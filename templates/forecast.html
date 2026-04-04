@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kelajak prognozi</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <script src="https://cdn.plot.ly/plotly-2.26.0.min.js"></script>
+</head>
+<body>
+  <main class="py-5">
+    <div class="container-fluid px-4">
+      <div class="row mb-4">
+        <div class="col-12">
+          <div class="card shadow-sm border-0 mb-4">
+            <div class="card-header bg-info text-white">
+              <h5 class="mb-0">Kelajak 24 soat uchun xavf prognozi</h5>
+            </div>
+            <div class="card-body">
+              <div id="future-forecast-plot" style="height:350px;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="row mb-4">
+        <div class="col-12">
+          <div class="card shadow-sm border-0 mb-4">
+            <div class="card-header bg-success text-white">
+              <h5 class="mb-0">So'nggi 7 kun: Parametrlar va xavf</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                  <label for="param-select" class="form-label">Parametrni tanlang:</label>
+                  <select id="param-select" class="form-select" style="max-width:300px; display:inline-block;"></select>
+                </div>
+                <div id="week-params-plot" style="height:400px;"></div>
+                <div class="alert alert-info mt-3" style="max-width:600px;">
+                  <i class="fas fa-info-circle me-2"></i>
+                  Parametrlar qiymatlari fasllar, ob-havo va boshqa tashqi omillarga bog'liq bo'lishi mumkin. Grafikda har 6 soatlik o'rtacha qiymatlar ko'rsatiladi.
+                </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+  <script>
+    async function loadForecast() {
+      const res = await fetch('/api/forecast');
+      const data = await res.json();
+      // Future forecast plot
+      const future = data.future || [];
+      Plotly.newPlot('future-forecast-plot', [{
+        x: future.map(x => x.timestamp),
+        y: future.map(x => x.xavf),
+        type: 'scatter',
+        mode: 'lines+markers',
+        name: 'Xavf prognozi',
+        line: {shape: 'hv', color: '#dc3545'},
+        text: future.map(x => x.xavf === 1 ? 'MUAMMO' : 'HAVFSIZ'),
+        hovertemplate: '%{x}<br>Xavf: %{text}<extra></extra>'
+      }], {
+        title: 'Kelajak 24 soat xavf prognozi',
+        yaxis: {
+          title: 'Xavf',
+          dtick: 1,
+          tickvals: [0, 1],
+          ticktext: ['HAVFSIZ', 'MUAMMO'],
+          range: [-0.1, 1.1]
+        },
+        xaxis: {title: 'Vaqt'}
+      }, {responsive:true});
+
+      // Parametr va trend grafi
+      const paramRes = await fetch('/api/forecast-params');
+      const paramData = await paramRes.json();
+      const paramKeys = Object.keys(paramData).filter(k => k !== 'timestamp' && k !== 'xavf');
+      const select = document.getElementById('param-select');
+      select.innerHTML = '';
+      for (const key of paramKeys) {
+        const opt = document.createElement('option');
+        opt.value = key;
+        opt.textContent = key;
+        select.appendChild(opt);
+      }
+      // Default: first param
+      if (paramKeys.length > 0) {
+        select.value = paramKeys[0];
+        plotSelectedParam(paramKeys[0]);
+      }
+      select.onchange = function() {
+        plotSelectedParam(this.value);
+      };
+    }
+
+    async function plotSelectedParam(param) {
+      const paramRes = await fetch('/api/forecast-params?param=' + encodeURIComponent(param));
+      const paramData = await paramRes.json();
+      const traces = [];
+      // Raw values
+      traces.push({
+        x: paramData.timestamp,
+        y: paramData[param],
+        name: param + ' (aniq)',
+        type: 'scatter',
+        mode: 'markers',
+        marker: {color: '#007bff', size: 6, opacity: 0.5},
+        hovertemplate: '%{x}<br>' + param + ': %{y}<extra></extra>'
+      });
+      // Trend (moving average) - faqat Vibratsiya bo'lmasa
+      if (param !== 'Vibratsiya' && paramData[param + '_trend']) {
+        traces.push({
+          x: paramData.timestamp,
+          y: paramData[param + '_trend'],
+          name: param + ' (trend)',
+          type: 'scatter',
+          mode: 'lines',
+          line: {color: '#007bff', width: 3, dash: 'solid'},
+          hovertemplate: '%{x}<br>' + param + ' trend: %{y:.2f}<extra></extra>'
+        });
+      }
+      // Xavf
+      traces.push({
+        x: paramData.timestamp,
+        y: paramData.xavf,
+        name: 'Xavf',
+        yaxis: 'y2',
+        type: 'scatter',
+        mode: 'lines+markers',
+        line: {color: '#dc3545', dash: 'dot'},
+        text: paramData.xavf.map(x => x === 1 ? 'MUAMMO' : 'HAVFSIZ'),
+        hovertemplate: '%{x}<br>Xavf: %{text}<extra></extra>'
+      });
+      Plotly.newPlot('week-params-plot', traces, {
+        title: `So'nggi 7 kun: ${param} va xavf`,
+        yaxis: {title: `${param} qiymati`},
+        yaxis2: {title: 'Xavf', overlaying: 'y', side: 'right', dtick: 1, range: [-0.1,1.1], tickvals: [0,1], ticktext: ['HAVFSIZ','MUAMMO']},
+        xaxis: {title: 'Vaqt'}
+      }, {responsive:true});
+    }
+    loadForecast();
+  </script>
+</body>
+</html>

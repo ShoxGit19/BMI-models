@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Grafiklar</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="{{url_for('static', filename='style.css')}}">
+  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+</head>
+<body>
+  {% include 'navbar.html' %}
+
+  <header class="bg-gradient-primary text-white py-5 shadow-sm">
+    <div class="container">
+      <h1 class="fw-bold mb-2">Trend Grafiklari</h1>
+      <p class="lead mb-0">Sensor ma'lumotlarining o'zgarishi</p>
+    </div>
+  </header>
+
+  <main class="py-5">
+    <div class="container-fluid px-4">
+      <!-- Filter Controls -->
+      <div class="row g-3 mb-4">
+        <div class="col-lg-12">
+          <div class="card shadow-sm border-0">
+            <div class="card-header bg-secondary text-white">
+              <h6 class="mb-0"><i class="fas fa-filter me-2"></i>Vaqt oralig'ini tanlang</h6>
+            </div>
+            <div class="card-body">
+              <div class="row g-3">
+                <div class="col-md-2">
+                  <label class="form-label small fw-bold">Oy</label>
+                  <select id="monthSelect" class="form-select form-select-sm">
+                    <option value="">Barcha</option>
+                    <option value="01">Yanvar (01)</option>
+                    <option value="02">Fevral (02)</option>
+                    <option value="03">Mart (03)</option>
+                    <option value="04">Aprel (04)</option>
+                    <option value="05">May (05)</option>
+                    <option value="06">Iyun (06)</option>
+                    <option value="07">Iyul (07)</option>
+                    <option value="08">Avgust (08)</option>
+                    <option value="09">Sentabr (09)</option>
+                    <option value="10">Oktabr (10)</option>
+                    <option value="11">Noyabr (11)</option>
+                    <option value="12">Dekabr (12)</option>
+                  </select>
+                </div>
+                <div class="col-md-2">
+                  <label class="form-label small fw-bold">Yil</label>
+                  <select id="yearSelect" class="form-select form-select-sm">
+                    <option value="">Barcha</option>
+                    <option value="2023">2023</option>
+                    <option value="2024">2024</option>
+                    <option value="2025">2025</option>
+                    <option value="2026">2026</option>
+                  </select>
+                </div>
+                <div class="col-md-3">
+                  <label class="form-label small fw-bold">Sana</label>
+                  <input type="date" id="dateSelect" class="form-control form-control-sm">
+                </div>
+                <div class="col-md-5 d-flex align-items-end gap-2">
+                  <button onclick="filterGraphs()" class="btn btn-primary btn-sm">
+                    <i class="fas fa-filter me-1"></i>Filtrlash
+                  </button>
+                  <button onclick="resetFilters()" class="btn btn-secondary btn-sm">
+                    <i class="fas fa-redo me-1"></i>Asliga qaytarish
+                  </button>
+                  <span id="filterInfo" class="text-muted small ms-2"></span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Charts -->
+      <div class="row g-4">
+        <div class="col-lg-6">
+          <div class="card shadow-sm border-0">
+            <div class="card-header bg-success text-white">
+              <h5 class="mb-0"><i class="fas fa-bolt me-2"></i>Tok (A) Trendi</h5>
+            </div>
+            <div class="card-body p-3">
+              <div id="current-chart" style="height: 400px;"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-lg-6">
+          <div class="card shadow-sm border-0">
+            <div class="card-header bg-info text-white">
+              <h5 class="mb-0"><i class="fas fa-plug me-2"></i>Kuchlanish (V) Trendi</h5>
+            </div>
+            <div class="card-body p-3">
+              <div id="voltage-chart" style="height: 400px;"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-lg-6">
+          <div class="card shadow-sm border-0">
+            <div class="card-header bg-warning text-white">
+              <h5 class="mb-0"><i class="fas fa-circle me-2"></i>Quvvat (kW) Trendi</h5>
+            </div>
+            <div class="card-body p-3">
+              <div id="power-chart" style="height: 400px;"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-lg-6">
+          <div class="card shadow-sm border-0">
+            <div class="card-header bg-danger text-white">
+              <h5 class="mb-0"><i class="fas fa-wave-square me-2"></i>Vibratsiya Trendi</h5>
+            </div>
+            <div class="card-body p-3">
+              <div id="vib-chart" style="height: 400px;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer class="bg-dark text-white text-center py-4 mt-5">
+    <p>© 2026 Elektr Uzatish Monitoringi</p>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    let allData = [];
+
+    async function loadData() {
+      try {
+        const response = await fetch('/api/data');
+        allData = await response.json();
+
+        if (!allData || allData.length === 0) {
+          console.error('Hech ma\'lumot yo\'q');
+          return;
+        }
+
+        console.log('✅ Yuklandi:', allData.length, 'qator');
+        filterGraphs();
+      } catch (error) {
+        console.error('Xato:', error);
+      }
+    }
+
+    function filterGraphs() {
+      let filtered = JSON.parse(JSON.stringify(allData));
+
+      const monthVal = document.getElementById('monthSelect').value;
+      const yearVal = document.getElementById('yearSelect').value;
+      const dateVal = document.getElementById('dateSelect').value;
+
+      // Filter by date if selected
+      if (dateVal) {
+        filtered = filtered.filter(d => {
+          if (!d.Timestamp) return false;
+          const dataDate = new Date(d.Timestamp).toISOString().split('T')[0];
+          return dataDate === dateVal;
+        });
+      } else {
+        // Filter by month and year
+        if (monthVal || yearVal) {
+          filtered = filtered.filter(d => {
+            if (!d.Timestamp) return false;
+            const date = new Date(d.Timestamp);
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const year = date.getFullYear().toString();
+
+            let match = true;
+            if (monthVal) match = match && (month === monthVal);
+            if (yearVal) match = match && (year === yearVal);
+            return match;
+          });
+        }
+      }
+
+      if (filtered.length === 0) {
+        document.getElementById('filterInfo').textContent = '❌ Ma\'lumot yo\'q';
+        return;
+      }
+
+      // Sort by timestamp
+      filtered.sort((a, b) => {
+        const timeA = new Date(a.Timestamp || 0).getTime();
+        const timeB = new Date(b.Timestamp || 0).getTime();
+        return timeA - timeB;
+      });
+
+      document.getElementById('filterInfo').textContent = `✅ ${filtered.length} qator`;
+
+      // Extract data
+      const timestamps = filtered.map(d => d.Timestamp || '');
+      const currents = filtered.map(d => d.Tok || 0);
+      const voltages = filtered.map(d => d.Kuchlanish || 0);
+      const powers = filtered.map(d => d.Quvvat || 0);
+      const vibs = filtered.map(d => d.Vibratsiya || 0);
+
+      const config = {
+        responsive: true,
+        displayModeBar: true,
+        margin: { l: 40, r: 20, t: 20, b: 40 }
+      };
+
+      // Tok (A) chart
+      const currentTrace = {
+        x: timestamps,
+        y: currents,
+        type: 'scatter',
+        mode: 'lines',
+        line: { color: '#28a745', width: 2 },
+        fill: 'tozeroy',
+        fillcolor: 'rgba(40, 167, 69, 0.2)'
+      };
+      Plotly.newPlot('current-chart', [currentTrace], { title: '' }, config);
+
+      // Kuchlanish (V) chart
+      const voltageTrace = {
+        x: timestamps,
+        y: voltages,
+        type: 'scatter',
+        mode: 'lines',
+        line: { color: '#17a2b8', width: 2 },
+        fill: 'tozeroy',
+        fillcolor: 'rgba(23, 162, 184, 0.2)'
+      };
+      Plotly.newPlot('voltage-chart', [voltageTrace], { title: '' }, config);
+
+      // Quvvat (kW) chart
+      const powerTrace = {
+        x: timestamps,
+        y: powers,
+        type: 'scatter',
+        mode: 'lines',
+        line: { color: '#ffc107', width: 2 },
+        fill: 'tozeroy',
+        fillcolor: 'rgba(255, 193, 7, 0.2)'
+      };
+      Plotly.newPlot('power-chart', [powerTrace], { title: '' }, config);
+
+      // Vibratsiya chart
+      const vibTrace = {
+        x: timestamps,
+        y: vibs,
+        type: 'scatter',
+        mode: 'lines',
+        line: { color: '#dc3545', width: 2 },
+        fill: 'tozeroy',
+        fillcolor: 'rgba(220, 53, 69, 0.2)'
+      };
+      Plotly.newPlot('vib-chart', [vibTrace], { title: '' }, config);
+    }
+
+    function resetFilters() {
+      document.getElementById('monthSelect').value = '';
+      document.getElementById('yearSelect').value = '';
+      document.getElementById('dateSelect').value = '';
+      filterGraphs();
+    }
+
+    // Load data on page load
+    loadData();
+  </script>
+</body>
+</html>

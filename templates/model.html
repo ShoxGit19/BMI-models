@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Model - Prognoz</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="{{url_for('static', filename='style.css')}}">
+</head>
+<body>
+  {% include 'navbar.html' %}
+
+  <header class="bg-gradient-primary text-white py-5 shadow-sm">
+    <div class="container">
+      <h1 class="fw-bold mb-2">🤖 Model Prognozi</h1>
+      <p class="lead mb-0">7 parametrli tahlil va nosozlik aniqlash</p>
+    </div>
+  </header>
+
+  <main class="py-5">
+    <div class="container-fluid px-4">
+      <div class="row g-4">
+          <div class="card shadow-sm border-0">
+            <div class="card-header bg-success text-white">
+              <h5 class="mb-0">🔍 7-Parametr prognozi</h5>
+            </div>
+            <div class="card-body">
+              <div class="alert alert-info mb-3">
+                <b>Vibratsiya nima?</b> Vibratsiya — bu uskuna yoki simlarning titrashi. Agar vibratsiya yuqori bo‘lsa, bu mexanik nosozlik yoki xavf belgisi bo‘lishi mumkin. Modelda vibratsiya xavfli qiymatga yetganda, tizim ogohlantiradi.
+              </div>
+              <form method="POST">
+                <div class="row g-2">
+                  <div class="col-6">
+                    <label class="form-label small">🌡️ Harorat (°C)</label>
+                    <input type="number" step="0.1" name="harorat" class="form-control form-control-sm" value="25" required>
+                  </div>
+                  <div class="col-6">
+                    <label class="form-label small">⚡ Tok (A)</label>
+                    <input type="number" step="0.1" name="tok" class="form-control form-control-sm" value="15" required>
+                  </div>
+                  <div class="col-6">
+                    <label class="form-label small">🔌 Kuchlanish (V)</label>
+                    <input type="number" step="0.1" name="kuchlanish" class="form-control form-control-sm" value="220" required>
+                  </div>
+                  <div class="col-6">
+                    <label class="form-label small">📳 Vibratsiya</label>
+                    <input type="number" step="0.01" name="vibratsiya" class="form-control form-control-sm" value="0.5" required>
+                  </div>
+                  <div class="col-6">
+                    <label class="form-label small">🔗 Sim holati (%)</label>
+                    <input type="number" step="0.1" name="sim_holati" class="form-control form-control-sm" value="90" required>
+                  </div>
+                  <div class="col-6">
+                    <label class="form-label small">💨 Namlik (%)</label>
+                    <input type="number" step="0.1" name="humidity" class="form-control form-control-sm" value="50" required>
+                  </div>
+                  <div class="col-12">
+                    <label class="form-label small">⚙️ Quvvat (kW)</label>
+                    <input type="number" step="0.01" name="quvvat" class="form-control form-control-sm" value="3.0" required>
+                  </div>
+                </div>
+                <button type="submit" class="btn btn-success w-100 mt-3">
+                  <i class="fas fa-magic me-2"></i>Prognoz qilish
+                </button>
+              </form>
+
+              {% if prediction %}
+                <div class="mt-3">
+                  {% if "HAVFSIZ" in prediction %}
+                    <div class="alert alert-success d-flex align-items-center" role="alert">
+                      <i class="fas fa-check-circle me-2" style="font-size: 1.5rem;"></i>
+                      <div>{{ prediction }}</div>
+                    </div>
+                  {% else %}
+                    <div class="alert alert-danger d-flex align-items-center" role="alert">
+                      <i class="fas fa-exclamation-triangle me-2" style="font-size: 1.5rem;"></i>
+                      <div>{{ prediction }}</div>
+                    </div>
+                  {% endif %}
+                </div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+
+        <div class="col-lg-5">
+          <div class="card shadow-sm border-0">
+            <div class="card-header bg-info text-white">
+              <h5 class="mb-0">ℹ️ 7-Parametrli model haqida</h5>
+            </div>
+            <div class="card-body small">
+              <h6 class="fw-bold text-primary mb-2">
+                <i class="fas fa-microchip me-2"></i>Model turi
+              </h6>
+              <p class="text-muted mb-3">
+                Gibrid: Random Forest (100 daraxt) + MLP Neyron tarmoq (50-25 neyron)
+              </p>
+
+              <hr>
+
+              <h6 class="fw-bold text-primary mb-2">
+                <i class="fas fa-list me-2"></i>7 parametr
+              </h6>
+              <ul class="mb-0">
+                <li>🌡️ Harorat (C)</li>
+                <li>⚡ Tok kuchi (A)</li>
+                <li>🔌 Kuchlanish (V)</li>
+                <li>📳 Vibratsiya</li>
+                <li>🔗 Sim mexanik holati (%)</li>
+                <li>💨 Atrof muhit namligi (%)</li>
+                <li>⚙️ Quvvati (kW)</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer class="bg-dark text-white text-center py-4 mt-5">
+    <p class="mb-1">© 2026 Toshkent Elektr Transsmissiya | Monitoring Tizimi</p>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

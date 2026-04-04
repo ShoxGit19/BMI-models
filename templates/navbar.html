@@ -1,0 +1,34 @@
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary sticky-top shadow-lg">
+  <div class="container-fluid px-4">
+    <a class="navbar-brand fw-bold d-flex align-items-center" href="/">
+      <span class="me-2" style="font-size: 1.8rem;">⚡</span>
+      <span>Monitoring</span>
+    </a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
+            data-bs-target="#navbarNav" aria-controls="navbarNav">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarNav">
+      <ul class="navbar-nav ms-auto gap-2">
+        <li class="nav-item">
+          <a class="nav-link {% if request.path == '/' %}active{% endif %}" href="/">🏠 Bosh sahifa</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link {% if request.path.startswith('/table') %}active{% endif %}" href="/table">📋 Jadval</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link {% if request.path.startswith('/map') %}active{% endif %}" href="/map">🗺️ Xarita</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link {% if request.path.startswith('/graphs') %}active{% endif %}" href="/graphs">📈 Grafiklar</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link {% if request.path.startswith('/model') %}active{% endif %}" href="/model">🤖 Model</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link {% if request.path.startswith('/forecast') %}active{% endif %}" href="/forecast">📈 Prognoz</a>
+        </li>
+      </ul>
+    </div>
+  </div>
+</nav>
