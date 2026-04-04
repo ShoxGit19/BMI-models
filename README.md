@@ -1,179 +1,165 @@
-# 🌟 Professional Elektr Monitoring Tizimi
 
-**Real-time sensor monitoring va AI-asosida fault prediction tizimi**
+# ⚡️ BMI_MODELS — Elektr Monitoring va AI Fault Prediction
 
-## 📋 Loyiha Haqida
+![Python](https://img.shields.io/badge/python-3.10%2B-blue?logo=python)
+![Flask](https://img.shields.io/badge/flask-%23000?logo=flask&logoColor=white)
+![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)
 
-Bu loyiha Toshkent elektr uzatish liniyasining real-time monitoring tizimini taqdim qiladi. Tizimda quyidagilari mavjud:
+**Real-time sensor monitoring va sunʼiy intellekt asosida nosozliklarni bashoratlash tizimi**
 
-- **📊 Real-time Dashboard**: Bosh sahifa KPI kartalari bilan
-- **📈 Trend Grafiklari**: Tok, kuchlanish, harorat, vibratsiya trendlari
-- **🗺️ Xarita**: Toshkent xaritasida sensorlarning joylashuvi
-- **📋 Jadval**: Batafsil sensor ma'lumotlari
-- **🤖 AI Model**: Hybrid RandomForest + MLP fault prediction
+---
+
+## 📋 Loyiha haqida
+
+Ushbu loyiha elektr uzatish liniyalari uchun professional monitoring va xavfsizlikni bashoratlash (AI) tizimini taqdim etadi:
+
+- 📊 **Dashboard**: KPI va umumiy statistikalar
+- 📈 **Grafiklar**: Tok, kuchlanish, harorat, vibratsiya trendlari
+- 🗺️ **Xarita**: Sensorlar joylashuvi va holati
+- 📋 **Jadval**: Barcha sensorlar bo‘yicha tafsilotlar
+- 🤖 **AI Model**: Hybrid RandomForest + MLP
+
+---
 
 ## 🏗️ Texnologiyalar
 
 - **Backend**: Flask (Python)
-- **Frontend**: Bootstrap 5, Plotly, JavaScript
-- **ML Model**: Scikit-learn (RandomForest + MLP)
+- **Frontend**: Bootstrap 5, Plotly.js
+- **ML**: Scikit-learn (RandomForest, MLP)
 - **Data**: Pandas, NumPy
-- **Database**: Excel fayllar
 
-## 📁 Loyiha Struktura
+---
+
+## 📁 Loyiha tuzilmasi
 
 ```
 BMI model/
-├── app.py                 # Flask asosiy faylı
+├── app.py                 # Flask asosiy fayl
 ├── config.py              # Konfiguratsiya
-├── requirements.txt       # Python paketlar
-├── hybrid_model.pkl       # Trained ML model
-├── tashkent_sensors.xlsx  # Sensor ma'lumotlari
+├── requirements.txt       # Python kutubxonalar
+├── hybrid_model.pkl       # O‘qitilgan AI model
+├── sensor_monitoring_1M.csv # Sensor maʼlumotlari
 ├── templates/             # HTML shablonlar
 │   ├── index.html         # Bosh sahifa
-│   ├── navbar.html        # Navigatsiya paneli
-│   ├── table.html         # Jadval sahifasi
+│   ├── navbar.html        # Navigatsiya
+│   ├── table.html         # Jadval
 │   ├── graphs.html        # Grafiklar
 │   ├── map.html           # Xarita
 │   ├── model.html         # Model prognozi
 │   └── error.html         # Xato sahifasi
 ├── static/
-│   └── style.css          # Professional stillar
+│   └── style.css          # UI stillar
 └── venv/                  # Virtual environment
 ```
 
-## 🚀 O'rnatish va Ismarlash
+---
 
-### 1. Virtual Environment Yaratish
+## 🚀 O‘rnatish va ishga tushirish
 
-```bash
-python -m venv venv
-source venv/Scripts/activate  # Windows
-# yoki
-source venv/bin/activate      # Linux/Mac
-```
-
-### 2. Paketlar O'rnatish
-
-```bash
-pip install -r requirements.txt
-```
-
-### 3. Appni Ishga Tushirish
-
-```bash
-python app.py
-```
-
-Brauzer'da `http://localhost:5000` oching.
-
-## 🌐 Sahifalar
-
-### 1. **Bosh Sahifa** (/)
-- KPI kartalari (jami sensorlar, muammolar, o'rtacha qiymatlar)
-- Real-time xarita
-- Joriy ma'lumotlar
-
-### 2. **Jadval** (/table)
-- Batafsil sensor ma'lumotlari
-- Filtrlash va saralash
-
-### 3. **Xarita** (/map)
-- Toshkent xaritasida sensorlarning joylashuvi
-- Status asosida ranglanish
-- Statistika
-
-### 4. **Grafiklar** (/graphs)
-- Tok trendi
-- Kuchlanish trendi
-- Harorat trendi
-- Vibratsiya trendi
-- Manziliklar bo'yicha taqqoslash
-
-### 5. **Model** (/model)
-- Barcha sensorlardan real-time prognozlar
-- Qo'lda prognoz qilish
-- Model ma'lumotlari
-
-## 🤖 AI Model
-
-**Tür**: Hybrid Voting Classifier
-- **Model 1**: Random Forest (100 trees)
-- **Model 2**: MLP Neural Network (50-25 neurons)
-- **Votting**: Soft voting (weighted average)
-- **Natija**: Binary classification (Havfsiz/Muammo)
-
-## 📊 Sensor Limitlari
-
-| Parametr | Min | Max | Birlik |
-|----------|-----|-----|--------|
-| Tok | 0 | 20 | A |
-| Kuchlanish | 210 | 230 | V |
-| Harorat | 0 | 50 | °C |
-| Vibratsiya | 0 | 1.5 | - |
-
-## 🛠️ API Endpoints
-
-| Endpoint | Metod | Tavsifi |
-|----------|-------|---------|
-| `/` | GET | Bosh sahifa |
-| `/table` | GET | Jadval sahifasi |
-| `/graphs` | GET | Grafiklar sahifasi |
-| `/map` | GET | Xarita sahifasi |
-| `/model` | GET, POST | Model sahifasi |
-| `/api/data` | GET | Barcha sensor ma'lumotlari |
-| `/api/map-data` | GET | Xarita uchun ma'lumotlar |
-| `/api/stats` | GET | Statistika |
-
-## 🎨 Dizayn
-
-- **Rang sxemasi**: Professional ko'k (Primary: #004a9f)
-- **Shrift**: Segoe UI, Tahoma, Geneva
-- **Responsive**: Mobile, Tablet, Desktop
-- **Animatsiyalar**: Smooth transitions va hover effects
-
-## 📝 Qo'shimcha Amallar
-
-### Model'ni qayta o'qitish
-
-```python
-python -c "
-from app import train_or_load_model
-import os
-os.remove('hybrid_model.pkl')  # Eski modelni o'chirish
-train_or_load_model()  # Yangi model
-"
-```
-
-### Debug rejasi
-
-`config.py` da `DEBUG = True` qilib o'rnating.
-
-## 🐛 Troubleshooting
-
-### 1. "Data file not found"
-- `tashkent_sensors.xlsx` faylining manzilini tekshiring
-
-### 2. "Model file not found"
-- Birinchi bor ishga tushirish `hybrid_model.pkl` ni avtomatik yaratadi
-
-### 3. Port busy
-- Port o'zgartiring: `app.run(port=5001)`
-
-## 📧 Jo'natish va Rivojlantirish
-
-- Pull request'lar qabul qilinadi
-- Issue'lar haq'ida xabar bering
-- Community sug'i'yotlari kutilmoqda
-
-## 📄 Litsenziya
-
-MIT License - Erkin foydalanish
-
-## 👤 Muallif
-
-Ucer - 2026
+1. **Virtual environment yaratish**
+	```bash
+	python -m venv venv
+	venv\Scripts\activate   # Windows
+	# yoki
+	source venv/bin/activate # Linux/Mac
+	```
+2. **Paketlarni o‘rnatish**
+	```bash
+	pip install -r requirements.txt
+	```
+3. **Dastur ishga tushirish**
+	```bash
+	python app.py
+	```
+4. Brauzerda oching: [http://localhost:5000](http://localhost:5000)
 
 ---
 
-**Izohlar**: Bu tizimda barcha ma'lumotlar real-time updating bo'ladi. Server xatolarida `/api` endpoints'lar JSON error dturi qaytaradi.
+## 🌐 Asosiy sahifalar
+
+| Yo‘nalish | URL | Tavsifi |
+|-----------|-----|---------|
+| Bosh sahifa | `/` | KPI, umumiy statistika, xarita |
+| Jadval | `/table` | Sensorlar jadvali |
+| Xarita | `/map` | Sensorlar joylashuvi |
+| Grafiklar | `/graphs` | Trend grafiklar |
+| Model | `/model` | AI prognoz va test |
+
+---
+
+## 🤖 AI Model haqida
+
+**Model turi**: Hybrid Voting Classifier
+
+- Random Forest (100 trees)
+- MLP Neural Network (2 qatlam)
+- Soft voting (weighted average)
+- Natija: Havfsiz/Muammo (0/1)
+
+---
+
+## 📊 Sensor parametr limitlari
+
+| Parametr     | Min  | Max  | Birlik |
+|--------------|------|------|--------|
+| Tok          | 0    | 20   | A      |
+| Kuchlanish   | 210  | 230  | V      |
+| Harorat      | 0    | 50   | °C     |
+| Vibratsiya   | 0    | 1.5  | -      |
+
+---
+
+## 🛠️ API Endpoints
+
+| Endpoint           | Metod      | Tavsifi                  |
+|--------------------|------------|--------------------------|
+| `/`                | GET        | Bosh sahifa              |
+| `/table`           | GET        | Jadval sahifasi          |
+
+| `/graphs`          | GET        | Grafiklar sahifasi       |
+| `/map`             | GET        | Xarita sahifasi          |
+| `/model`           | GET, POST  | Model sahifasi           |
+| `/api/data`        | GET        | Barcha sensor maʼlumotlari|
+| `/api/map-data`    | GET        | Xarita uchun maʼlumotlar |
+| `/api/stats`       | GET        | Statistika               |
+| `/api/forecast`    | GET        | 24 soatlik xavf prognozi |
+| `/api/forecast-params` | GET    | Trend va parametrlar     |
+
+---
+
+
+## 🎨 Dizayn
+
+- **Rang sxemasi**: Professional ko‘k (Primary: #004a9f)
+- **Shrift**: Segoe UI, Tahoma, Geneva
+- **Responsive**: Mobile, Tablet, Desktop
+- **Animatsiyalar**: Smooth hover va transition
+
+---
+
+## 🐛 Troubleshooting
+
+- **Data file not found**: `sensor_monitoring_1M.csv` fayli mavjudligini tekshiring
+- **Model file not found**: `hybrid_model.pkl` birinchi ishga tushganda avtomatik yaratiladi
+- **Port busy**: `app.py`da portni o‘zgartiring: `app.run(port=5001)`
+
+---
+
+## 📧 Hissa qo‘shish va bog‘lanish
+
+- Pull request va issue’lar ochiq
+- Taklif va savollar uchun: [GitHub Issues](https://github.com/ShoxGit19/BMI_models/issues)
+
+---
+
+## 📄 Litsenziya
+
+MIT License — Erkin foydalanish
+
+## 👤 Muallif
+
+Ucer — 2026
+
+---
+
+**Izoh**: Tizim barcha maʼlumotlarni real-time yangilaydi. API xatolarida JSON formatda xabar qaytariladi.
