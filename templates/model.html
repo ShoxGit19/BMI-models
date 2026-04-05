@@ -7,121 +7,270 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
   <link rel="stylesheet" href="{{url_for('static', filename='style.css')}}">
+  <script src="https://cdn.plot.ly/plotly-2.26.0.min.js"></script>
+  <style>
+    .param-card { transition: transform 0.2s; border-left: 4px solid #e5e7eb; border-radius: 16px; }
+    .param-card:hover { transform: translateY(-2px); }
+    .param-card.status-normal { border-left-color: var(--accent-green); }
+    .param-card.status-warning { border-left-color: var(--accent-amber); }
+    .param-card.status-danger { border-left-color: var(--accent-red); }
+    .status-badge { font-size: 0.72rem; padding: 3px 10px; border-radius: 50px; font-weight: 600; }
+    .badge-normal { background: rgba(16,185,129,0.12); color: #065f46; }
+    .badge-warning { background: rgba(245,158,11,0.12); color: #92400e; }
+    .badge-danger { background: rgba(239,68,68,0.12); color: #991b1b; }
+    .result-banner { border-radius: 16px; padding: 20px; }
+    .result-success { background: rgba(16,185,129,0.08); border: 2px solid var(--accent-green); }
+    .result-warning { background: rgba(245,158,11,0.08); border: 2px solid var(--accent-amber); }
+    .result-danger { background: rgba(239,68,68,0.08); border: 2px solid var(--accent-red); }
+  </style>
 </head>
 <body>
   {% include 'navbar.html' %}
 
-  <header class="bg-gradient-primary text-white py-5 shadow-sm">
-    <div class="container">
-      <h1 class="fw-bold mb-2">🤖 Model Prognozi</h1>
-      <p class="lead mb-0">7 parametrli tahlil va nosozlik aniqlash</p>
+  <section class="page-hero">
+    <div class="container-fluid px-4">
+      <div class="d-flex align-items-center justify-content-between">
+        <div>
+          <h1><i class="fas fa-robot me-2"></i>Model Prognozi</h1>
+          <p class="mb-0">8 parametrli tahlil va nosozlik aniqlash</p>
+        </div>
+        <a href="/" class="btn-back"><i class="fas fa-arrow-left"></i> Orqaga</a>
+      </div>
     </div>
-  </header>
+  </section>
 
-  <main class="py-5">
+  <main class="py-4">
     <div class="container-fluid px-4">
       <div class="row g-4">
-          <div class="card shadow-sm border-0">
-            <div class="card-header bg-success text-white">
-              <h5 class="mb-0">🔍 7-Parametr prognozi</h5>
+        <!-- CHAP: FORMA -->
+        <div class="col-lg-4">
+          <div class="card">
+            <div class="card-header">
+              <h5 class="mb-0"><i class="fas fa-sliders-h me-2"></i>Parametrlarni kiriting</h5>
             </div>
             <div class="card-body">
-              <div class="alert alert-info mb-3">
-                <b>Vibratsiya nima?</b> Vibratsiya — bu uskuna yoki simlarning titrashi. Agar vibratsiya yuqori bo‘lsa, bu mexanik nosozlik yoki xavf belgisi bo‘lishi mumkin. Modelda vibratsiya xavfli qiymatga yetganda, tizim ogohlantiradi.
-              </div>
               <form method="POST">
-                <div class="row g-2">
-                  <div class="col-6">
-                    <label class="form-label small">🌡️ Harorat (°C)</label>
-                    <input type="number" step="0.1" name="harorat" class="form-control form-control-sm" value="25" required>
-                  </div>
-                  <div class="col-6">
-                    <label class="form-label small">⚡ Tok (A)</label>
-                    <input type="number" step="0.1" name="tok" class="form-control form-control-sm" value="15" required>
-                  </div>
-                  <div class="col-6">
-                    <label class="form-label small">🔌 Kuchlanish (V)</label>
-                    <input type="number" step="0.1" name="kuchlanish" class="form-control form-control-sm" value="220" required>
-                  </div>
-                  <div class="col-6">
-                    <label class="form-label small">📳 Vibratsiya</label>
-                    <input type="number" step="0.01" name="vibratsiya" class="form-control form-control-sm" value="0.5" required>
-                  </div>
-                  <div class="col-6">
-                    <label class="form-label small">🔗 Sim holati (%)</label>
-                    <input type="number" step="0.1" name="sim_holati" class="form-control form-control-sm" value="90" required>
-                  </div>
-                  <div class="col-6">
-                    <label class="form-label small">💨 Namlik (%)</label>
-                    <input type="number" step="0.1" name="humidity" class="form-control form-control-sm" value="50" required>
-                  </div>
-                  <div class="col-12">
-                    <label class="form-label small">⚙️ Quvvat (kW)</label>
-                    <input type="number" step="0.01" name="quvvat" class="form-control form-control-sm" value="3.0" required>
-                  </div>
+                <div class="mb-2">
+                  <label class="form-label"><i class="fas fa-temperature-half text-danger me-1"></i>Muhit harorat (°C) <span class="text-muted fw-normal" style="font-size:0.78rem;">Normal: &lt;40</span></label>
+                  <input type="number" step="0.1" name="harorat" class="form-control form-control-sm" value="{{ result.values.harorat if result else 25 }}" required>
                 </div>
-                <button type="submit" class="btn btn-success w-100 mt-3">
-                  <i class="fas fa-magic me-2"></i>Prognoz qilish
+                <div class="mb-2">
+                  <label class="form-label"><i class="fas fa-wind text-info me-1"></i>Shamol tezligi (km/h) <span class="text-muted fw-normal" style="font-size:0.78rem;">Normal: &lt;15</span></label>
+                  <input type="number" step="0.1" name="shamol" class="form-control form-control-sm" value="{{ result.values.shamol if result else 7 }}" required>
+                </div>
+                <div class="mb-2">
+                  <label class="form-label"><i class="fas fa-wave-square text-primary me-1"></i>Chastota (Hz) <span class="text-muted fw-normal" style="font-size:0.78rem;">Normal: 49.5-50.5</span></label>
+                  <input type="number" step="0.01" name="chastota" class="form-control form-control-sm" value="{{ result.values.chastota if result else 50 }}" required>
+                </div>
+                <div class="mb-2">
+                  <label class="form-label"><i class="fas fa-bolt text-warning me-1"></i>Kuchlanish (V) <span class="text-muted fw-normal" style="font-size:0.78rem;">Normal: 210-230</span></label>
+                  <input type="number" step="0.1" name="kuchlanish" class="form-control form-control-sm" value="{{ result.values.kuchlanish if result else 220 }}" required>
+                </div>
+                <div class="mb-2">
+                  <label class="form-label"><i class="fas fa-vibrate text-secondary me-1"></i>Vibratsiya <span class="text-muted fw-normal" style="font-size:0.78rem;">Normal: &lt;1.0</span></label>
+                  <input type="number" step="0.01" name="vibratsiya" class="form-control form-control-sm" value="{{ result.values.vibratsiya if result else 0.5 }}" required>
+                </div>
+                <div class="mb-2">
+                  <label class="form-label"><i class="fas fa-link text-success me-1"></i>Sim holati (%) <span class="text-muted fw-normal" style="font-size:0.78rem;">Normal: &gt;85</span></label>
+                  <input type="number" step="0.1" name="sim_holati" class="form-control form-control-sm" value="{{ result.values.sim_holati if result else 90 }}" required>
+                </div>
+                <div class="mb-2">
+                  <label class="form-label"><i class="fas fa-droplet text-primary me-1"></i>Namlik (%) <span class="text-muted fw-normal" style="font-size:0.78rem;">Normal: 35-85</span></label>
+                  <input type="number" step="0.1" name="humidity" class="form-control form-control-sm" value="{{ result.values.humidity if result else 60 }}" required>
+                </div>
+                <div class="mb-2">
+                  <label class="form-label"><i class="fas fa-gear text-dark me-1"></i>Quvvat (kW) <span class="text-muted fw-normal" style="font-size:0.78rem;">Normal: ≤5.0</span></label>
+                  <input type="number" step="0.01" name="quvvat" class="form-control form-control-sm" value="{{ result.values.quvvat if result else 3.0 }}" required>
+                </div>
+                <button type="submit" class="btn btn-success w-100 mt-2">
+                  <i class="fas fa-search-plus me-2"></i>Prognoz qilish
                 </button>
               </form>
+            </div>
+          </div>
 
-              {% if prediction %}
-                <div class="mt-3">
-                  {% if "HAVFSIZ" in prediction %}
-                    <div class="alert alert-success d-flex align-items-center" role="alert">
-                      <i class="fas fa-check-circle me-2" style="font-size: 1.5rem;"></i>
-                      <div>{{ prediction }}</div>
-                    </div>
-                  {% else %}
-                    <div class="alert alert-danger d-flex align-items-center" role="alert">
-                      <i class="fas fa-exclamation-triangle me-2" style="font-size: 1.5rem;"></i>
-                      <div>{{ prediction }}</div>
-                    </div>
-                  {% endif %}
-                </div>
-              {% endif %}
+          <!-- CHEGARALAR JADVALI -->
+          <div class="card mt-3">
+            <div class="card-header py-2">
+              <h5 class="mb-0" style="font-size:0.9rem;"><i class="fas fa-ruler me-2"></i>Chegaralar jadvali</h5>
+            </div>
+            <div class="card-body p-2">
+              <table class="table table-sm table-bordered mb-0" style="font-size: 0.75rem;">
+                <thead class="table-light">
+                  <tr>
+                    <th>Parametr</th>
+                    <th class="text-success text-center">Normal</th>
+                    <th class="text-warning text-center">Ogohl.</th>
+                    <th class="text-danger text-center">Xavf</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr><td>Kuchlanish</td><td class="text-center">210-230V</td><td class="text-center">200-210 / 230-240</td><td class="text-center">&lt;200 / &gt;240</td></tr>
+                  <tr><td>Chastota</td><td class="text-center">49.5-50.5 Hz</td><td class="text-center">49.0-49.5 / 50.5-51.0</td><td class="text-center">&lt;49 / &gt;51</td></tr>
+                  <tr><td>Muhit harorat</td><td class="text-center">&lt;40°C</td><td class="text-center">40-45</td><td class="text-center">&gt;45</td></tr>
+                  <tr><td>Shamol tezligi</td><td class="text-center">&lt;15 km/h</td><td class="text-center">15-25</td><td class="text-center">&gt;25</td></tr>
+                  <tr><td>Vibratsiya</td><td class="text-center">&lt;1.0</td><td class="text-center">1.0-1.5</td><td class="text-center">&gt;1.5</td></tr>
+                  <tr><td colspan="4" class="text-muted small"><i class="fas fa-info-circle me-1"></i>Vibratsiya faslga va shamolga bog'liq: qishda sovuqda sim qisqarib, yozda issiqda cho'zilib, kuchli shamolda tebranadi</td></tr>
+                  <tr><td>Sim holati</td><td class="text-center">&gt;85%</td><td class="text-center">75-85</td><td class="text-center">&lt;75</td></tr>
+                  <tr><td>Namlik</td><td class="text-center">35-85%</td><td class="text-center">30-35 / 85-90</td><td class="text-center">&lt;30 / &gt;90</td></tr>
+                  <tr><td>Quvvat</td><td class="text-center">≤5kW</td><td class="text-center">5-5.5</td><td class="text-center">&gt;5.5</td></tr>
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
 
-        <div class="col-lg-5">
-          <div class="card shadow-sm border-0">
-            <div class="card-header bg-info text-white">
-              <h5 class="mb-0">ℹ️ 7-Parametrli model haqida</h5>
+        <!-- O'NG: NATIJALAR -->
+        <div class="col-lg-8">
+          {% if result %}
+          <!-- UMUMIY XULOSA BANNER -->
+          <div class="result-banner result-{{ result.level }} mb-4">
+            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+              <div>
+                <h3 class="fw-bold mb-1">{{ result.level_text }}</h3>
+                <p class="mb-0">{{ result.level_msg }}</p>
+              </div>
+              <div>
+                <div class="d-flex gap-2">
+                  <span class="badge bg-success fs-6">{{ result.normal_count }} Normal</span>
+                  {% if result.warning_count > 0 %}
+                  <span class="badge bg-warning text-dark fs-6">{{ result.warning_count }} Ogohl.</span>
+                  {% endif %}
+                  {% if result.danger_count > 0 %}
+                  <span class="badge bg-danger fs-6">{{ result.danger_count }} Xavf</span>
+                  {% endif %}
+                </div>
+              </div>
             </div>
-            <div class="card-body small">
-              <h6 class="fw-bold text-primary mb-2">
-                <i class="fas fa-microchip me-2"></i>Model turi
-              </h6>
-              <p class="text-muted mb-3">
-                Gibrid: Random Forest (100 daraxt) + MLP Neyron tarmoq (50-25 neyron)
-              </p>
+          </div>
 
-              <hr>
+          <!-- GRAFIK: Parametrlar holati -->
+          <div class="card mb-4">
+            <div class="card-header py-2">
+              <h5 class="mb-0" style="font-size:0.9rem;"><i class="fas fa-chart-bar me-2"></i>Parametrlar holati grafigi</h5>
+            </div>
+            <div class="card-body p-2">
+              <div id="params-chart" style="height: 350px;"></div>
+            </div>
+          </div>
 
-              <h6 class="fw-bold text-primary mb-2">
-                <i class="fas fa-list me-2"></i>7 parametr
-              </h6>
+          <!-- HAR BIR PARAMETR TAHLILI -->
+          <h5 class="fw-bold mb-3"><i class="fas fa-clipboard-list me-2"></i>Batafsil tahlil</h5>
+          <div class="row g-3">
+            {% for p in result.params %}
+            <div class="col-md-6">
+              <div class="card param-card status-{{ p.status }} shadow-sm h-100">
+                <div class="card-body py-2 px-3">
+                  <div class="d-flex justify-content-between align-items-center mb-1">
+                    <h6 class="mb-0">{{ p.icon }} {{ p.name }}</h6>
+                    {% if p.status == 'normal' %}
+                      <span class="status-badge badge-normal">✅ Normal</span>
+                    {% elif p.status == 'warning' %}
+                      <span class="status-badge badge-warning">⚠️ Ogohlantirish</span>
+                    {% else %}
+                      <span class="status-badge badge-danger">🔴 Xavf</span>
+                    {% endif %}
+                  </div>
+                  <div class="d-flex align-items-center mb-1">
+                    <span class="fw-bold fs-5 me-1">{{ p.value }}</span>
+                    <span class="text-muted small">{{ p.unit }}</span>
+                  </div>
+                  <p class="small mb-0 {% if p.status == 'danger' %}text-danger fw-bold{% elif p.status == 'warning' %}text-warning-emphasis{% else %}text-success{% endif %}">
+                    {{ p.msg }}
+                  </p>
+                </div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+
+          <!-- MUAMMOLI PARAMETRLAR UCHUN TAVSIYALAR -->
+          {% if result.danger_count > 0 or result.warning_count > 0 %}
+          <div class="card mt-4">
+            <div class="card-header py-2">
+              <h5 class="mb-0" style="font-size:0.9rem;"><i class="fas fa-tools me-2"></i>Tavsiyalar va choralar</h5>
+            </div>
+            <div class="card-body">
               <ul class="mb-0">
-                <li>🌡️ Harorat (C)</li>
-                <li>⚡ Tok kuchi (A)</li>
-                <li>🔌 Kuchlanish (V)</li>
-                <li>📳 Vibratsiya</li>
-                <li>🔗 Sim mexanik holati (%)</li>
-                <li>💨 Atrof muhit namligi (%)</li>
-                <li>⚙️ Quvvati (kW)</li>
+                {% for p in result.params %}
+                  {% if p.status == 'danger' %}
+                  <li class="mb-2">
+                    <span class="badge bg-danger me-1">XAVF</span>
+                    <b>{{ p.icon }} {{ p.name }} ({{ p.value }}{{ p.unit }}):</b> {{ p.msg }}
+                  </li>
+                  {% elif p.status == 'warning' %}
+                  <li class="mb-2">
+                    <span class="badge bg-warning text-dark me-1">OGOHL.</span>
+                    <b>{{ p.icon }} {{ p.name }} ({{ p.value }}{{ p.unit }}):</b> {{ p.msg }}
+                  </li>
+                  {% endif %}
+                {% endfor %}
               </ul>
             </div>
           </div>
+          {% endif %}
+
+          {% else %}
+          <!-- FORMA YUBORILMAGAN -->
+          <div class="card">
+            <div class="card-body text-center py-5">
+              <i class="fas fa-hand-point-left" style="font-size: 4rem; color: var(--primary-light);"></i>
+              <h4 class="mt-3 text-muted">Parametrlarni kiriting va "Prognoz qilish" tugmasini bosing</h4>
+              <p class="text-muted">Tizim har bir parametrni tekshirib, grafik va so'zlar bilan natijani ko'rsatadi</p>
+            </div>
+          </div>
+          {% endif %}
         </div>
       </div>
     </div>
   </main>
 
-  <footer class="bg-dark text-white text-center py-4 mt-5">
-    <p class="mb-1">© 2026 Toshkent Elektr Transsmissiya | Monitoring Tizimi</p>
+  <footer class="text-center py-3 mt-3">
+    <p class="mb-0">&copy; 2026 Toshkent Elektr Transsmissiya | Monitoring Tizimi</p>
   </footer>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+  {% if result %}
+  <script>
+    // @ts-nocheck
+    const paramData = JSON.parse('{{ result.params | tojson | e }}');
+    const names = paramData.map(p => p.icon + ' ' + p.name);
+    const colors = paramData.map(p => p.status === 'normal' ? '#10b981' : p.status === 'warning' ? '#f59e0b' : '#ef4444');
+    const values = paramData.map(p => p.value);
+
+    const barTrace = {
+      x: names,
+      y: values,
+      type: 'bar',
+      marker: {
+        color: colors,
+        line: { color: colors.map(c => c === '#f59e0b' ? '#92400e' : c), width: 2 },
+        cornerradius: 6
+      },
+      text: paramData.map(p => p.value + '' + p.unit),
+      textposition: 'outside',
+      hovertext: paramData.map(p =>
+        '<b>' + p.icon + ' ' + p.name + '</b><br>' +
+        'Qiymati: ' + p.value + p.unit + '<br>' +
+        'Holat: ' + (p.status === 'normal' ? '✅ Normal' : p.status === 'warning' ? '⚠️ Ogohlantirish' : '🔴 XAVF') + '<br>' +
+        p.msg
+      ),
+      hoverinfo: 'text'
+    };
+
+    const layout = {
+      margin: { t: 20, b: 80, l: 60, r: 20 },
+      yaxis: { title: '' },
+      xaxis: { tickangle: 0 },
+      showlegend: false,
+      plot_bgcolor: '#f8f9fa',
+      paper_bgcolor: '#fff',
+      font: { size: 11 }
+    };
+
+    Plotly.newPlot('params-chart', [barTrace], layout, {responsive: true, displayModeBar: false});
+  </script>
+  {% endif %}
 </body>
 </html>
