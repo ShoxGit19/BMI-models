@@ -13,7 +13,12 @@ logger = logging.getLogger(__name__)
 
 logger.info("📊 CSV yuklanmoqda...")
 import os
-if os.path.exists("sensor_data_part1.csv") and os.path.exists("sensor_data_part2.csv"):
+if os.path.exists("data/sensor_data_part1.csv") and os.path.exists("data/sensor_data_part2.csv"):
+    df = pd.concat([
+        pd.read_csv("data/sensor_data_part1.csv"),
+        pd.read_csv("data/sensor_data_part2.csv")
+    ], ignore_index=True)
+elif os.path.exists("sensor_data_part1.csv") and os.path.exists("sensor_data_part2.csv"):
     df = pd.concat([
         pd.read_csv("sensor_data_part1.csv"),
         pd.read_csv("sensor_data_part2.csv")
@@ -80,9 +85,10 @@ logger.info(f"Pipeline accuracy: {score:.3f}")
 # Save trained pipeline — 2 qismga bo'lib saqlash (GitHub 100MB limit)
 model_bytes = pickle.dumps(pipeline)
 half = len(model_bytes) // 2
-with open("hybrid_model_part1.pkl", "wb") as f:
+os.makedirs("models", exist_ok=True)
+with open("models/hybrid_model_part1.pkl", "wb") as f:
     f.write(model_bytes[:half])
-with open("hybrid_model_part2.pkl", "wb") as f:
+with open("models/hybrid_model_part2.pkl", "wb") as f:
     f.write(model_bytes[half:])
 
 logger.info("Pipeline saved to hybrid_model_part1.pkl + hybrid_model_part2.pkl")
