@@ -46,29 +46,47 @@ Ushbu loyiha elektr uzatish liniyalari uchun to'liq monitoring va AI-bashorat ti
 
 ```text
 BMI_models/
-├── app.py                    # Flask asosiy server
-├── train_model.py            # Model o'qitish skripti
-├── config.py                 # Konfiguratsiya (limitlar, portlar)
-├── requirements.txt          # Python kutubxonalar
-├── hybrid_model_part1.pkl    # AI model (1-qism)
-├── hybrid_model_part2.pkl    # AI model (2-qism)
-├── sensor_data_part1.csv     # Dataset (1-qism, 500K qator)
-├── sensor_data_part2.csv     # Dataset (2-qism, 500K qator)
-├── templates/
-│   ├── index.html            # Bosh sahifa (dashboard)
-│   ├── navbar.html           # Navigatsiya paneli
-│   ├── login.html            # Kirish sahifasi
-│   ├── table.html            # Jadval (pagination, sort, filter)
-│   ├── graphs.html           # 8 parametr grafiklari
-│   ├── map.html              # Toshkent sensorlar xaritasi
-│   ├── model.html            # AI model prognozi
-│   ├── forecast.html         # 7 kunlik bashorat
-│   ├── sensor_detail.html    # Sensor tafsilotlari
-│   └── error.html            # 404/500 xato sahifasi
-├── static/
-│   ├── style.css             # Barcha UI stillar
-│   └── bg-grid.png           # Fon rasm
-└── .gitignore
+├── app.py                        # Flask asosiy server
+├── train_model.py                # Model o'qitish skripti
+├── config.py                     # Konfiguratsiya (limitlar, portlar)
+├── requirements.txt              # Python kutubxonalar
+├── README.md
+├── .gitignore
+├── data/                         # Dataset fayllar
+│   ├── sensor_data_part1.csv     # 500K qator (1-qism)
+│   ├── sensor_data_part2.csv     # 500K qator (2-qism)
+│   └── tashkent_weather_cache.json
+├── models/                       # AI model fayllar
+│   ├── hybrid_model_part1.pkl    # Model (1-qism)
+│   └── hybrid_model_part2.pkl    # Model (2-qism)
+├── scripts/                      # Yordamchi skriptlar
+│   ├── analyze_faults.py
+│   ├── check_ranges.py
+│   ├── debug_model.py
+│   ├── fix_csv_faults.py
+│   ├── fix_fault_labels.py
+│   ├── gen_advanced_monitoring.py
+│   ├── regenerate_csv.py
+│   ├── forecast_params_api.py
+│   ├── bmi_model.py
+│   └── test_pages.py
+├── logs/                         # Log fayllar
+│   ├── app.log
+│   └── train.log
+├── templates/                    # HTML sahifalar
+│   ├── index.html
+│   ├── navbar.html
+│   ├── login.html
+│   ├── table.html
+│   ├── graphs.html
+│   ├── map.html
+│   ├── model.html
+│   ├── forecast.html
+│   ├── sensor_detail.html
+│   └── error.html
+└── static/                       # CSS, rasmlar
+    ├── style.css
+    └── bg-grid.png
 ```
 
 ---
@@ -191,7 +209,7 @@ VotingClassifier (soft voting) + StandardScaler pipeline:
 
 ## 📦 Dataset
 
-- **Fayllar**: `sensor_data_part1.csv` + `sensor_data_part2.csv` (GitHub 100MB limit uchun bo'lingan)
+- **Fayllar**: `data/sensor_data_part1.csv` + `data/sensor_data_part2.csv` (GitHub 100MB limit uchun bo'lingan)
 - **Qatorlar**: 1,000,000 (har bir faylda 500,000)
 - **Sensorlar**: 500 ta (S001–S500)
 - **Tumanlar**: 11 ta (Toshkent shahri)
@@ -217,8 +235,8 @@ Natija: 28 ta prognoz nuqtasi (7 kun × 4 marta/kun), kunlik xulosa kartalari, r
 
 | Muammo | Yechim |
 | --- | --- |
-| `sensor_data_part*.csv` topilmadi | Dataset fayllarini loyiha papkasiga qo'ying |
-| `hybrid_model_part*.pkl` topilmadi | `python train_model.py` orqali model o'qiting |
+| `data/sensor_data_part*.csv` topilmadi | Dataset fayllarini `data/` papkasiga qo'ying |
+| `models/hybrid_model_part*.pkl` topilmadi | `python train_model.py` orqali model o'qiting |
 | Port 5000 band | `config.py` da `PORT = 5001` qiling |
 | Prognoz ob-havo xatosi | Internet aloqasini tekshiring (Open-Meteo API) |
 
