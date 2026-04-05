@@ -54,6 +54,7 @@ BMI_models/
 ├── train_model.py                # Model o'qitish skripti
 ├── config.py                     # Konfiguratsiya (limitlar, portlar)
 ├── telegram_bot.py               # Telegram bot (24 buyruq)
+├── users.json                    # Foydalanuvchilar ro'yxati
 ├── requirements.txt              # Python kutubxonalar
 ├── README.md
 ├── .gitignore
@@ -75,7 +76,8 @@ BMI_models/
 │   ├── regenerate_csv.py
 │   ├── forecast_params_api.py
 │   ├── bmi_model.py
-│   └── test_pages.py
+│   ├── test_pages.py
+│   └── Untitled.ipynb
 ├── logs/                         # Log fayllar
 │   ├── app.log
 │   └── train.log
@@ -251,7 +253,7 @@ Bot: [@elektr_monitor_bot](https://t.me/elektr_monitor_bot)
 
 | Buyruq | Tavsifi |
 | --- | --- |
-| `/start` | Bosh menyu (inline tugmalar) |
+| `/start` | Telefon raqam so'rash + Bosh menyu (inline tugmalar) |
 | `/stats` | Umumiy statistika — sensorlar holati, 7 kunlik xavf |
 | `/forecast` | 7 kunlik prognoz + ob-havo |
 | `/districts` | 11 tuman bo'yicha holat |
@@ -278,6 +280,7 @@ Bot: [@elektr_monitor_bot](https://t.me/elektr_monitor_bot)
 
 ### Bot xususiyatlari
 
+- **Telefon raqam to'plash** — birinchi `/start` da foydalanuvchi kontaktini so'rash va saqlash
 - **Inline keyboard** — barcha funksiyalar tugmalar orqali
 - **Auto-alert** — har 1 soatda xavfli sensorlarni tekshirish va obunchilarga xabar
 - **Grafik** — matplotlib orqali sensor grafiklari PNG rasm sifatida

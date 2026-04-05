@@ -173,8 +173,8 @@ DISTRICT_COORDS = {
 
 # ==================== COMMANDS ====================
 
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    register_user(update)
+async def send_main_menu(message):
+    """Asosiy menuni ko'rsatish"""
     keyboard = [
         [InlineKeyboardButton("📊 Statistika", callback_data="stats"),
          InlineKeyboardButton("🔮 Prognoz", callback_data="forecast")],
@@ -193,7 +193,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("ℹ️ Yordam", callback_data="help")]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.message.reply_text(
+    await message.reply_text(
         "⚡ *Elektr Monitoring Bot*\n"
         "━━━━━━━━━━━━━━━━━━━━\n"
         "Toshkent shahar elektr tarmog'i\n"
@@ -202,6 +202,41 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup=reply_markup,
         parse_mode="Markdown"
     )
+
+
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    register_user(update)
+    user = update.effective_user
+    # Telefon raqam borligini tekshirish — faqat 1 marta so'raladi
+    users_list = load_users()
+    user_data = next((u for u in users_list if u["id"] == user.id), None)
+    if not user_data or not user_data.get("phone"):
+        contact_btn = KeyboardButton("📱 Telefon raqamni yuborish", request_contact=True)
+        markup = ReplyKeyboardMarkup([[contact_btn]], resize_keyboard=True, one_time_keyboard=True)
+        await update.message.reply_text(
+            "👋 *Xush kelibsiz!*\n\n"
+            "Davom etish uchun telefon raqamingizni yuboring:\n"
+            "Pastdagi tugmani bosing 👇",
+            reply_markup=markup,
+            parse_mode="Markdown"
+        )
+        return
+    await send_main_menu(update.message)
+
+
+async def contact_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Foydalanuvchi telefon raqamini qabul qilish"""
+    contact = update.message.contact
+    if contact:
+        phone = contact.phone_number
+        user_id = update.effective_user.id
+        save_user_phone(user_id, phone)
+        logger.info(f"📱 Telefon saqlandi: {update.effective_user.first_name} -> {phone}")
+        await update.message.reply_text(
+            "✅ Telefon raqamingiz saqlandi!",
+            reply_markup=ReplyKeyboardRemove()
+        )
+        await send_main_menu(update.message)
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = (
@@ -1534,6 +1569,9 @@ def main():
     app.add_handler(CommandHandler("admin", admin_command))
     app.add_handler(CommandHandler("broadcast", broadcast_command))
     app.add_handler(CommandHandler("map", map_command))
+
+    # Telefon raqam qabul qilish
+    app.add_handler(MessageHandler(filters.CONTACT, contact_handler))
 
     # Callback buttons
     app.add_handler(CallbackQueryHandler(button_callback))
