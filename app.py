@@ -819,5 +819,16 @@ def server_error(error):
 # MAIN
 # ========================
 if __name__ == "__main__":
+    # Telegram botni alohida threadda ishga tushirish
+    import subprocess, threading
+    def run_bot():
+        subprocess.Popen(
+            ["python", "telegram_bot.py"],
+            cwd=os.path.dirname(os.path.abspath(__file__))
+        )
+    bot_thread = threading.Thread(target=run_bot, daemon=True)
+    bot_thread.start()
+    logger.info("🤖 Telegram bot ishga tushirildi")
+
     logger.info("🚀 Server 0.0.0.0:5000 ishga tushmmoqda")
     app.run(host="0.0.0.0", port=5000, debug=True)

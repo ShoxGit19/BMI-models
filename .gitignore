@@ -1,6 +1,5 @@
 __pycache__/
 *.pyc
-hybrid_model.pkl
 sensor_monitoring_1M.csv
 static/bg-grid.png
 debug_model.py
@@ -10,3 +9,8 @@ regenerate_csv.py
 fix_fault_labels.py
 fix_csv_faults.py
 analyze_faults.py
+.env
+.gitignore
+.gitignore
+.gitignore
+.gitignore

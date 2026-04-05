@@ -3,9 +3,10 @@
 ![Python](https://img.shields.io/badge/python-3.12-blue?logo=python)
 ![Flask](https://img.shields.io/badge/Flask-3.0.0-black?logo=flask)
 ![scikit--learn](https://img.shields.io/badge/scikit--learn-1.3.2-orange?logo=scikit-learn)
+![Telegram Bot](https://img.shields.io/badge/Telegram-Bot-blue?logo=telegram)
 ![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)
 
-Toshkent shahri — 500 ta sensor, 11 tuman, real-time monitoring va sunʼiy intellekt asosida nosozliklarni bashoratlash
+Toshkent shahri — 500 ta sensor, 11 tuman, real-time monitoring, Telegram bot va sunʼiy intellekt asosida nosozliklarni bashoratlash
 
 ---
 
@@ -24,6 +25,7 @@ Ushbu loyiha elektr uzatish liniyalari uchun to'liq monitoring va AI-bashorat ti
 - 🔐 **Autentifikatsiya** — Session-based login, role-based access
 - 🌙 **Dark mode** — To'liq qorong'u rejim
 - 📱 **Responsive** — Mobile, tablet, desktop
+- 🤖 **Telegram Bot** — 24 ta buyruq, grafik, auto-alert, export, admin panel
 
 ---
 
@@ -37,6 +39,8 @@ Ushbu loyiha elektr uzatish liniyalari uchun to'liq monitoring va AI-bashorat ti
 | **NumPy** | 1.26.2 | Hisoblashlar |
 | **scikit-learn** | 1.3.2 | ML model (RF + MLP) |
 | **Plotly** | 5.18.0 | Interaktiv grafiklar |
+| **Matplotlib** | 3.9.2 | Telegram bot grafiklari |
+| **python-telegram-bot** | 21.3 | Telegram bot framework |
 | **Bootstrap** | 5.3.0 | UI framework |
 | **Font Awesome** | 6.4.0 | Ikonkalar |
 
@@ -49,9 +53,11 @@ BMI_models/
 ├── app.py                        # Flask asosiy server
 ├── train_model.py                # Model o'qitish skripti
 ├── config.py                     # Konfiguratsiya (limitlar, portlar)
+├── telegram_bot.py               # Telegram bot (24 buyruq)
 ├── requirements.txt              # Python kutubxonalar
 ├── README.md
 ├── .gitignore
+├── .env                          # Bot token (gitignore'da)
 ├── data/                         # Dataset fayllar
 │   ├── sensor_data_part1.csv     # 500K qator (1-qism)
 │   ├── sensor_data_part2.csv     # 500K qator (2-qism)
@@ -109,7 +115,11 @@ pip install -r requirements.txt
 # 4. Model o'qitish (birinchi marta)
 python train_model.py
 
-# 5. Serverni ishga tushirish
+# 5. Telegram bot tokenni sozlash
+# .env faylga qo'shing:
+# TELEGRAM_BOT_TOKEN=your_token_here
+
+# 6. Serverni ishga tushirish (Flask + Telegram bot birga)
 python app.py
 ```
 
@@ -231,6 +241,52 @@ Natija: 28 ta prognoz nuqtasi (7 kun × 4 marta/kun), kunlik xulosa kartalari, r
 
 ---
 
+## 🤖 Telegram Bot
+
+Bot: [@elektr_monitor_bot](https://t.me/elektr_monitor_bot)
+
+`python app.py` ishga tushganda Flask server va Telegram bot birga ishlaydi.
+
+### Buyruqlar (24 ta)
+
+| Buyruq | Tavsifi |
+| --- | --- |
+| `/start` | Bosh menyu (inline tugmalar) |
+| `/stats` | Umumiy statistika — sensorlar holati, 7 kunlik xavf |
+| `/forecast` | 7 kunlik prognoz + ob-havo |
+| `/districts` | 11 tuman bo'yicha holat |
+| `/sensor S001` | Bitta sensor batafsil ma'lumoti |
+| `/model` | AI bashorat parametrlarini kiritish |
+| `/predict 30 7 50 220 0.5 90 60 3` | AI model bashorat (8 parametr) |
+| `/danger` | Muammoli sensorlar ro'yxati |
+| `/top` | Top 10 eng xavfli sensor |
+| `/averages` | O'rtacha qiymatlar (min/max) |
+| `/weather` | Toshkent real ob-havo |
+| `/chart S001` | Sensor grafigi (4 ta: kuchlanish, harorat, chastota, vibratsiya) |
+| `/compare S001 S002` | Ikki sensorni taqqoslash + grafik |
+| `/district_compare Chilonzor Sergeli` | Tumanlarni taqqoslash |
+| `/history S001 7` | Sensor tarixi (holat o'zgarishlari) |
+| `/search Chilonzor` | Tuman bo'yicha sensorlar qidiruv |
+| `/filter danger` | Holat bo'yicha filtr (danger/warn/safe) |
+| `/report` | Umumiy hisobot CSV yuklab olish |
+| `/csv S001` | Sensor ma'lumotini CSV faylda |
+| `/map Chilonzor` | Tuman lokatsiyasi xaritada |
+| `/subscribe` | Auto-alert obuna (har 1 soatda) |
+| `/unsubscribe` | Obunani bekor qilish |
+| `/admin` | Admin panel (faqat @gaybullayeev19) |
+| `/broadcast text` | Obunchilarga xabar yuborish |
+
+### Bot xususiyatlari
+
+- **Inline keyboard** — barcha funksiyalar tugmalar orqali
+- **Auto-alert** — har 1 soatda xavfli sensorlarni tekshirish va obunchilarga xabar
+- **Grafik** — matplotlib orqali sensor grafiklari PNG rasm sifatida
+- **Export** — CSV hisobot va alohida sensor ma'lumotlarini yuklab olish
+- **Admin panel** — bot statistikasi, broadcast, faqat admin uchun
+- **Xarita** — Telegram lokatsiya orqali tuman joylashuvi
+
+---
+
 ## 🐛 Muammolarni hal qilish
 
 | Muammo | Yechim |
@@ -239,6 +295,8 @@ Natija: 28 ta prognoz nuqtasi (7 kun × 4 marta/kun), kunlik xulosa kartalari, r
 | `models/hybrid_model_part*.pkl` topilmadi | `python train_model.py` orqali model o'qiting |
 | Port 5000 band | `config.py` da `PORT = 5001` qiling |
 | Prognoz ob-havo xatosi | Internet aloqasini tekshiring (Open-Meteo API) |
+| Telegram bot ishlamayapti | `.env` faylda `TELEGRAM_BOT_TOKEN` borligini tekshiring |
+| Bot conflict xatosi | Boshqa joyda bot ishlayotgan bo'lishi mumkin, avval to'xtating |
 
 ---
 
@@ -248,4 +306,7 @@ MIT License — Erkin foydalanish
 
 ## 👤 Muallif
 
-**Shohjahon G'aybullayev** — 2026
+**Shohjahon G'aybullayev** — Toshkent, Bekobod 2026
+
+- Telegram: [@gaybullayeev19](https://t.me/gaybullayeev19)
+- GitHub: [ShoxGit19](https://github.com/ShoxGit19)
