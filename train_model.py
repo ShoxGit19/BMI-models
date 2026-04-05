@@ -15,10 +15,11 @@ logger.info("📊 CSV yuklanmoqda...")
 df = pd.read_csv("sensor_monitoring_1M.csv")
 logger.info(f"✅ {len(df)} rows, {len(df.columns)} cols yuklandi")
 
-# 7 features - exact column names expected in CSV
+# 8 features - exact column names expected in CSV
 feature_cols = [
-    "Harorat (C)",
-    "Tok_kuchi (A)",
+    "Muhit_harorat (C)",
+    "Shamol_tezligi (km/h)",
+    "Chastota (Hz)",
     "Kuchlanish (V)",
     "Vibratsiya",
     "Sim_mexanik_holati (%)",

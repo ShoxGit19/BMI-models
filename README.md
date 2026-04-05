@@ -1,154 +1,224 @@
+# ⚡ BMI_MODELS — Elektr Uzatish Monitoring va AI Bashorat Tizimi
 
-# ⚡️ BMI_MODELS — Elektr Monitoring va AI Fault Prediction
-
-![Python](https://img.shields.io/badge/python-3.10%2B-blue?logo=python)
-![Flask](https://img.shields.io/badge/flask-%23000?logo=flask&logoColor=white)
+![Python](https://img.shields.io/badge/python-3.12-blue?logo=python)
+![Flask](https://img.shields.io/badge/Flask-3.0.0-black?logo=flask)
+![scikit--learn](https://img.shields.io/badge/scikit--learn-1.3.2-orange?logo=scikit-learn)
 ![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)
 
-**Real-time sensor monitoring va sunʼiy intellekt asosida nosozliklarni bashoratlash tizimi**
+Toshkent shahri — 500 ta sensor, 11 tuman, real-time monitoring va sunʼiy intellekt asosida nosozliklarni bashoratlash
 
 ---
 
 ## 📋 Loyiha haqida
 
-Ushbu loyiha elektr uzatish liniyalari uchun professional monitoring va xavfsizlikni bashoratlash (AI) tizimini taqdim etadi:
+Ushbu loyiha elektr uzatish liniyalari uchun to'liq monitoring va AI-bashorat tizimini taqdim etadi. Tizim 8 ta parametrni real-time kuzatadi, 3 bosqichli xavf darajasini aniqlaydi va 7 kunlik prognoz beradi.
 
-- 📊 **Dashboard**: KPI va umumiy statistikalar
-- 📈 **Grafiklar**: Tok, kuchlanish, harorat, vibratsiya trendlari
-- 🗺️ **Xarita**: Sensorlar joylashuvi va holati
-- 📋 **Jadval**: Barcha sensorlar bo‘yicha tafsilotlar
-- 🤖 **AI Model**: Hybrid RandomForest + MLP
+### Asosiy imkoniyatlar
+
+- 📊 **Dashboard** — KPI kartalar, statistika, jonli ma'lumotlar, Toshkent xaritasi
+- 📋 **Jadval** — 1M qator ma'lumot, pagination, smart sorting, CSV/PDF eksport
+- 🗺️ **Xarita** — 500 ta sensor joylashuvi va real-time holati (Plotly)
+- 📈 **Grafiklar** — 8 ta parametr bo'yicha trend va tahlil
+- 🤖 **AI Model** — Hybrid VotingClassifier (RandomForest + MLP)
+- 🔮 **7 kunlik prognoz** — Real ob-havo (Open-Meteo API) + AI bashorat
+- 🔐 **Autentifikatsiya** — Session-based login, role-based access
+- 🌙 **Dark mode** — To'liq qorong'u rejim
+- 📱 **Responsive** — Mobile, tablet, desktop
 
 ---
 
 ## 🏗️ Texnologiyalar
 
-- **Backend**: Flask (Python)
-- **Frontend**: Bootstrap 5, Plotly.js
-- **ML**: Scikit-learn (RandomForest, MLP)
-- **Data**: Pandas, NumPy
+| Texnologiya | Versiya | Vazifasi |
+| --- | --- | --- |
+| **Python** | 3.12 | Backend til |
+| **Flask** | 3.0.0 | Web framework |
+| **Pandas** | 2.1.3 | Data processing |
+| **NumPy** | 1.26.2 | Hisoblashlar |
+| **scikit-learn** | 1.3.2 | ML model (RF + MLP) |
+| **Plotly** | 5.18.0 | Interaktiv grafiklar |
+| **Bootstrap** | 5.3.0 | UI framework |
+| **Font Awesome** | 6.4.0 | Ikonkalar |
 
 ---
 
 ## 📁 Loyiha tuzilmasi
 
-```
-BMI model/
-├── app.py                 # Flask asosiy fayl
-├── config.py              # Konfiguratsiya
-├── requirements.txt       # Python kutubxonalar
-├── hybrid_model.pkl       # O‘qitilgan AI model
-├── sensor_monitoring_1M.csv # Sensor maʼlumotlari
-├── templates/             # HTML shablonlar
-│   ├── index.html         # Bosh sahifa
-│   ├── navbar.html        # Navigatsiya
-│   ├── table.html         # Jadval
-│   ├── graphs.html        # Grafiklar
-│   ├── map.html           # Xarita
-│   ├── model.html         # Model prognozi
-│   └── error.html         # Xato sahifasi
+```text
+BMI_models/
+├── app.py                    # Flask asosiy server
+├── train_model.py            # Model o'qitish skripti
+├── config.py                 # Konfiguratsiya (limitlar, portlar)
+├── requirements.txt          # Python kutubxonalar
+├── hybrid_model.pkl          # O'qitilgan AI model
+├── sensor_monitoring_1M.csv  # 1M qator sensor dataset
+├── templates/
+│   ├── index.html            # Bosh sahifa (dashboard)
+│   ├── navbar.html           # Navigatsiya paneli
+│   ├── login.html            # Kirish sahifasi
+│   ├── table.html            # Jadval (pagination, sort, filter)
+│   ├── graphs.html           # 8 parametr grafiklari
+│   ├── map.html              # Toshkent sensorlar xaritasi
+│   ├── model.html            # AI model prognozi
+│   ├── forecast.html         # 7 kunlik bashorat
+│   ├── sensor_detail.html    # Sensor tafsilotlari
+│   └── error.html            # 404/500 xato sahifasi
 ├── static/
-│   └── style.css          # UI stillar
-└── venv/                  # Virtual environment
+│   ├── style.css             # Barcha UI stillar
+│   └── bg-grid.png           # Fon rasm
+└── .gitignore
 ```
 
 ---
 
-## 🚀 O‘rnatish va ishga tushirish
+## 🚀 O'rnatish va ishga tushirish
 
-1. **Virtual environment yaratish**
-	```bash
-	python -m venv venv
-	venv\Scripts\activate   # Windows
-	# yoki
-	source venv/bin/activate # Linux/Mac
-	```
-2. **Paketlarni o‘rnatish**
-	```bash
-	pip install -r requirements.txt
-	```
-3. **Dastur ishga tushirish**
-	```bash
-	python app.py
-	```
-4. Brauzerda oching: [http://localhost:5000](http://localhost:5000)
+```bash
+# 1. Repozitoriyani klonlash
+git clone https://github.com/ShoxGit19/BMI_models.git
+cd BMI_models
+
+# 2. Virtual environment
+python -m venv venv
+venv\Scripts\activate        # Windows
+# source venv/bin/activate   # Linux/Mac
+
+# 3. Paketlarni o'rnatish
+pip install -r requirements.txt
+
+# 4. Model o'qitish (birinchi marta)
+python train_model.py
+
+# 5. Serverni ishga tushirish
+python app.py
+```
+
+Brauzerda oching: [http://localhost:5000](http://localhost:5000)
+
+### Kirish ma'lumotlari
+
+| Foydalanuvchi | Parol | Rol |
+| --- | --- | --- |
+| `admin` | `admin123` | Administrator |
+| `operator` | `operator123` | Operator |
 
 ---
 
-## 🌐 Asosiy sahifalar
+## 🌐 Sahifalar va API
 
-| Yo‘nalish | URL | Tavsifi |
-|-----------|-----|---------|
-| Bosh sahifa | `/` | KPI, umumiy statistika, xarita |
-| Jadval | `/table` | Sensorlar jadvali |
+### Web sahifalar
+
+| Sahifa | URL | Tavsifi |
+| --- | --- | --- |
+| Kirish | `/login` | Autentifikatsiya |
+| Dashboard | `/` | KPI, statistika, xarita, jonli panel |
+| Jadval | `/table` | Sensor ma'lumotlar jadvali |
 | Xarita | `/map` | Sensorlar joylashuvi |
-| Grafiklar | `/graphs` | Trend grafiklar |
+| Grafiklar | `/graphs` | 8 parametr trend grafiklari |
 | Model | `/model` | AI prognoz va test |
+| Prognoz | `/forecast` | 7 kunlik bashorat |
+| Sensor | `/sensor/<id>` | Alohida sensor tafsiloti |
+
+### API Endpoints
+
+| Endpoint | Metod | Tavsifi |
+| --- | --- | --- |
+| `/api/data` | GET | Paginated sensor data (`?page=&per_page=`) |
+| `/api/graph-data` | GET | Grafiklar uchun 1000 ta nuqta |
+| `/api/stats` | GET | Dashboard statistika |
+| `/api/map-data` | GET | Xarita — har bir sensorning oxirgi holati |
+| `/api/forecast` | GET | 7 kunlik prognoz (28 nuqta, har 6 soat) |
+| `/api/forecast-params` | GET | Parametr trendlari (`?param=`) |
+| `/api/sensor/<id>` | GET | Sensor oxirgi 100 o'qish + tarix |
+| `/api/export/csv` | GET | CSV eksport (5000 qator) |
+| `/api/export/pdf` | GET | HTML hisobot |
+| `/api/telegram/test` | POST | Telegram test xabar |
 
 ---
 
-## 🤖 AI Model haqida
+## 🤖 AI Model
 
-**Model turi**: Hybrid Voting Classifier
+### Arxitektura
 
-- Random Forest (100 trees)
-- MLP Neural Network (2 qatlam)
-- Soft voting (weighted average)
-- Natija: Havfsiz/Muammo (0/1)
+VotingClassifier (soft voting) + StandardScaler pipeline:
+
+| Komponent | Konfiguratsiya |
+| --- | --- |
+| **RandomForestClassifier** | 100 trees, `n_jobs=-1` |
+| **MLPClassifier** | 2 qatlam (100, 50), max_iter=300 |
+| **Preprocessing** | StandardScaler |
+| **Training sample** | 100,000 qator, 80/20 split |
+
+### 8 ta kirish parametri (features)
+
+| # | Parametr | Birlik |
+| --- | --- | --- |
+| 1 | Muhit harorat | °C |
+| 2 | Shamol tezligi | km/h |
+| 3 | Chastota | Hz |
+| 4 | Kuchlanish | V |
+| 5 | Vibratsiya | — |
+| 6 | Sim mexanik holati | % |
+| 7 | Namlik | % |
+| 8 | Quvvat | kW |
+
+### Natija — 3 bosqichli klassifikatsiya
+
+| Kod | Holat | Rang |
+| --- | --- | --- |
+| 0 | ✅ Havfsiz (Normal) | Yashil |
+| 1 | ⚠️ Ogohlantirish (Warning) | Sariq |
+| 2 | ⛔ Muammo (Danger) | Qizil |
 
 ---
 
 ## 📊 Sensor parametr limitlari
 
-| Parametr     | Min  | Max  | Birlik |
-|--------------|------|------|--------|
-| Tok          | 0    | 20   | A      |
-| Kuchlanish   | 210  | 230  | V      |
-| Harorat      | 0    | 50   | °C     |
-| Vibratsiya   | 0    | 1.5  | -      |
+| Parametr | Normal | Ogohlantirish | Xavfli |
+| --- | --- | --- | --- |
+| Kuchlanish (V) | 210–230 | 200–210 / 230–240 | <200 / >240 |
+| Chastota (Hz) | 49.5–50.5 | 49.0–49.5 / 50.5–51.0 | <49 / >51 |
+| Harorat (°C) | <40 | 40–45 | >45 |
+| Shamol (km/h) | <15 | 15–25 | >25 |
+| Vibratsiya | <1.0 | 1.0–1.5 | >1.5 |
+| Sim holati (%) | >85 | 75–85 | <75 |
+| Namlik (%) | 35–85 | 30–35 / 85–90 | <30 / >90 |
+| Quvvat (kW) | ≤5.0 | 5.0–5.5 | >5.5 |
 
 ---
 
-## 🛠️ API Endpoints
+## 📦 Dataset
 
-| Endpoint           | Metod      | Tavsifi                  |
-|--------------------|------------|--------------------------|
-| `/`                | GET        | Bosh sahifa              |
-| `/table`           | GET        | Jadval sahifasi          |
-
-| `/graphs`          | GET        | Grafiklar sahifasi       |
-| `/map`             | GET        | Xarita sahifasi          |
-| `/model`           | GET, POST  | Model sahifasi           |
-| `/api/data`        | GET        | Barcha sensor maʼlumotlari|
-| `/api/map-data`    | GET        | Xarita uchun maʼlumotlar |
-| `/api/stats`       | GET        | Statistika               |
-| `/api/forecast`    | GET        | 24 soatlik xavf prognozi |
-| `/api/forecast-params` | GET    | Trend va parametrlar     |
+- **Fayl**: `sensor_monitoring_1M.csv`
+- **Qatorlar**: 1,000,000
+- **Sensorlar**: 500 ta (S001–S500)
+- **Tumanlar**: 11 ta (Toshkent shahri)
+- **Vaqt oralig'i**: 2024-01-01 — 2026-04-05
+- **Ustunlar**: Timestamp, SensorID, District, Latitude, Longitude, 8 parametr, Fault
 
 ---
 
+## 🔮 7 kunlik prognoz
 
-## 🎨 Dizayn
+Prognoz tizimi quyidagilarni birlashtiradi:
 
-- **Rang sxemasi**: Professional ko‘k (Primary: #004a9f)
-- **Shrift**: Segoe UI, Tahoma, Geneva
-- **Responsive**: Mobile, Tablet, Desktop
-- **Animatsiyalar**: Smooth hover va transition
+1. **Real ob-havo ma'lumotlari** — Open-Meteo API (Toshkent: 41.31°N, 69.28°E)
+2. **Stoxastik simulyatsiya** — Elektr parametrlarning o'rtachaga qaytish modeli
+3. **AI bashorat** — Har bir 6 soatlik nuqta uchun model prognozi
+4. **Peak-hour effektlari** — Yuqori yuklanish soatlari (8–12, 18–22)
 
----
-
-## 🐛 Troubleshooting
-
-- **Data file not found**: `sensor_monitoring_1M.csv` fayli mavjudligini tekshiring
-- **Model file not found**: `hybrid_model.pkl` birinchi ishga tushganda avtomatik yaratiladi
-- **Port busy**: `app.py`da portni o‘zgartiring: `app.run(port=5001)`
+Natija: 28 ta prognoz nuqtasi (7 kun × 4 marta/kun), kunlik xulosa kartalari, risk grafigi va batafsil jadval.
 
 ---
 
-## 📧 Hissa qo‘shish va bog‘lanish
+## 🐛 Muammolarni hal qilish
 
-- Pull request va issue’lar ochiq
-- Taklif va savollar uchun: [GitHub Issues](https://github.com/ShoxGit19/BMI_models/issues)
+| Muammo | Yechim |
+| --- | --- |
+| `sensor_monitoring_1M.csv` topilmadi | Dataset faylini loyiha papkasiga qo'ying |
+| `hybrid_model.pkl` topilmadi | `python train_model.py` orqali model o'qiting |
+| Port 5000 band | `config.py` da `PORT = 5001` qiling |
+| Prognoz ob-havo xatosi | Internet aloqasini tekshiring (Open-Meteo API) |
 
 ---
 
@@ -158,8 +228,4 @@ MIT License — Erkin foydalanish
 
 ## 👤 Muallif
 
-Ucer — 2026
-
----
-
-**Izoh**: Tizim barcha maʼlumotlarni real-time yangilaydi. API xatolarida JSON formatda xabar qaytariladi.
+**Shohjahon G'aybullayev** — 2026

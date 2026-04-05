@@ -12,26 +12,37 @@
 <body>
   {% include 'navbar.html' %}
 
-  <header class="bg-gradient-primary text-white py-5 shadow-sm">
-    <div class="container">
-      <h1 class="fw-bold mb-2">Trend Grafiklari</h1>
-      <p class="lead mb-0">Sensor ma'lumotlarining o'zgarishi</p>
+  <section class="page-hero">
+    <div class="container-fluid px-4">
+      <div class="d-flex align-items-center justify-content-between">
+        <div>
+          <h1><i class="fas fa-chart-line me-2"></i>Trend Grafiklari</h1>
+          <p class="mb-0">Sensor ma'lumotlarining o'zgarishi</p>
+        </div>
+        <a href="/" class="btn-back"><i class="fas fa-arrow-left"></i> Orqaga</a>
+      </div>
     </div>
-  </header>
+  </section>
 
-  <main class="py-5">
+  <!-- Loading spinner -->
+  <div id="graphs-loading" class="text-center py-5">
+    <div class="spinner-border" style="width:3rem;height:3rem;color:#2c5364;" role="status"></div>
+    <p class="mt-3 text-muted">Grafiklar yuklanmoqda...</p>
+  </div>
+
+  <main class="py-4" id="graphs-main" style="display:none;">
     <div class="container-fluid px-4">
       <!-- Filter Controls -->
       <div class="row g-3 mb-4">
         <div class="col-lg-12">
-          <div class="card shadow-sm border-0">
-            <div class="card-header bg-secondary text-white">
-              <h6 class="mb-0"><i class="fas fa-filter me-2"></i>Vaqt oralig'ini tanlang</h6>
+          <div class="card">
+            <div class="card-header">
+              <h5 class="mb-0"><i class="fas fa-filter me-2"></i>Vaqt oralig'ini tanlang</h5>
             </div>
             <div class="card-body">
-              <div class="row g-3">
+              <div class="row g-3 align-items-end">
                 <div class="col-md-2">
-                  <label class="form-label small fw-bold">Oy</label>
+                  <label class="form-label">Oy</label>
                   <select id="monthSelect" class="form-select form-select-sm">
                     <option value="">Barcha</option>
                     <option value="01">Yanvar (01)</option>
@@ -49,27 +60,26 @@
                   </select>
                 </div>
                 <div class="col-md-2">
-                  <label class="form-label small fw-bold">Yil</label>
+                  <label class="form-label">Yil</label>
                   <select id="yearSelect" class="form-select form-select-sm">
                     <option value="">Barcha</option>
-                    <option value="2023">2023</option>
                     <option value="2024">2024</option>
                     <option value="2025">2025</option>
                     <option value="2026">2026</option>
                   </select>
                 </div>
                 <div class="col-md-3">
-                  <label class="form-label small fw-bold">Sana</label>
+                  <label class="form-label">Sana</label>
                   <input type="date" id="dateSelect" class="form-control form-control-sm">
                 </div>
-                <div class="col-md-5 d-flex align-items-end gap-2">
+                <div class="col-md-5 d-flex gap-2">
                   <button onclick="filterGraphs()" class="btn btn-primary btn-sm">
                     <i class="fas fa-filter me-1"></i>Filtrlash
                   </button>
-                  <button onclick="resetFilters()" class="btn btn-secondary btn-sm">
+                  <button onclick="resetFilters()" class="btn btn-outline-primary btn-sm">
                     <i class="fas fa-redo me-1"></i>Asliga qaytarish
                   </button>
-                  <span id="filterInfo" class="text-muted small ms-2"></span>
+                  <span id="filterInfo" class="text-muted small ms-2 d-flex align-items-center"></span>
                 </div>
               </div>
             </div>
@@ -80,45 +90,89 @@
       <!-- Charts -->
       <div class="row g-4">
         <div class="col-lg-6">
-          <div class="card shadow-sm border-0">
-            <div class="card-header bg-success text-white">
-              <h5 class="mb-0"><i class="fas fa-bolt me-2"></i>Tok (A) Trendi</h5>
+          <div class="card">
+            <div class="card-header">
+              <h5 class="mb-0"><i class="fas fa-wave-square me-2"></i>Chastota (Hz) Trendi</h5>
             </div>
             <div class="card-body p-3">
-              <div id="current-chart" style="height: 400px;"></div>
+              <div id="current-chart" style="height: 380px;"></div>
             </div>
           </div>
         </div>
 
         <div class="col-lg-6">
-          <div class="card shadow-sm border-0">
-            <div class="card-header bg-info text-white">
-              <h5 class="mb-0"><i class="fas fa-plug me-2"></i>Kuchlanish (V) Trendi</h5>
+          <div class="card">
+            <div class="card-header">
+              <h5 class="mb-0"><i class="fas fa-bolt me-2"></i>Kuchlanish (V) Trendi</h5>
             </div>
             <div class="card-body p-3">
-              <div id="voltage-chart" style="height: 400px;"></div>
+              <div id="voltage-chart" style="height: 380px;"></div>
             </div>
           </div>
         </div>
 
         <div class="col-lg-6">
-          <div class="card shadow-sm border-0">
-            <div class="card-header bg-warning text-white">
-              <h5 class="mb-0"><i class="fas fa-circle me-2"></i>Quvvat (kW) Trendi</h5>
+          <div class="card">
+            <div class="card-header">
+              <h5 class="mb-0"><i class="fas fa-gear me-2"></i>Quvvat (kW) Trendi</h5>
             </div>
             <div class="card-body p-3">
-              <div id="power-chart" style="height: 400px;"></div>
+              <div id="power-chart" style="height: 380px;"></div>
             </div>
           </div>
         </div>
 
         <div class="col-lg-6">
-          <div class="card shadow-sm border-0">
-            <div class="card-header bg-danger text-white">
-              <h5 class="mb-0"><i class="fas fa-wave-square me-2"></i>Vibratsiya Trendi</h5>
+          <div class="card">
+            <div class="card-header">
+              <h5 class="mb-0"><i class="fas fa-vibrate me-2"></i>Vibratsiya Trendi</h5>
             </div>
             <div class="card-body p-3">
-              <div id="vib-chart" style="height: 400px;"></div>
+              <div id="vib-chart" style="height: 380px;"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-lg-6">
+          <div class="card">
+            <div class="card-header">
+              <h5 class="mb-0"><i class="fas fa-temperature-half me-2"></i>Muhit Harorat (°C) Trendi</h5>
+            </div>
+            <div class="card-body p-3">
+              <div id="harorat-chart" style="height: 380px;"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-lg-6">
+          <div class="card">
+            <div class="card-header">
+              <h5 class="mb-0"><i class="fas fa-link me-2"></i>Sim Mexanik Holati (%) Trendi</h5>
+            </div>
+            <div class="card-body p-3">
+              <div id="sim-chart" style="height: 380px;"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-lg-6">
+          <div class="card">
+            <div class="card-header">
+              <h5 class="mb-0"><i class="fas fa-droplet me-2"></i>Namlik (%) Trendi</h5>
+            </div>
+            <div class="card-body p-3">
+              <div id="namlik-chart" style="height: 380px;"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-lg-6">
+          <div class="card">
+            <div class="card-header">
+              <h5 class="mb-0"><i class="fas fa-wind me-2"></i>Shamol Tezligi (km/h) Trendi</h5>
+            </div>
+            <div class="card-body p-3">
+              <div id="shamol-chart" style="height: 380px;"></div>
             </div>
           </div>
         </div>
@@ -126,8 +180,8 @@
     </div>
   </main>
 
-  <footer class="bg-dark text-white text-center py-4 mt-5">
-    <p>© 2026 Elektr Uzatish Monitoringi</p>
+  <footer class="text-center py-3 mt-3">
+    <p class="mb-0">© 2026 Toshkent Elektr Transsmissiya | Monitoring Tizimi</p>
   </footer>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -136,15 +190,22 @@
 
     async function loadData() {
       try {
-        const response = await fetch('/api/data');
+        const response = await fetch('/api/graph-data');
         allData = await response.json();
 
         if (!allData || allData.length === 0) {
           console.error('Hech ma\'lumot yo\'q');
+          document.getElementById('graphs-loading').innerHTML = '<div class="alert alert-warning m-4">Ma\'lumot topilmadi</div>';
           return;
         }
 
         console.log('✅ Yuklandi:', allData.length, 'qator');
+
+        // AVVAL konteyerni ko'rsatamiz (Plotly o'lcham hisoblay olishi uchun)
+        document.getElementById('graphs-loading').style.display = 'none';
+        document.getElementById('graphs-main').style.display = 'block';
+
+        // Keyin grafiklarni chizamiz
         filterGraphs();
       } catch (error) {
         console.error('Xato:', error);
@@ -198,7 +259,7 @@
 
       // Extract data
       const timestamps = filtered.map(d => d.Timestamp || '');
-      const currents = filtered.map(d => d.Tok || 0);
+      const currents = filtered.map(d => d.Chastota || 0);
       const voltages = filtered.map(d => d.Kuchlanish || 0);
       const powers = filtered.map(d => d.Quvvat || 0);
       const vibs = filtered.map(d => d.Vibratsiya || 0);
@@ -209,7 +270,7 @@
         margin: { l: 40, r: 20, t: 20, b: 40 }
       };
 
-      // Tok (A) chart
+      // Chastota (Hz) chart
       const currentTrace = {
         x: timestamps,
         y: currents,
@@ -219,7 +280,11 @@
         fill: 'tozeroy',
         fillcolor: 'rgba(40, 167, 69, 0.2)'
       };
-      Plotly.newPlot('current-chart', [currentTrace], { title: '' }, config);
+      Plotly.newPlot('current-chart', [currentTrace], {
+        title: '',
+        yaxis: { range: [47, 53], title: 'Hz' },
+        xaxis: { title: 'Vaqt' }
+      }, config);
 
       // Kuchlanish (V) chart
       const voltageTrace = {
@@ -231,7 +296,11 @@
         fill: 'tozeroy',
         fillcolor: 'rgba(23, 162, 184, 0.2)'
       };
-      Plotly.newPlot('voltage-chart', [voltageTrace], { title: '' }, config);
+      Plotly.newPlot('voltage-chart', [voltageTrace], {
+        title: '',
+        yaxis: { range: [180, 265], title: 'V' },
+        xaxis: { title: 'Vaqt' }
+      }, config);
 
       // Quvvat (kW) chart
       const powerTrace = {
@@ -243,7 +312,11 @@
         fill: 'tozeroy',
         fillcolor: 'rgba(255, 193, 7, 0.2)'
       };
-      Plotly.newPlot('power-chart', [powerTrace], { title: '' }, config);
+      Plotly.newPlot('power-chart', [powerTrace], {
+        title: '',
+        yaxis: { range: [0, 9], title: 'kW' },
+        xaxis: { title: 'Vaqt' }
+      }, config);
 
       // Vibratsiya chart
       const vibTrace = {
@@ -255,7 +328,75 @@
         fill: 'tozeroy',
         fillcolor: 'rgba(220, 53, 69, 0.2)'
       };
-      Plotly.newPlot('vib-chart', [vibTrace], { title: '' }, config);
+      Plotly.newPlot('vib-chart', [vibTrace], {
+        title: '',
+        yaxis: { range: [0, 3.5], title: '' },
+        xaxis: { title: 'Vaqt' }
+      }, config);
+
+      // Harorat chart
+      const haroratTrace = {
+        x: timestamps,
+        y: filtered.map(d => d.Harorat || 0),
+        type: 'scatter',
+        mode: 'lines',
+        line: { color: '#e74c3c', width: 2 },
+        fill: 'tozeroy',
+        fillcolor: 'rgba(231,76,60,0.2)'
+      };
+      Plotly.newPlot('harorat-chart', [haroratTrace], {
+        title: '',
+        yaxis: { range: [-10, 60], title: '°C' },
+        xaxis: { title: 'Vaqt' }
+      }, config);
+
+      // Sim holati chart
+      const simTrace = {
+        x: timestamps,
+        y: filtered.map(d => d.Sim_holati || 0),
+        type: 'scatter',
+        mode: 'lines',
+        line: { color: '#27ae60', width: 2 },
+        fill: 'tozeroy',
+        fillcolor: 'rgba(39,174,96,0.2)'
+      };
+      Plotly.newPlot('sim-chart', [simTrace], {
+        title: '',
+        yaxis: { range: [40, 105], title: '%' },
+        xaxis: { title: 'Vaqt' }
+      }, config);
+
+      // Namlik chart
+      const namlikTrace = {
+        x: timestamps,
+        y: filtered.map(d => d.Humidity || 0),
+        type: 'scatter',
+        mode: 'lines',
+        line: { color: '#3498db', width: 2 },
+        fill: 'tozeroy',
+        fillcolor: 'rgba(52,152,219,0.2)'
+      };
+      Plotly.newPlot('namlik-chart', [namlikTrace], {
+        title: '',
+        yaxis: { range: [10, 100], title: '%' },
+        xaxis: { title: 'Vaqt' }
+      }, config);
+
+      // Shamol chart
+      const shamolTrace = {
+        x: timestamps,
+        y: filtered.map(d => d.Shamol || 0),
+        type: 'scatter',
+        mode: 'lines',
+        line: { color: '#8e44ad', width: 2 },
+        fill: 'tozeroy',
+        fillcolor: 'rgba(142,68,173,0.2)'
+      };
+      Plotly.newPlot('shamol-chart', [shamolTrace], {
+        title: '',
+        yaxis: { range: [0, 40], title: 'km/h' },
+        xaxis: { title: 'Vaqt' }
+      }, config);
     }
 
     function resetFilters() {

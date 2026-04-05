@@ -1,34 +1,104 @@
-<nav class="navbar navbar-expand-lg navbar-dark bg-primary sticky-top shadow-lg">
+<nav class="navbar navbar-expand-lg navbar-dark sticky-top" style="background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%); box-shadow: 0 2px 12px rgba(0,0,0,0.3); padding: 0.5rem 0;">
   <div class="container-fluid px-4">
-    <a class="navbar-brand fw-bold d-flex align-items-center" href="/">
-      <span class="me-2" style="font-size: 1.8rem;">⚡</span>
+    <a class="navbar-brand fw-bold d-flex align-items-center" href="/" style="font-size:1.2rem; letter-spacing:0.5px;">
+      <span class="me-2" style="font-size: 1.5rem;">⚡</span>
       <span>Monitoring</span>
     </a>
-    <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
+    <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse"
             data-bs-target="#navbarNav" aria-controls="navbarNav">
       <span class="navbar-toggler-icon"></span>
     </button>
     <div class="collapse navbar-collapse" id="navbarNav">
-      <ul class="navbar-nav ms-auto gap-2">
+      <ul class="navbar-nav ms-auto gap-1">
         <li class="nav-item">
-          <a class="nav-link {% if request.path == '/' %}active{% endif %}" href="/">🏠 Bosh sahifa</a>
+          <a class="nav-link px-3 py-2 rounded-pill {% if request.path == '/' %}active{% endif %}" href="/" style="font-size:0.88rem;{% if request.path == '/' %}background:rgba(255,255,255,0.12);{% endif %}">
+            <i class="fas fa-home me-1"></i> Bosh sahifa
+          </a>
         </li>
         <li class="nav-item">
-          <a class="nav-link {% if request.path.startswith('/table') %}active{% endif %}" href="/table">📋 Jadval</a>
+          <a class="nav-link px-3 py-2 rounded-pill {% if request.path.startswith('/table') %}active{% endif %}" href="/table" style="font-size:0.88rem;{% if request.path.startswith('/table') %}background:rgba(255,255,255,0.12);{% endif %}">
+            <i class="fas fa-table me-1"></i> Jadval
+          </a>
         </li>
         <li class="nav-item">
-          <a class="nav-link {% if request.path.startswith('/map') %}active{% endif %}" href="/map">🗺️ Xarita</a>
+          <a class="nav-link px-3 py-2 rounded-pill {% if request.path.startswith('/map') %}active{% endif %}" href="/map" style="font-size:0.88rem;{% if request.path.startswith('/map') %}background:rgba(255,255,255,0.12);{% endif %}">
+            <i class="fas fa-map-location-dot me-1"></i> Xarita
+          </a>
         </li>
         <li class="nav-item">
-          <a class="nav-link {% if request.path.startswith('/graphs') %}active{% endif %}" href="/graphs">📈 Grafiklar</a>
+          <a class="nav-link px-3 py-2 rounded-pill {% if request.path.startswith('/graphs') %}active{% endif %}" href="/graphs" style="font-size:0.88rem;{% if request.path.startswith('/graphs') %}background:rgba(255,255,255,0.12);{% endif %}">
+            <i class="fas fa-chart-line me-1"></i> Grafiklar
+          </a>
         </li>
         <li class="nav-item">
-          <a class="nav-link {% if request.path.startswith('/model') %}active{% endif %}" href="/model">🤖 Model</a>
+          <a class="nav-link px-3 py-2 rounded-pill {% if request.path.startswith('/model') %}active{% endif %}" href="/model" style="font-size:0.88rem;{% if request.path.startswith('/model') %}background:rgba(255,255,255,0.12);{% endif %}">
+            <i class="fas fa-robot me-1"></i> Model
+          </a>
         </li>
         <li class="nav-item">
-          <a class="nav-link {% if request.path.startswith('/forecast') %}active{% endif %}" href="/forecast">📈 Prognoz</a>
+          <a class="nav-link px-3 py-2 rounded-pill {% if request.path.startswith('/forecast') %}active{% endif %}" href="/forecast" style="font-size:0.88rem;{% if request.path.startswith('/forecast') %}background:rgba(255,255,255,0.12);{% endif %}">
+            <i class="fas fa-chart-area me-1"></i> Prognoz
+          </a>
         </li>
+        <!-- Dark/Light mode -->
+        <li class="nav-item ms-2">
+          <button class="nav-link px-3 py-2 rounded-pill border-0" onclick="toggleTheme()" style="font-size:0.88rem;cursor:pointer;background:rgba(255,255,255,0.06);" title="Rejim o'zgartirish" id="theme-toggle-btn">
+            <i class="fas fa-moon" id="theme-icon"></i>
+          </button>
+        </li>
+        <!-- User menu -->
+        {% if session.get('user') %}
+        <li class="nav-item dropdown ms-2">
+          <a class="nav-link dropdown-toggle px-3 py-2 rounded-pill" href="#" data-bs-toggle="dropdown" style="font-size:0.88rem;background:rgba(255,255,255,0.06);">
+            <i class="fas fa-user-circle me-1"></i> {{ session.user }}
+          </a>
+          <ul class="dropdown-menu dropdown-menu-end" style="border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,0.15);">
+            <li><a class="dropdown-item" href="/api/export/pdf"><i class="fas fa-file-pdf me-2 text-danger"></i>PDF hisobot</a></li>
+            <li><a class="dropdown-item" href="/api/export/csv"><i class="fas fa-file-csv me-2 text-success"></i>CSV eksport</a></li>
+            <li><hr class="dropdown-divider"></li>
+            <li><a class="dropdown-item text-danger" href="/logout"><i class="fas fa-sign-out-alt me-2"></i>Chiqish</a></li>
+          </ul>
+        </li>
+        {% endif %}
       </ul>
     </div>
   </div>
 </nav>
+
+<!-- Notification toast container -->
+<div id="notification-container" style="position:fixed;top:80px;right:20px;z-index:9999;"></div>
+
+<!-- Dark/Light mode script -->
+<script>
+function toggleTheme() {
+  const body = document.body;
+  const isDark = body.classList.toggle('dark-mode');
+  localStorage.setItem('theme', isDark ? 'dark' : 'light');
+  const icon = document.getElementById('theme-icon');
+  icon.className = isDark ? 'fas fa-sun' : 'fas fa-moon';
+}
+// Apply saved theme
+(function() {
+  if (localStorage.getItem('theme') === 'dark') {
+    document.body.classList.add('dark-mode');
+    const icon = document.getElementById('theme-icon');
+    if (icon) icon.className = 'fas fa-sun';
+  }
+})();
+
+// Notification system
+function showNotification(message, type) {
+  const container = document.getElementById('notification-container');
+  if (!container) return;
+  const toast = document.createElement('div');
+  const colors = {danger: '#ef4444', warning: '#f59e0b', success: '#10b981', info: '#3b82f6'};
+  const icons = {danger: 'fa-exclamation-circle', warning: 'fa-exclamation-triangle', success: 'fa-check-circle', info: 'fa-info-circle'};
+  toast.style.cssText = `background:#fff;border-left:4px solid ${colors[type]||'#3b82f6'};border-radius:12px;padding:12px 16px;margin-bottom:8px;box-shadow:0 4px 20px rgba(0,0,0,0.15);display:flex;align-items:center;gap:10px;min-width:300px;animation:slideInRight 0.3s ease;font-size:0.88rem;`;
+  toast.innerHTML = `<i class="fas ${icons[type]||'fa-info-circle'}" style="color:${colors[type]||'#3b82f6'};font-size:1.2rem;"></i><span>${message}</span>`;
+  container.appendChild(toast);
+  setTimeout(() => { toast.style.opacity = '0'; toast.style.transition = 'opacity 0.3s'; setTimeout(() => toast.remove(), 300); }, 5000);
+}
+</script>
+<style>
+@keyframes slideInRight { from { opacity:0; transform:translateX(50px); } to { opacity:1; transform:translateX(0); } }
+</style>

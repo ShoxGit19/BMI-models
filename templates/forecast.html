@@ -4,140 +4,606 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Kelajak prognozi</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
   <link rel="stylesheet" href="/static/style.css">
   <script src="https://cdn.plot.ly/plotly-2.26.0.min.js"></script>
+  <style>
+    .kpi-card {
+      border-radius: 16px;
+      border: 1px solid rgba(0,0,0,0.04);
+      transition: transform 0.2s, box-shadow 0.2s;
+      overflow: hidden;
+      background: #fff;
+    }
+    .kpi-card:hover { transform: translateY(-4px); box-shadow: 0 8px 25px rgba(0,0,0,0.1); }
+    .kpi-card .kpi-icon { font-size: 1.6rem; margin-bottom: 6px; }
+    .kpi-card .kpi-value { font-size: 2rem; font-weight: 800; line-height: 1.1; }
+    .kpi-card .kpi-label { font-size: 0.78rem; opacity: 0.55; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .kpi-blue { border-left: 4px solid var(--accent-blue); }
+    .kpi-blue .kpi-icon { color: var(--accent-blue); }
+    .kpi-blue .kpi-value { color: var(--accent-blue); }
+    .kpi-red { border-left: 4px solid var(--accent-red); }
+    .kpi-red .kpi-icon { color: var(--accent-red); }
+    .kpi-red .kpi-value { color: var(--accent-red); }
+    .kpi-amber { border-left: 4px solid var(--accent-amber); }
+    .kpi-amber .kpi-icon { color: var(--accent-amber); }
+    .kpi-amber .kpi-value { color: var(--accent-amber); }
+    .kpi-green { border-left: 4px solid var(--accent-green); }
+    .kpi-green .kpi-icon { color: var(--accent-green); }
+    .kpi-green .kpi-value { color: var(--accent-green); }
+    .kpi-purple { border-left: 4px solid var(--accent-purple); }
+    .kpi-purple .kpi-icon { color: var(--accent-purple); }
+    .kpi-purple .kpi-value { color: var(--accent-purple); }
+
+    .day-card {
+      border-radius: 16px;
+      border: 1px solid #e9ecef;
+      transition: transform 0.15s, box-shadow 0.15s;
+      cursor: default;
+      background: #fff;
+    }
+    .day-card:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.08); }
+    .day-card .day-name { font-weight: 700; font-size: 0.95rem; }
+    .day-card .day-date { font-size: 0.8rem; opacity: 0.5; }
+    .day-card .day-status { font-size: 1.6rem; margin: 6px 0; }
+    .day-card .day-info { font-size: 0.78rem; }
+    .day-safe { border-bottom: 3px solid var(--accent-green); }
+    .day-warn { border-bottom: 3px solid var(--accent-amber); }
+    .day-danger { border-bottom: 3px solid var(--accent-red); }
+
+    .chart-card {
+      border-radius: 16px;
+      border: 1px solid rgba(0,0,0,0.04);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+      background: #fff;
+    }
+    .chart-card .card-header {
+      border-radius: 16px 16px 0 0;
+      border-bottom: 1px solid #f1f3f5;
+      padding: 14px 20px;
+      background: #fff;
+    }
+
+    .param-btn { border-radius: 50px; font-size: 0.82rem; padding: 6px 16px; margin: 3px; transition: all 0.2s; font-weight: 600; }
+    .param-btn.active { transform: scale(1.05); box-shadow: 0 3px 10px rgba(0,0,0,0.15); }
+
+    .forecast-table-container { max-height: 500px; overflow-y: auto; }
+    .forecast-table-container thead { position: sticky; top: 0; z-index: 1; }
+
+    .timeline-strip {
+      display: flex; gap: 2px; border-radius: 8px; overflow: hidden;
+      height: 36px; margin-bottom: 8px;
+    }
+    .timeline-strip .ts-block {
+      flex: 1; position: relative; transition: opacity 0.2s;
+    }
+    .timeline-strip .ts-block:hover { opacity: 0.75; }
+    .ts-safe { background: var(--accent-green); }
+    .ts-warn { background: var(--accent-amber); }
+    .ts-danger { background: var(--accent-red); }
+  </style>
 </head>
 <body>
-  <main class="py-5">
+  {% include 'navbar.html' %}
+
+  <section class="page-hero">
     <div class="container-fluid px-4">
-      <div class="row mb-4">
-        <div class="col-12">
-          <div class="card shadow-sm border-0 mb-4">
-            <div class="card-header bg-info text-white">
-              <h5 class="mb-0">Kelajak 24 soat uchun xavf prognozi</h5>
-            </div>
-            <div class="card-body">
-              <div id="future-forecast-plot" style="height:350px;"></div>
-            </div>
-          </div>
+      <div class="d-flex align-items-center justify-content-between">
+        <div>
+          <h1><i class="fas fa-chart-area me-2"></i>Kelajak Prognozi</h1>
+          <p class="mb-0">Keyingi 7 kun uchun xavf va parametrlar bashorati</p>
         </div>
-      </div>
-      <div class="row mb-4">
-        <div class="col-12">
-          <div class="card shadow-sm border-0 mb-4">
-            <div class="card-header bg-success text-white">
-              <h5 class="mb-0">So'nggi 7 kun: Parametrlar va xavf</h5>
-            </div>
-            <div class="card-body">
-                <div class="mb-3">
-                  <label for="param-select" class="form-label">Parametrni tanlang:</label>
-                  <select id="param-select" class="form-select" style="max-width:300px; display:inline-block;"></select>
-                </div>
-                <div id="week-params-plot" style="height:400px;"></div>
-                <div class="alert alert-info mt-3" style="max-width:600px;">
-                  <i class="fas fa-info-circle me-2"></i>
-                  Parametrlar qiymatlari fasllar, ob-havo va boshqa tashqi omillarga bog'liq bo'lishi mumkin. Grafikda har 6 soatlik o'rtacha qiymatlar ko'rsatiladi.
-                </div>
-            </div>
-          </div>
-        </div>
+        <a href="/" class="btn-back"><i class="fas fa-arrow-left"></i> Orqaga</a>
       </div>
     </div>
+  </section>
+
+  <!-- Loading spinner -->
+  <div id="forecast-loading" class="text-center py-5">
+    <div class="spinner-border" style="width:3rem;height:3rem;color:#2c5364;" role="status"></div>
+    <p class="mt-3 text-muted">Prognoz yuklanmoqda...</p>
+  </div>
+
+  <main class="py-4" id="forecast-main" style="display:none;">
+    <div class="container-fluid px-4">
+
+      <!-- ===== KPI KARTALAR ===== -->
+      <div class="row g-3 mb-4">
+        <div class="col-xl col-md-4 col-6">
+          <div class="card kpi-card kpi-blue">
+            <div class="card-body text-center py-3">
+              <div class="kpi-icon"><i class="fas fa-calendar-week"></i></div>
+              <div class="kpi-value" id="kpi-total">--</div>
+              <div class="kpi-label">Prognoz nuqtasi</div>
+            </div>
+          </div>
+        </div>
+        <div class="col-xl col-md-4 col-6">
+          <div class="card kpi-card kpi-red">
+            <div class="card-body text-center py-3">
+              <div class="kpi-icon"><i class="fas fa-bolt"></i></div>
+              <div class="kpi-value" id="kpi-danger">--</div>
+              <div class="kpi-label">Muammo</div>
+            </div>
+          </div>
+        </div>
+        <div class="col-xl col-md-4 col-6">
+          <div class="card kpi-card kpi-amber">
+            <div class="card-body text-center py-3">
+              <div class="kpi-icon"><i class="fas fa-exclamation-triangle"></i></div>
+              <div class="kpi-value" id="kpi-warn">--</div>
+              <div class="kpi-label">Ogohlantirish</div>
+            </div>
+          </div>
+        </div>
+        <div class="col-xl col-md-4 col-6">
+          <div class="card kpi-card kpi-green">
+            <div class="card-body text-center py-3">
+              <div class="kpi-icon"><i class="fas fa-shield-alt"></i></div>
+              <div class="kpi-value" id="kpi-safe">--</div>
+              <div class="kpi-label">Havfsiz</div>
+            </div>
+          </div>
+        </div>
+        <div class="col-xl col-md-4 col-6">
+          <div class="card kpi-card kpi-purple">
+            <div class="card-body text-center py-3">
+              <div class="kpi-icon"><i class="fas fa-percentage"></i></div>
+              <div class="kpi-value" id="kpi-risk">--</div>
+              <div class="kpi-label">Xavf darajasi</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== KUNLAR BO'YICHA XULOSA ===== -->
+      <div class="card chart-card mb-4">
+        <div class="card-header bg-white">
+          <h5 class="mb-0 fw-bold"><i class="fas fa-calendar-day me-2" style="color:var(--primary-light)"></i>Kunlik xulosa</h5>
+        </div>
+        <div class="card-body">
+          <div class="row g-3" id="day-cards-row"></div>
+        </div>
+      </div>
+
+      <!-- ===== ASOSIY XAVF GRAFIGI ===== -->
+      <div class="card chart-card mb-4">
+        <div class="card-header bg-white d-flex align-items-center justify-content-between">
+          <h5 class="mb-0 fw-bold"><i class="fas fa-heartbeat me-2" style="color:var(--accent-red)"></i>Xavf prognozi — vaqt bo'yicha</h5>
+          <div>
+            <span class="badge bg-success me-1">Havfsiz</span>
+            <span class="badge bg-warning text-dark me-1">Ogohlantirish</span>
+            <span class="badge bg-danger">Muammo</span>
+          </div>
+        </div>
+        <div class="card-body">
+          <!-- Visual timeline strip -->
+          <div class="timeline-strip" id="timeline-strip"></div>
+          <div id="future-forecast-plot" style="height:350px;"></div>
+        </div>
+      </div>
+
+      <!-- ===== PARAMETRLAR PROGNOZI ===== -->
+      <div class="card chart-card mb-4">
+        <div class="card-header bg-white">
+          <h5 class="mb-0 fw-bold"><i class="fas fa-chart-area me-2" style="color:var(--primary-light)"></i>Parametrlar prognozi — keyingi 7 kun</h5>
+        </div>
+        <div class="card-body">
+          <div class="text-center mb-3" id="future-param-buttons"></div>
+          <div id="future-params-plot" style="height:380px;"></div>
+        </div>
+      </div>
+
+      <!-- ===== TARIXIY PARAMETRLAR ===== -->
+      <div class="card chart-card mb-4">
+        <div class="card-header bg-white">
+          <h5 class="mb-0 fw-bold"><i class="fas fa-history me-2" style="color:var(--accent-green)"></i>So'nggi 7 kun — tarixiy ma'lumotlar</h5>
+        </div>
+        <div class="card-body">
+          <div class="text-center mb-3" id="hist-param-buttons"></div>
+          <div id="week-params-plot" style="height:380px;"></div>
+        </div>
+      </div>
+
+      <!-- ===== JADVAL ===== -->
+      <div class="card chart-card mb-4">
+        <div class="card-header bg-white d-flex align-items-center justify-content-between">
+          <h5 class="mb-0 fw-bold"><i class="fas fa-table me-2" style="color:var(--accent-cyan)"></i>Batafsil prognoz jadvali</h5>
+          <small class="text-muted">Har 6 soatda · 28 nuqta</small>
+        </div>
+        <div class="card-body p-0">
+          <div class="forecast-table-container">
+            <table class="table table-hover mb-0" id="forecast-table">
+              <thead>
+                <tr style="background:linear-gradient(135deg,#0f2027,#2c5364);color:#fff;">
+                  <th class="ps-3">Sana/Vaqt</th>
+                  <th><i class="fas fa-temperature-half me-1"></i>Harorat</th>
+                  <th><i class="fas fa-wind me-1"></i>Shamol</th>
+                  <th><i class="fas fa-wave-square me-1"></i>Chastota</th>
+                  <th><i class="fas fa-bolt me-1"></i>Kuchlanish</th>
+                  <th><i class="fas fa-vibrate me-1"></i>Vibratsiya</th>
+                  <th><i class="fas fa-link me-1"></i>Sim holati</th>
+                  <th><i class="fas fa-droplet me-1"></i>Namlik</th>
+                  <th><i class="fas fa-gear me-1"></i>Quvvat</th>
+                  <th class="pe-3">Holat</th>
+                </tr>
+              </thead>
+              <tbody id="forecast-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </div>
   </main>
+
+  <footer class="text-center py-3 mt-3">
+    <p class="mb-0">© 2026 Toshkent Elektr Transsmissiya | Monitoring Tizimi</p>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
   <script>
+    const paramLabels = {
+      "Muhit_harorat (C)": "🌡️ Muhit harorat (°C)",
+      "Shamol_tezligi (km/h)": "🌬️ Shamol tezligi (km/h)",
+      "Chastota (Hz)": "🔄 Chastota (Hz)",
+      "Kuchlanish (V)": "🔌 Kuchlanish (V)",
+      "Vibratsiya": "📳 Vibratsiya",
+      "Sim_mexanik_holati (%)": "🔗 Sim holati (%)",
+      "Atrof_muhit_humidity (%)": "💨 Namlik (%)",
+      "Quvvati (kW)": "⚙️ Quvvat (kW)"
+    };
+    const paramShort = {
+      "Muhit_harorat (C)": "🌡️ Harorat",
+      "Shamol_tezligi (km/h)": "🌬️ Shamol",
+      "Chastota (Hz)": "🔄 Chastota",
+      "Kuchlanish (V)": "🔌 Kuchlanish",
+      "Vibratsiya": "📳 Vibratsiya",
+      "Sim_mexanik_holati (%)": "🔗 Sim holati",
+      "Atrof_muhit_humidity (%)": "💨 Namlik",
+      "Quvvati (kW)": "⚙️ Quvvat"
+    };
+    // Normal chegaralar (param uchun yashil zona)
+    const paramLimits = {
+      "Muhit_harorat (C)": { warnLo: null, warnHi: 40, dangerHi: 45, unit: '°C' },
+      "Shamol_tezligi (km/h)": { warnLo: null, warnHi: 15, dangerHi: 25, unit: 'km/h' },
+      "Chastota (Hz)": { warnLo: 49.5, warnHi: 50.5, dangerLo: 49.0, dangerHi: 51.0, unit: 'Hz' },
+      "Kuchlanish (V)": { warnLo: 210, warnHi: 230, dangerLo: 200, dangerHi: 240, unit: 'V' },
+      "Vibratsiya": { warnLo: null, warnHi: 1.0, dangerHi: 1.5, unit: '' },
+      "Sim_mexanik_holati (%)": { warnLo: 85, warnHi: null, dangerLo: 75, unit: '%', inverted: true },
+      "Atrof_muhit_humidity (%)": { warnLo: 35, warnHi: 85, dangerLo: 30, dangerHi: 90, unit: '%' },
+      "Quvvati (kW)": { warnLo: null, warnHi: 5.0, dangerHi: 5.5, unit: 'kW' }
+    };
+    const dayNames = ['Yakshanba', 'Dushanba', 'Seshanba', 'Chorshanba', 'Payshanba', 'Juma', 'Shanba'];
+
+    let globalFuture = [];
+
     async function loadForecast() {
       const res = await fetch('/api/forecast');
       const data = await res.json();
-      // Future forecast plot
       const future = data.future || [];
-      Plotly.newPlot('future-forecast-plot', [{
-        x: future.map(x => x.timestamp),
-        y: future.map(x => x.xavf),
-        type: 'scatter',
-        mode: 'lines+markers',
-        name: 'Xavf prognozi',
-        line: {shape: 'hv', color: '#dc3545'},
-        text: future.map(x => x.xavf === 1 ? 'MUAMMO' : 'HAVFSIZ'),
-        hovertemplate: '%{x}<br>Xavf: %{text}<extra></extra>'
-      }], {
-        title: 'Kelajak 24 soat xavf prognozi',
-        yaxis: {
-          title: 'Xavf',
-          dtick: 1,
-          tickvals: [0, 1],
-          ticktext: ['HAVFSIZ', 'MUAMMO'],
-          range: [-0.1, 1.1]
-        },
-        xaxis: {title: 'Vaqt'}
-      }, {responsive:true});
+      globalFuture = future;
 
-      // Parametr va trend grafi
+      // ===== KPI =====
+      const dangerCount = future.filter(x => x.xavf === 2).length;
+      const warnCount = future.filter(x => x.xavf === 1).length;
+      const safeCount = future.filter(x => x.xavf === 0).length;
+      const riskPercent = future.length > 0 ? Math.round(100 * (dangerCount + warnCount) / future.length) : 0;
+
+      document.getElementById('kpi-total').textContent = future.length;
+      document.getElementById('kpi-danger').textContent = dangerCount;
+      document.getElementById('kpi-warn').textContent = warnCount;
+      document.getElementById('kpi-safe').textContent = safeCount;
+      document.getElementById('kpi-risk').textContent = riskPercent + '%';
+
+      // ===== KUNLIK KARTALAR =====
+      buildDayCards(future);
+
+      // ===== TIMELINE STRIP =====
+      const strip = document.getElementById('timeline-strip');
+      strip.innerHTML = '';
+      future.forEach((item, i) => {
+        const block = document.createElement('div');
+        block.className = 'ts-block ' + (item.xavf === 2 ? 'ts-danger' : item.xavf === 1 ? 'ts-warn' : 'ts-safe');
+        block.title = item.timestamp + '\n' + (item.xavf === 2 ? 'MUAMMO' : item.xavf === 1 ? 'OGOHLANTIRISH' : 'HAVFSIZ');
+        strip.appendChild(block);
+      });
+
+      // ===== JADVAL =====
+      buildTable(future);
+
+      // ===== PARAMETR TUGMALARI (buttonlarni tuzamiz, lekin chart hali chizmaymiz) =====
+      let futureParamKeys = [];
+      if (future.length > 0 && future[0].params) {
+        futureParamKeys = Object.keys(future[0].params);
+        buildParamButtons('future-param-buttons', futureParamKeys, (key) => plotFutureParam(future, key));
+      }
+
+      // ===== TARIXIY buttonlar =====
       const paramRes = await fetch('/api/forecast-params');
       const paramData = await paramRes.json();
-      const paramKeys = Object.keys(paramData).filter(k => k !== 'timestamp' && k !== 'xavf');
-      const select = document.getElementById('param-select');
-      select.innerHTML = '';
-      for (const key of paramKeys) {
-        const opt = document.createElement('option');
-        opt.value = key;
-        opt.textContent = key;
-        select.appendChild(opt);
-      }
-      // Default: first param
-      if (paramKeys.length > 0) {
-        select.value = paramKeys[0];
-        plotSelectedParam(paramKeys[0]);
-      }
-      select.onchange = function() {
-        plotSelectedParam(this.value);
-      };
+      const histKeys = Object.keys(paramData).filter(k => k !== 'timestamp' && k !== 'xavf' && !k.endsWith('_trend'));
+      buildParamButtons('hist-param-buttons', histKeys, (key) => {
+        fetch('/api/forecast-params?param=' + encodeURIComponent(key))
+          .then(r => r.json())
+          .then(d => plotSelectedParam(d, key));
+      });
+
+      // AVVAL konteyerni ko'rsatamiz — Plotly o'lcham hisoblay olishi uchun
+      document.getElementById('forecast-loading').style.display = 'none';
+      document.getElementById('forecast-main').style.display = 'block';
+
+      // Keyin chartlarni chizamiz (konteyner endi ko'rinadi)
+      plotMainForecast(future);
+      if (futureParamKeys.length > 0) plotFutureParam(future, futureParamKeys[0]);
+      if (histKeys.length > 0) plotSelectedParam(paramData, histKeys[0]);
     }
 
-    async function plotSelectedParam(param) {
-      const paramRes = await fetch('/api/forecast-params?param=' + encodeURIComponent(param));
-      const paramData = await paramRes.json();
-      const traces = [];
-      // Raw values
-      traces.push({
-        x: paramData.timestamp,
-        y: paramData[param],
-        name: param + ' (aniq)',
-        type: 'scatter',
-        mode: 'markers',
-        marker: {color: '#007bff', size: 6, opacity: 0.5},
-        hovertemplate: '%{x}<br>' + param + ': %{y}<extra></extra>'
+    function buildDayCards(future) {
+      const dayMap = {};
+      future.forEach(item => {
+        const day = item.timestamp.split(' ')[0];
+        if (!dayMap[day]) dayMap[day] = [];
+        dayMap[day].push(item);
       });
-      // Trend (moving average) - faqat Vibratsiya bo'lmasa
-      if (param !== 'Vibratsiya' && paramData[param + '_trend']) {
-        traces.push({
-          x: paramData.timestamp,
-          y: paramData[param + '_trend'],
-          name: param + ' (trend)',
-          type: 'scatter',
-          mode: 'lines',
-          line: {color: '#007bff', width: 3, dash: 'solid'},
-          hovertemplate: '%{x}<br>' + param + ' trend: %{y:.2f}<extra></extra>'
+      const row = document.getElementById('day-cards-row');
+      row.innerHTML = '';
+      Object.keys(dayMap).forEach(day => {
+        const items = dayMap[day];
+        const danger = items.filter(x => x.xavf === 2).length;
+        const warn = items.filter(x => x.xavf === 1).length;
+        const safe = items.filter(x => x.xavf === 0).length;
+        const d = new Date(day);
+        const dayName = dayNames[d.getDay()];
+        const dayNum = d.getDate() + '/' + (d.getMonth()+1);
+        let cls = 'day-safe', icon = '✅', status = 'Havfsiz';
+        if (danger > 0) { cls = 'day-danger'; icon = '🔴'; status = 'Muammo'; }
+        else if (warn > 0) { cls = 'day-warn'; icon = '🟡'; status = 'Ogohlantirish'; }
+        const col = document.createElement('div');
+        col.className = 'col-xl col-md-3 col-6';
+        col.innerHTML = `
+          <div class="card day-card ${cls} text-center p-3">
+            <div class="day-name">${dayName}</div>
+            <div class="day-date text-muted">${dayNum}</div>
+            <div class="day-status">${icon}</div>
+            <div class="fw-semibold">${status}</div>
+            <div class="day-info mt-1">
+              ${danger > 0 ? '<span class="text-danger me-1">●'+danger+'</span>' : ''}
+              ${warn > 0 ? '<span class="text-warning me-1">●'+warn+'</span>' : ''}
+              <span class="text-success">●${safe}</span>
+              <span class="text-muted ms-1">/ ${items.length}</span>
+            </div>
+          </div>
+        `;
+        row.appendChild(col);
+      });
+    }
+
+    function buildParamButtons(containerId, keys, onClick) {
+      const container = document.getElementById(containerId);
+      container.innerHTML = '';
+      const colors = ['primary', 'danger', 'success', 'info', 'secondary', 'warning', 'dark'];
+      keys.forEach((key, i) => {
+        const btn = document.createElement('button');
+        btn.className = `btn btn-outline-${colors[i % colors.length]} param-btn` + (i === 0 ? ' active' : '');
+        btn.textContent = paramShort[key] || key;
+        btn.onclick = () => {
+          container.querySelectorAll('.param-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          onClick(key);
+        };
+        container.appendChild(btn);
+      });
+    }
+
+    function plotMainForecast(future) {
+      // Scatter plot with colored markers + fill zones
+      const safeX = [], safeY = [], warnX = [], warnY = [], dangerX = [], dangerY = [];
+      future.forEach(item => {
+        if (item.xavf === 0) { safeX.push(item.timestamp); safeY.push(0); }
+        else if (item.xavf === 1) { warnX.push(item.timestamp); warnY.push(1); }
+        else { dangerX.push(item.timestamp); dangerY.push(2); }
+      });
+
+      const traces = [
+        {
+          x: safeX, y: safeY, name: 'Havfsiz', type: 'scatter', mode: 'markers',
+          marker: { color: '#2dce89', size: 16, symbol: 'circle', line: { color: '#fff', width: 2 } },
+          hovertemplate: '%{x}<br>✅ HAVFSIZ<extra></extra>'
+        },
+        {
+          x: warnX, y: warnY, name: 'Ogohlantirish', type: 'scatter', mode: 'markers',
+          marker: { color: '#fbb034', size: 16, symbol: 'diamond', line: { color: '#fff', width: 2 } },
+          hovertemplate: '%{x}<br>🟡 OGOHLANTIRISH<extra></extra>'
+        },
+        {
+          x: dangerX, y: dangerY, name: 'Muammo', type: 'scatter', mode: 'markers',
+          marker: { color: '#f5365c', size: 16, symbol: 'hexagram', line: { color: '#fff', width: 2 } },
+          hovertemplate: '%{x}<br>🔴 MUAMMO<extra></extra>'
+        },
+        // Connecting line
+        {
+          x: future.map(x => x.timestamp), y: future.map(x => x.xavf),
+          showlegend: false, type: 'scatter', mode: 'lines',
+          line: { color: '#adb5bd', width: 1.5, dash: 'dot' },
+          hoverinfo: 'skip'
+        }
+      ];
+
+      Plotly.newPlot('future-forecast-plot', traces, {
+        yaxis: {
+          tickvals: [0, 1, 2],
+          ticktext: ['✅ Havfsiz', '⚠️ Ogohlantirish', '🔴 Muammo'],
+          range: [-0.5, 2.5],
+          gridcolor: '#e9ecef',
+          zeroline: false
+        },
+        xaxis: { tickangle: -30, gridcolor: '#e9ecef' },
+        plot_bgcolor: '#fff',
+        paper_bgcolor: '#fff',
+        margin: { t: 20, b: 80, l: 120, r: 20 },
+        legend: { orientation: 'h', y: 1.12, x: 0.5, xanchor: 'center' },
+        shapes: [
+          // Yashil zona
+          { type: 'rect', xref: 'paper', yref: 'y', x0: 0, x1: 1, y0: -0.5, y1: 0.5, fillcolor: 'rgba(45,206,137,0.07)', line: { width: 0 } },
+          // Sariq zona
+          { type: 'rect', xref: 'paper', yref: 'y', x0: 0, x1: 1, y0: 0.5, y1: 1.5, fillcolor: 'rgba(251,176,52,0.07)', line: { width: 0 } },
+          // Qizil zona
+          { type: 'rect', xref: 'paper', yref: 'y', x0: 0, x1: 1, y0: 1.5, y1: 2.5, fillcolor: 'rgba(245,54,92,0.07)', line: { width: 0 } }
+        ]
+      }, {responsive: true});
+    }
+
+    function plotFutureParam(future, param) {
+      const timestamps = future.map(x => x.timestamp);
+      const values = future.map(x => x.params[param]);
+      const colors = future.map(x => x.xavf === 2 ? '#f5365c' : x.xavf === 1 ? '#fbb034' : '#2dce89');
+      const lim = paramLimits[param] || {};
+
+      const traces = [{
+        x: timestamps, y: values,
+        name: paramLabels[param] || param,
+        type: 'scatter', mode: 'lines+markers',
+        line: { color: '#5e72e4', width: 3, shape: 'spline' },
+        marker: { size: 8, color: colors, line: { color: '#fff', width: 1.5 } },
+        fill: 'tozeroy',
+        fillcolor: 'rgba(94,114,228,0.08)',
+        hovertemplate: '<b>%{x}</b><br>' + (paramLabels[param] || param) + ': <b>%{y:.2f}</b><extra></extra>'
+      }];
+
+      const shapes = [];
+      const annotations = [];
+      // Danger zone - top
+      if (lim.dangerHi != null) {
+        shapes.push({
+          type: 'line', xref: 'paper', yref: 'y', x0: 0, x1: 1,
+          y0: lim.dangerHi, y1: lim.dangerHi,
+          line: { color: '#f5365c', width: 2, dash: 'dash' }
+        });
+        annotations.push({
+          xref: 'paper', yref: 'y', x: 1.01, y: lim.dangerHi,
+          text: 'Xavfli: ' + lim.dangerHi + (lim.unit || ''),
+          showarrow: false, font: { color: '#f5365c', size: 11 }, xanchor: 'left'
         });
       }
-      // Xavf
-      traces.push({
-        x: paramData.timestamp,
-        y: paramData.xavf,
-        name: 'Xavf',
-        yaxis: 'y2',
-        type: 'scatter',
-        mode: 'lines+markers',
-        line: {color: '#dc3545', dash: 'dot'},
-        text: paramData.xavf.map(x => x === 1 ? 'MUAMMO' : 'HAVFSIZ'),
-        hovertemplate: '%{x}<br>Xavf: %{text}<extra></extra>'
-      });
-      Plotly.newPlot('week-params-plot', traces, {
-        title: `So'nggi 7 kun: ${param} va xavf`,
-        yaxis: {title: `${param} qiymati`},
-        yaxis2: {title: 'Xavf', overlaying: 'y', side: 'right', dtick: 1, range: [-0.1,1.1], tickvals: [0,1], ticktext: ['HAVFSIZ','MUAMMO']},
-        xaxis: {title: 'Vaqt'}
-      }, {responsive:true});
+      // Warning zone
+      if (lim.warnHi != null) {
+        shapes.push({
+          type: 'line', xref: 'paper', yref: 'y', x0: 0, x1: 1,
+          y0: lim.warnHi, y1: lim.warnHi,
+          line: { color: '#fbb034', width: 2, dash: 'dot' }
+        });
+        annotations.push({
+          xref: 'paper', yref: 'y', x: 1.01, y: lim.warnHi,
+          text: 'Ogohlant.: ' + lim.warnHi + (lim.unit || ''),
+          showarrow: false, font: { color: '#fbb034', size: 11 }, xanchor: 'left'
+        });
+      }
+      // Lower warning/danger
+      if (lim.dangerLo != null) {
+        shapes.push({
+          type: 'line', xref: 'paper', yref: 'y', x0: 0, x1: 1,
+          y0: lim.dangerLo, y1: lim.dangerLo,
+          line: { color: '#f5365c', width: 2, dash: 'dash' }
+        });
+      }
+      if (lim.warnLo != null) {
+        shapes.push({
+          type: 'line', xref: 'paper', yref: 'y', x0: 0, x1: 1,
+          y0: lim.warnLo, y1: lim.warnLo,
+          line: { color: '#fbb034', width: 2, dash: 'dot' }
+        });
+      }
+
+      Plotly.newPlot('future-params-plot', traces, {
+        yaxis: {
+          title: { text: paramLabels[param] || param, font: { size: 13 } },
+          gridcolor: '#e9ecef', zeroline: false
+        },
+        xaxis: { tickangle: -30, gridcolor: '#e9ecef' },
+        plot_bgcolor: '#fff', paper_bgcolor: '#fff',
+        margin: { t: 20, b: 80, l: 70, r: 90 },
+        shapes: shapes,
+        annotations: annotations,
+        showlegend: false
+      }, {responsive: true});
     }
+
+    function buildTable(future) {
+      const tbody = document.getElementById('forecast-tbody');
+      tbody.innerHTML = '';
+      future.forEach(item => {
+        const p = item.params || {};
+        const row = document.createElement('tr');
+        const badge = item.xavf === 2
+          ? '<span class="badge bg-danger px-3 py-2">🔴 Muammo</span>'
+          : item.xavf === 1
+          ? '<span class="badge bg-warning text-dark px-3 py-2">🟡 Ogohl.</span>'
+          : '<span class="badge bg-success px-3 py-2">✅ Havfsiz</span>';
+        row.innerHTML = `
+          <td class="ps-3 fw-semibold">${item.timestamp}</td>
+          <td>${(p["Muhit_harorat (C)"] ?? '--')}</td>
+          <td>${(p["Shamol_tezligi (km/h)"] ?? '--')}</td>
+          <td>${(p["Chastota (Hz)"] ?? '--')}</td>
+          <td>${(p["Kuchlanish (V)"] ?? '--')}</td>
+          <td>${(p["Vibratsiya"] ?? '--')}</td>
+          <td>${(p["Sim_mexanik_holati (%)"] ?? '--')}</td>
+          <td>${(p["Atrof_muhit_humidity (%)"] ?? '--')}</td>
+          <td>${(p["Quvvati (kW)"] ?? '--')}</td>
+          <td class="pe-3">${badge}</td>
+        `;
+        if (item.xavf === 2) row.style.background = 'rgba(245,54,92,0.08)';
+        else if (item.xavf === 1) row.style.background = 'rgba(251,176,52,0.08)';
+        tbody.appendChild(row);
+      });
+    }
+
+    function plotSelectedParam(paramData, param) {
+      const lim = paramLimits[param] || {};
+      const traces = [];
+
+      if (paramData[param + '_trend']) {
+        // Trend area fill
+        traces.push({
+          x: paramData.timestamp, y: paramData[param + '_trend'],
+          name: 'Trend',
+          type: 'scatter', mode: 'lines',
+          line: { color: '#5e72e4', width: 3, shape: 'spline' },
+          fill: 'tozeroy', fillcolor: 'rgba(94,114,228,0.1)'
+        });
+      }
+      traces.push({
+        x: paramData.timestamp, y: paramData[param],
+        name: paramLabels[param] || param,
+        type: 'scatter', mode: 'markers',
+        marker: { color: '#5e72e4', size: 5, opacity: 0.4 }
+      });
+
+      const shapes = [];
+      if (lim.dangerHi != null) {
+        shapes.push({ type: 'line', xref: 'paper', yref: 'y', x0: 0, x1: 1, y0: lim.dangerHi, y1: lim.dangerHi, line: { color: '#f5365c', width: 2, dash: 'dash' } });
+      }
+      if (lim.warnHi != null) {
+        shapes.push({ type: 'line', xref: 'paper', yref: 'y', x0: 0, x1: 1, y0: lim.warnHi, y1: lim.warnHi, line: { color: '#fbb034', width: 2, dash: 'dot' } });
+      }
+      if (lim.dangerLo != null) {
+        shapes.push({ type: 'line', xref: 'paper', yref: 'y', x0: 0, x1: 1, y0: lim.dangerLo, y1: lim.dangerLo, line: { color: '#f5365c', width: 2, dash: 'dash' } });
+      }
+      if (lim.warnLo != null) {
+        shapes.push({ type: 'line', xref: 'paper', yref: 'y', x0: 0, x1: 1, y0: lim.warnLo, y1: lim.warnLo, line: { color: '#fbb034', width: 2, dash: 'dot' } });
+      }
+
+      Plotly.newPlot('week-params-plot', traces, {
+        yaxis: { title: { text: paramLabels[param] || param, font: { size: 13 } }, gridcolor: '#e9ecef', zeroline: false },
+        xaxis: { gridcolor: '#e9ecef' },
+        plot_bgcolor: '#fff', paper_bgcolor: '#fff',
+        margin: { t: 20, b: 60, l: 70, r: 40 },
+        shapes: shapes,
+        legend: { orientation: 'h', y: 1.1, x: 0.5, xanchor: 'center' }
+      }, {responsive: true});
+    }
+
     loadForecast();
   </script>
 </body>
