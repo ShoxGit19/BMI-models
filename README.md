@@ -50,8 +50,10 @@ BMI_models/
 ├── train_model.py            # Model o'qitish skripti
 ├── config.py                 # Konfiguratsiya (limitlar, portlar)
 ├── requirements.txt          # Python kutubxonalar
-├── hybrid_model.pkl          # O'qitilgan AI model
-├── sensor_monitoring_1M.csv  # 1M qator sensor dataset
+├── hybrid_model_part1.pkl    # AI model (1-qism)
+├── hybrid_model_part2.pkl    # AI model (2-qism)
+├── sensor_data_part1.csv     # Dataset (1-qism, 500K qator)
+├── sensor_data_part2.csv     # Dataset (2-qism, 500K qator)
 ├── templates/
 │   ├── index.html            # Bosh sahifa (dashboard)
 │   ├── navbar.html           # Navigatsiya paneli
@@ -189,8 +191,8 @@ VotingClassifier (soft voting) + StandardScaler pipeline:
 
 ## 📦 Dataset
 
-- **Fayl**: `sensor_monitoring_1M.csv`
-- **Qatorlar**: 1,000,000
+- **Fayllar**: `sensor_data_part1.csv` + `sensor_data_part2.csv` (GitHub 100MB limit uchun bo'lingan)
+- **Qatorlar**: 1,000,000 (har bir faylda 500,000)
 - **Sensorlar**: 500 ta (S001–S500)
 - **Tumanlar**: 11 ta (Toshkent shahri)
 - **Vaqt oralig'i**: 2024-01-01 — 2026-04-05
@@ -215,8 +217,8 @@ Natija: 28 ta prognoz nuqtasi (7 kun × 4 marta/kun), kunlik xulosa kartalari, r
 
 | Muammo | Yechim |
 | --- | --- |
-| `sensor_monitoring_1M.csv` topilmadi | Dataset faylini loyiha papkasiga qo'ying |
-| `hybrid_model.pkl` topilmadi | `python train_model.py` orqali model o'qiting |
+| `sensor_data_part*.csv` topilmadi | Dataset fayllarini loyiha papkasiga qo'ying |
+| `hybrid_model_part*.pkl` topilmadi | `python train_model.py` orqali model o'qiting |
 | Port 5000 band | `config.py` da `PORT = 5001` qiling |
 | Prognoz ob-havo xatosi | Internet aloqasini tekshiring (Open-Meteo API) |
 

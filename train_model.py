@@ -12,7 +12,14 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 logger.info("📊 CSV yuklanmoqda...")
-df = pd.read_csv("sensor_monitoring_1M.csv")
+import os
+if os.path.exists("sensor_data_part1.csv") and os.path.exists("sensor_data_part2.csv"):
+    df = pd.concat([
+        pd.read_csv("sensor_data_part1.csv"),
+        pd.read_csv("sensor_data_part2.csv")
+    ], ignore_index=True)
+else:
+    df = pd.read_csv("sensor_monitoring_1M.csv")
 logger.info(f"✅ {len(df)} rows, {len(df.columns)} cols yuklandi")
 
 # 8 features - exact column names expected in CSV
@@ -70,8 +77,12 @@ pipeline.fit(X_train, y_train)
 score = pipeline.score(X_test, y_test)
 logger.info(f"Pipeline accuracy: {score:.3f}")
 
-# Save trained pipeline
-with open("hybrid_model.pkl", "wb") as f:
-    pickle.dump(pipeline, f)
+# Save trained pipeline — 2 qismga bo'lib saqlash (GitHub 100MB limit)
+model_bytes = pickle.dumps(pipeline)
+half = len(model_bytes) // 2
+with open("hybrid_model_part1.pkl", "wb") as f:
+    f.write(model_bytes[:half])
+with open("hybrid_model_part2.pkl", "wb") as f:
+    f.write(model_bytes[half:])
 
-logger.info("Pipeline saved to hybrid_model.pkl")
+logger.info("Pipeline saved to hybrid_model_part1.pkl + hybrid_model_part2.pkl")

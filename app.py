@@ -44,11 +44,27 @@ def login_required(f):
 def load_data_and_model():
     df, hybrid_model = None, None
     try:
-        if os.path.exists("sensor_monitoring_1M.csv"):
+        # CSV: bo'lingan fayllardan yuklash
+        if os.path.exists("sensor_data_part1.csv") and os.path.exists("sensor_data_part2.csv"):
+            df = pd.concat([
+                pd.read_csv("sensor_data_part1.csv"),
+                pd.read_csv("sensor_data_part2.csv")
+            ], ignore_index=True)
+            if "Timestamp" in df.columns:
+                df["Timestamp"] = pd.to_datetime(df["Timestamp"], errors='coerce')
+        elif os.path.exists("sensor_monitoring_1M.csv"):
             df = pd.read_csv("sensor_monitoring_1M.csv")
             if "Timestamp" in df.columns:
                 df["Timestamp"] = pd.to_datetime(df["Timestamp"], errors='coerce')
-        if os.path.exists("hybrid_model.pkl"):
+
+        # Model: bo'lingan fayllardan yuklash
+        if os.path.exists("hybrid_model_part1.pkl") and os.path.exists("hybrid_model_part2.pkl"):
+            merged = b""
+            for p in ["hybrid_model_part1.pkl", "hybrid_model_part2.pkl"]:
+                with open(p, "rb") as f:
+                    merged += f.read()
+            hybrid_model = pickle.loads(merged)
+        elif os.path.exists("hybrid_model.pkl"):
             with open("hybrid_model.pkl", "rb") as f:
                 hybrid_model = pickle.load(f)
     except Exception as e:

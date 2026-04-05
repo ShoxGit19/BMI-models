@@ -1,6 +1,6 @@
 __pycache__/
 *.pyc
-*.pkl
+hybrid_model.pkl
 sensor_monitoring_1M.csv
 static/bg-grid.png
 debug_model.py

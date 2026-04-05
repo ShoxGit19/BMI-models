@@ -4,8 +4,8 @@ import os
 class Config:
     """Application configuration"""
     DEBUG = True
-    DATA_FILE = "sensor_monitoring_1M.csv"  # Advanced 8-parameter file
-    MODEL_FILE = "hybrid_model.pkl"
+    DATA_FILES = ["sensor_data_part1.csv", "sensor_data_part2.csv"]
+    MODEL_FILES = ["hybrid_model_part1.pkl", "hybrid_model_part2.pkl"]
 
     # Real elektr uzatish liniyasi parametr chegaralari (3 daraja)
     SENSOR_LIMITS = {
