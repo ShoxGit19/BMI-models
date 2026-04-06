@@ -32,6 +32,43 @@ USERS = {
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "")
 
+@app.route("/")
+def home():
+    return render_template("index.html")
+# --- Yagona importlar va sozlamalar ---
+import os
+import io
+import logging
+import datetime
+import pickle
+import hashlib
+import functools
+import pandas as pd
+import numpy as np
+import requests as http_requests
+from flask import Flask, render_template, jsonify, request, session, redirect, url_for, send_file, flash
+
+# --- Flask va logger ---
+app = Flask(__name__)
+app.secret_key = os.environ.get("SECRET_KEY", "monitoring-secret-2026-toshkent")
+logger = logging.getLogger("bmi-app")
+logger.setLevel(logging.INFO)
+handler = logging.StreamHandler()
+formatter = logging.Formatter('[%(asctime)s] %(levelname)s: %(message)s')
+handler.setFormatter(formatter)
+if not logger.hasHandlers():
+    logger.addHandler(handler)
+
+# --- Foydalanuvchilar (oddiy demo uchun) ---
+USERS = {
+    "admin": hashlib.sha256("admin123".encode()).hexdigest(),
+    "operator": hashlib.sha256("operator123".encode()).hexdigest(),
+}
+
+# --- Telegram sozlamalari ---
+TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
+TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "")
+
 def login_required(f):
     @functools.wraps(f)
     def decorated(*args, **kwargs):
@@ -43,217 +80,33 @@ def login_required(f):
 # --- Ma'lumot va modelni yuklash funksiyasi ---
 def load_data_and_model():
     df, hybrid_model = None, None
-    try:
-        # CSV: data/ papkadan yuklash
-        if os.path.exists("data/sensor_data_part1.csv") and os.path.exists("data/sensor_data_part2.csv"):
-            df = pd.concat([
-                pd.read_csv("data/sensor_data_part1.csv"),
-                pd.read_csv("data/sensor_data_part2.csv")
-            ], ignore_index=True)
-            if "Timestamp" in df.columns:
-                df["Timestamp"] = pd.to_datetime(df["Timestamp"], errors='coerce')
-        elif os.path.exists("sensor_data_part1.csv") and os.path.exists("sensor_data_part2.csv"):
-            df = pd.concat([
-                pd.read_csv("sensor_data_part1.csv"),
-                pd.read_csv("sensor_data_part2.csv")
-            ], ignore_index=True)
-            if "Timestamp" in df.columns:
-                df["Timestamp"] = pd.to_datetime(df["Timestamp"], errors='coerce')
+    # CSV: data/ papkadan yuklash
+    if os.path.exists("data/sensor_data_part1.csv") and os.path.exists("data/sensor_data_part2.csv"):
+        df = pd.concat([
+            pd.read_csv("data/sensor_data_part1.csv"),
+            pd.read_csv("data/sensor_data_part2.csv")
+        ], ignore_index=True)
+        if "Timestamp" in df.columns:
+            df["Timestamp"] = pd.to_datetime(df["Timestamp"], errors='coerce')
+    elif os.path.exists("sensor_data_part1.csv") and os.path.exists("sensor_data_part2.csv"):
+        df = pd.concat([
+            pd.read_csv("sensor_data_part1.csv"),
+            pd.read_csv("sensor_data_part2.csv")
+        ], ignore_index=True)
+        if "Timestamp" in df.columns:
+            df["Timestamp"] = pd.to_datetime(df["Timestamp"], errors='coerce')
 
-        # Model: models/ papkadan yuklash
-        if os.path.exists("models/hybrid_model_part1.pkl") and os.path.exists("models/hybrid_model_part2.pkl"):
-            merged = b""
-            for p in ["models/hybrid_model_part1.pkl", "models/hybrid_model_part2.pkl"]:
-                with open(p, "rb") as f:
-                    merged += f.read()
-            hybrid_model = pickle.loads(merged)
-        elif os.path.exists("hybrid_model_part1.pkl") and os.path.exists("hybrid_model_part2.pkl"):
-            merged = b""
-            for p in ["hybrid_model_part1.pkl", "hybrid_model_part2.pkl"]:
-                with open(p, "rb") as f:
-                    merged += f.read()
-            hybrid_model = pickle.loads(merged)
-    except Exception as e:
-        logger.error(f"Yuklash xatosi: {e}")
-    return df, hybrid_model
-
-df, hybrid_model = load_data_and_model()
-
-# --- ROUTES ---
-@app.route("/login", methods=["GET", "POST"])
-def login():
-    if "user" in session:
-        return redirect("/")
-    error = None
-    if request.method == "POST":
-        username = request.form.get("username", "").strip()
-        password = request.form.get("password", "")
-        pw_hash = hashlib.sha256(password.encode()).hexdigest()
-        if username in USERS and USERS[username] == pw_hash:
-            session["user"] = username
-            logger.info(f"Login: {username}")
-            return redirect("/")
-        error = "Login yoki parol noto'g'ri!"
-    return render_template("login.html", error=error)
-
-@app.route("/logout")
-def logout():
-    session.pop("user", None)
-    return redirect(url_for("login"))
-
-@app.route("/")
-@login_required
-def home():
-    return render_template("index.html")
-
-@app.route("/graphs")
-@login_required
-def graphs():
-    return render_template("graphs.html")
-
-@app.route("/table")
-@login_required
-def table():
-    return render_template("table.html")
-
-@app.route("/map")
-@login_required
-def map_page():
-    return render_template("map.html")
-
-@app.route("/model", methods=["GET", "POST"])
-@login_required
-def model_page():
-    result = None
-    if request.method == "POST":
+    # Model: models/ papkadan yuklash
+    if os.path.exists("models/hybrid_model_part1.pkl") and os.path.exists("models/hybrid_model_part2.pkl"):
+        merged = b""
+        for p in ["models/hybrid_model_part1.pkl", "models/hybrid_model_part2.pkl"]:
+            with open(p, "rb") as f:
+                merged += f.read()
         try:
-            harorat = float(request.form.get("harorat", 30))
-            shamol = float(request.form.get("shamol", 7))
-            chastota = float(request.form.get("chastota", 50))
-            kuchlanish = float(request.form.get("kuchlanish", 220))
-            vibratsiya = float(request.form.get("vibratsiya", 0.5))
-            sim_holati = float(request.form.get("sim_holati", 90))
-            humidity = float(request.form.get("humidity", 60))
-            quvvat = float(request.form.get("quvvat", 3))
-
-            # --- HAR BIR PARAMETRNI 3 DARAJA BILAN TEKSHIRISH ---
-            params_status = []
-
-            # Kuchlanish
-            if 210 <= kuchlanish <= 230:
-                params_status.append({"name": "Kuchlanish", "icon": "🔌", "value": kuchlanish, "unit": "V", "status": "normal", "msg": "Normal chegarada (210-230V)"})
-            elif 200 <= kuchlanish < 210 or 230 < kuchlanish <= 240:
-                params_status.append({"name": "Kuchlanish", "icon": "🔌", "value": kuchlanish, "unit": "V", "status": "warning", "msg": f"Ogohlantirish! {kuchlanish}V — normal chegara 210-230V dan tashqarida. Transformator sozlanishi kerak."})
-            else:
-                params_status.append({"name": "Kuchlanish", "icon": "🔌", "value": kuchlanish, "unit": "V", "status": "danger", "msg": f"XAVF! {kuchlanish}V — favqulodda holat! Uskunalar shikastlanishi mumkin. Darhol o'chirish kerak!"})
-
-            # Chastota
-            if 49.5 <= chastota <= 50.5:
-                params_status.append({"name": "Chastota", "icon": "🔄", "value": chastota, "unit": "Hz", "status": "normal", "msg": "Normal chegarada (49.5-50.5 Hz)"})
-            elif 49.0 <= chastota < 49.5 or 50.5 < chastota <= 51.0:
-                params_status.append({"name": "Chastota", "icon": "🔄", "value": chastota, "unit": "Hz", "status": "warning", "msg": f"Ogohlantirish! {chastota} Hz — chastota normal chegaradan (49.5-50.5 Hz) chiqmoqda. Generator yuklamasi tekshirilsin."})
-            else:
-                params_status.append({"name": "Chastota", "icon": "🔄", "value": chastota, "unit": "Hz", "status": "danger", "msg": f"XAVF! {chastota} Hz — favqulodda chastota o'zgarishi! Tarmog'da jiddiy yuklama muvozanati buzilgan. Darhol choralar ko'rilsin!"})
-
-            # Harorat (muhit)
-            if harorat < 40:
-                params_status.append({"name": "Muhit harorat", "icon": "🌡️", "value": harorat, "unit": "°C", "status": "normal", "msg": "Normal chegarada (<40°C)"})
-            elif 40 <= harorat <= 45:
-                params_status.append({"name": "Muhit harorat", "icon": "🌡️", "value": harorat, "unit": "°C", "status": "warning", "msg": f"Ogohlantirish! {harorat}°C — havo issiq. Uskunalar qizishi mumkin. Normal <40°C."})
-            else:
-                params_status.append({"name": "Muhit harorat", "icon": "🌡️", "value": harorat, "unit": "°C", "status": "danger", "msg": f"XAVF! {harorat}°C — haddan tashqari issiq muhit! Uskunalar ortiqcha qizishi va nosozlik xavfi!"})
-
-            # Vibratsiya (faslga/haroratga bog'liq)
-            vib_reason = ""
-            if harorat < 0:
-                vib_reason = " Sovuq havoda simlar qisqarib muzlaydi (zaminiya)."
-            elif harorat > 40:
-                vib_reason = " Issiq havoda simlar cho'zilib tebranadi (zaminiya)."
-            if vibratsiya < 1.0:
-                params_status.append({"name": "Vibratsiya", "icon": "📳", "value": vibratsiya, "unit": "", "status": "normal", "msg": "Normal chegarada (<1.0)"})
-            elif 1.0 <= vibratsiya <= 1.5:
-                params_status.append({"name": "Vibratsiya", "icon": "📳", "value": vibratsiya, "unit": "", "status": "warning", "msg": f"Ogohlantirish! Vibratsiya {vibratsiya} — mexanik tebranish boshlanmoqda.{vib_reason} Mahkamlash tekshirilsin."})
-            else:
-                params_status.append({"name": "Vibratsiya", "icon": "📳", "value": vibratsiya, "unit": "", "status": "danger", "msg": f"XAVF! Vibratsiya {vibratsiya} — kuchli tebranish!{vib_reason} Sim uzilishi yoki uskuna buzilishi mumkin!"})
-
-            # Sim holati
-            if sim_holati > 85:
-                params_status.append({"name": "Sim holati", "icon": "🔗", "value": sim_holati, "unit": "%", "status": "normal", "msg": "Normal chegarada (>85%)"})
-            elif 75 <= sim_holati <= 85:
-                params_status.append({"name": "Sim holati", "icon": "🔗", "value": sim_holati, "unit": "%", "status": "warning", "msg": f"Ogohlantirish! Sim holati {sim_holati}% — eskirish belgilari bor. Texnik ko'rik rejalashtirilsin."})
-            else:
-                params_status.append({"name": "Sim holati", "icon": "🔗", "value": sim_holati, "unit": "%", "status": "danger", "msg": f"XAVF! Sim holati {sim_holati}% — jiddiy eskirish! Sim uzilishi mumkin. Almashtirilsin!"})
-
-            # Namlik
-            if 35 <= humidity <= 85:
-                params_status.append({"name": "Namlik", "icon": "💨", "value": humidity, "unit": "%", "status": "normal", "msg": "Normal chegarada (35-85%)"})
-            elif 30 <= humidity < 35 or 85 < humidity <= 90:
-                params_status.append({"name": "Namlik", "icon": "💨", "value": humidity, "unit": "%", "status": "warning", "msg": f"Ogohlantirish! Namlik {humidity}% — normal chegara 35-85%. Korroziya yoki quruqlik xavfi."})
-            else:
-                params_status.append({"name": "Namlik", "icon": "💨", "value": humidity, "unit": "%", "status": "danger", "msg": f"XAVF! Namlik {humidity}% — favqulodda! Izolyatsiya buzilishi yoki korroziya tezlashadi!"})
-
-            # Quvvat
-            if quvvat <= 5.0:
-                params_status.append({"name": "Quvvat", "icon": "⚙️", "value": quvvat, "unit": "kW", "status": "normal", "msg": "Normal chegarada (≤5.0 kW)"})
-            elif 5.0 < quvvat <= 5.5:
-                params_status.append({"name": "Quvvat", "icon": "⚙️", "value": quvvat, "unit": "kW", "status": "warning", "msg": f"Ogohlantirish! Quvvat {quvvat} kW — yuklama ortmoqda. Taqsimlovchini tekshiring."})
-            else:
-                params_status.append({"name": "Quvvat", "icon": "⚙️", "value": quvvat, "unit": "kW", "status": "danger", "msg": f"XAVF! Quvvat {quvvat} kW — haddan tashqari yuklama! Simlar qizishi va yong'in xavfi!"})
-
-            # Shamol tezligi
-            if shamol < 15:
-                params_status.append({"name": "Shamol", "icon": "🌬️", "value": shamol, "unit": "km/h", "status": "normal", "msg": "Normal chegarada (<15 km/h)"})
-            elif 15 <= shamol <= 25:
-                params_status.append({"name": "Shamol", "icon": "🌬️", "value": shamol, "unit": "km/h", "status": "warning", "msg": f"Ogohlantirish! Shamol {shamol} km/h — kuchli shamol. Simlar tebranishi ortadi."})
-            else:
-                params_status.append({"name": "Shamol", "icon": "🌬️", "value": shamol, "unit": "km/h", "status": "danger", "msg": f"XAVF! Shamol {shamol} km/h — juda kuchli shamol! Sim uzilishi va ustunlar qiyshayishi xavfi!"})
-
-            # --- UMUMIY XULOSA ---
-            danger_count = sum(1 for p in params_status if p["status"] == "danger")
-            warning_count = sum(1 for p in params_status if p["status"] == "warning")
-            normal_count = sum(1 for p in params_status if p["status"] == "normal")
-
-            danger_params = [p for p in params_status if p["status"] == "danger"]
-            warning_params = [p for p in params_status if p["status"] == "warning"]
-
-            if danger_count >= 2:
-                level = "danger"
-                level_text = "⛔ MUAMMO"
-                level_msg = f"{danger_count} ta parametr favqulodda holatda! Darhol choralar ko'rilsin."
-            elif danger_count == 1:
-                level = "danger"
-                level_text = "⚠️ MUAMMO"
-                level_msg = f"1 ta parametr favqulodda holatda: {danger_params[0]['icon']} {danger_params[0]['name']}. Tezda tekshirilsin."
-            elif warning_count >= 2:
-                level = "warning"
-                level_text = "🟡 OGOHLANTIRISH"
-                level_msg = f"{warning_count} ta parametr ogohlantirish chegarasida. Monitoring kuchaytirilsin."
-            elif warning_count == 1:
-                level = "warning"
-                level_text = "🟡 OGOHLANTIRISH"
-                level_msg = f"1 ta parametr ogohlantirish chegarasida: {warning_params[0]['icon']} {warning_params[0]['name']}."
-            else:
-                level = "success"
-                level_text = "✅ HAVFSIZ"
-                level_msg = "Barcha parametrlar normal chegarada. Tizim barqaror ishlayapti."
-
-            result = {
-                "level": level,
-                "level_text": level_text,
-                "level_msg": level_msg,
-                "params": params_status,
-                "danger_count": danger_count,
-                "warning_count": warning_count,
-                "normal_count": normal_count,
-                "values": {
-                    "harorat": harorat, "shamol": shamol, "chastota": chastota, "kuchlanish": kuchlanish,
-                    "vibratsiya": vibratsiya, "sim_holati": sim_holati,
-                    "humidity": humidity, "quvvat": quvvat
-                }
-            }
+            hybrid_model = pickle.loads(merged)
         except Exception as e:
-            result = {"level": "danger", "level_text": "❌ XATO", "level_msg": str(e), "params": [], "danger_count": 0, "warning_count": 0, "normal_count": 0, "values": {}}
-    return render_template("model.html", result=result)
+            logger.error(f"Model yuklashda xato: {e}")
+    return df, hybrid_model
 
 @app.route("/forecast")
 @login_required
@@ -292,29 +145,100 @@ def forecast():
         for t, p in zip(last_week_resampled.index, lw_preds):
             result.append({"timestamp": str(t), "xavf": int(p)})
 
-        # ===== KELAJAK 7 KUN PROGNOZI =====
-        future = []
 
-        # 1) REAL ob-havo prognozi (Open-Meteo API)
-        weather_forecast = {}
-        try:
-            resp = http_requests.get("https://api.open-meteo.com/v1/forecast", params={
-                "latitude": 41.3111, "longitude": 69.2797,
-                "hourly": "temperature_2m,wind_speed_10m,relative_humidity_2m",
-                "timezone": "Asia/Tashkent",
-                "forecast_days": 7
-            }, timeout=10)
-            wd = resp.json().get("hourly", {})
-            if wd.get("time"):
-                for i, t in enumerate(wd["time"]):
-                    weather_forecast[t[:13]] = {  # "2026-04-05T06" format
-                        "temp": wd["temperature_2m"][i],
-                        "wind": wd["wind_speed_10m"][i],
-                        "humid": wd["relative_humidity_2m"][i]
-                    }
-            logger.info(f"Open-Meteo: {len(weather_forecast)} soatlik ob-havo yuklandi")
-        except Exception as e:
-            logger.warning(f"Open-Meteo xatosi, fallback ishlatiladi: {e}")
+        # ===== KELAJAK 7 KUN PROGNOZI (TUMANLAR BO'YICHA) =====
+        # 1) Tumanlar ro'yxati va koordinatalari
+        cols = ["District", "Latitude", "Longitude"]
+        tuman_df = df[cols].drop_duplicates().groupby("District").first().reset_index()
+        tumanlar = tuman_df.to_dict(orient="records")
+
+        all_future = []
+
+        for tuman in tumanlar:
+            tuman_name = tuman["District"]
+            lat = tuman["Latitude"]
+            lon = tuman["Longitude"]
+
+            # 2) Shu tuman uchun ob-havo prognozi
+            weather_forecast = {}
+            try:
+                resp = http_requests.get("https://api.open-meteo.com/v1/forecast", params={
+                    "latitude": lat, "longitude": lon,
+                    "hourly": "temperature_2m,wind_speed_10m,relative_humidity_2m",
+                    "timezone": "Asia/Tashkent",
+                    "forecast_days": 7
+                }, timeout=10)
+                wd = resp.json().get("hourly", {})
+                if wd.get("time"):
+                    for i, t in enumerate(wd["time"]):
+                        weather_forecast[t[:13]] = {
+                            "temp": wd["temperature_2m"][i],
+                            "wind": wd["wind_speed_10m"][i],
+                            "humid": wd["relative_humidity_2m"][i]
+                        }
+                logger.info(f"Open-Meteo: {tuman_name} uchun {len(weather_forecast)} soatlik ob-havo yuklandi")
+            except Exception as e:
+                logger.warning(f"Open-Meteo xatosi ({tuman_name}), fallback ishlatiladi: {e}")
+
+            # 3) So'nggi ma'lum qiymatlar (shu tuman uchun)
+            tuman_week = last_week[last_week["District"] == tuman_name]
+            if not tuman_week.empty:
+                recent = tuman_week.set_index("Timestamp")[feature_cols].resample("6h").mean().dropna()
+                base_vals = recent.iloc[-1].values.copy() if len(recent) >= 1 else None
+            else:
+                base_vals = None
+
+            if base_vals is not None:
+                rng = np.random.default_rng(42)
+                normal_center = np.array([
+                    15.0,   # Harorat
+                    5.0,    # Shamol
+                    50.0,   # Chastota (Hz)
+                    220.0,  # Kuchlanish (V)
+                    0.35,   # Vibratsiya
+                    90.0,   # Sim holati (%)
+                    60.0,   # Namlik
+                    3.2     # Quvvat (kW)
+                ])
+                noise_scale = np.array([1.5, 1.0, 0.15, 3.0, 0.08, 1.5, 3.0, 0.25])
+                reversion = np.array([0.3, 0.3, 0.4, 0.3, 0.3, 0.15, 0.3, 0.3])
+                normal_bounds = {
+                    0: (-5, 50),     # Harorat
+                    1: (0, 35),      # Shamol
+                    2: (49.2, 50.8), # Chastota
+                    3: (205, 235),   # Kuchlanish
+                    4: (0.05, 1.2),  # Vibratsiya
+                    5: (70, 100),    # Sim holati
+                    6: (25, 95),     # Namlik
+                    7: (1.5, 5.5),   # Quvvat
+                }
+                prev_vals = base_vals.copy()
+                for i in range(1, 29):  # 28 nuqta = 7 kun * 4
+                    future_time = now + datetime.timedelta(hours=i * 6)
+                    hour = future_time.hour
+                    time_key = future_time.strftime("%Y-%m-%dT%H")
+                    is_peak = 1.0 if (8 <= hour <= 12 or 18 <= hour <= 22) else 0.0
+                    peak_effect = np.array([0.0, 0.0, -0.05, 0.5, 0.03, 0.0, 0.0, 0.2]) * is_peak
+                    noise = rng.normal(0, 1, len(feature_cols)) * noise_scale
+                    vals = prev_vals + reversion * (normal_center - prev_vals) + noise + peak_effect
+                    # REAL ob-havo ma'lumotlarini qo'yish (harorat, shamol, namlik)
+                    if time_key in weather_forecast:
+                        w = weather_forecast[time_key]
+                        vals[0] = w["temp"] + rng.normal(0, 0.5)
+                        vals[1] = w["wind"] + rng.normal(0, 0.3)
+                        vals[6] = w["humid"] + rng.normal(0, 1.0)
+                    for j, (lo, hi) in normal_bounds.items():
+                        vals[j] = np.clip(vals[j], lo, hi)
+                    pred_input = pd.DataFrame([vals], columns=feature_cols)
+                    pred = int(hybrid_model.predict(pred_input)[0])
+                    all_future.append({
+                        "timestamp": future_time.strftime("%Y-%m-%d %H:00"),
+                        "xavf": pred,
+                        "params": {feature_cols[k]: round(float(vals[k]), 2) for k in range(len(feature_cols))},
+                        "District": tuman_name,
+                        "Latitude": lat,
+                        "Longitude": lon
+                    })
 
         # 2) So'nggi ma'lum qiymatlar (elektr parametrlar uchun baza)
         if not last_week.empty:
@@ -358,6 +282,7 @@ def forecast():
 
             prev_vals = base_vals.copy()
 
+            future = []
             for i in range(1, 29):  # 28 nuqta = 7 kun * 4
                 future_time = now + datetime.timedelta(hours=i * 6)
                 hour = future_time.hour
@@ -395,7 +320,43 @@ def forecast():
                 })
                 prev_vals = vals.copy()
 
-        return jsonify({"last_week": result, "future": future})
+
+
+        # === PROGNOZLARNI sensor_data_part2.csv GA SAQLASH (tumanlar bo'yicha, to'liq ustunlar bilan) ===
+        if all_future:
+            import csv
+            csv_path = os.path.join("data", "sensor_data_part2.csv")
+            file_exists = os.path.isfile(csv_path)
+            fieldnames = [
+                "timestamp", "SensorID", "District", "Latitude", "Longitude",
+                "Muhit_harorat (C)", "Shamol_tezligi (km/h)", "Chastota (Hz)", "Kuchlanish (V)",
+                "Vibratsiya", "Sim_mexanik_holati (%)", "Atrof_muhit_humidity (%)", "Quvvati (kW)", "Fault"
+            ]
+            with open(csv_path, "a", newline='', encoding="utf-8") as csvfile:
+                writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+                if not file_exists:
+                    writer.writeheader()
+                for row in all_future:
+                    params = row["params"]
+                    csv_row = {
+                        "timestamp": row["timestamp"],
+                        "SensorID": "S999",
+                        "District": row["District"],
+                        "Latitude": row["Latitude"],
+                        "Longitude": row["Longitude"],
+                        "Muhit_harorat (C)": round(params.get("Muhit_harorat (C)", 0), 2),
+                        "Shamol_tezligi (km/h)": round(params.get("Shamol_tezligi (km/h)", 0), 2),
+                        "Chastota (Hz)": round(params.get("Chastota (Hz)", 0), 2),
+                        "Kuchlanish (V)": round(params.get("Kuchlanish (V)", 0), 2),
+                        "Vibratsiya": round(params.get("Vibratsiya", 0), 4),
+                        "Sim_mexanik_holati (%)": round(params.get("Sim_mexanik_holati (%)", 0), 2),
+                        "Atrof_muhit_humidity (%)": round(params.get("Atrof_muhit_humidity (%)", 0), 2),
+                        "Quvvati (kW)": round(params.get("Quvvati (kW)", 0), 2),
+                        "Fault": row["xavf"]
+                    }
+                    writer.writerow(csv_row)
+
+        return jsonify({"last_week": result, "future": all_future})
     except Exception as e:
         logger.error(f"Forecast error: {e}")
         return jsonify({"error": str(e)}), 500

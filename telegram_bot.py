@@ -1577,7 +1577,7 @@ def main():
     app.add_handler(CallbackQueryHandler(button_callback))
 
     # Auto-alert: har 1 soatda tekshirish
-    app.job_queue.run_repeating(alert_check, interval=3600, first=60)
+    # app.job_queue.run_repeating(alert_check, interval=3600, first=60)  # Auto-alert o'chirildi
 
     logger.info("🤖 Bot ishga tushdi! (8 ta yangi funksiya qo'shildi)")
     app.run_polling(allowed_updates=Update.ALL_TYPES)

@@ -18,7 +18,7 @@ Ushbu loyiha elektr uzatish liniyalari uchun to'liq monitoring va AI-bashorat ti
 
 - 📊 **Dashboard** — KPI kartalar, statistika, jonli ma'lumotlar, Toshkent xaritasi
 - 📋 **Jadval** — 1M qator ma'lumot, pagination, smart sorting, CSV/PDF eksport
-- 🗺️ **Xarita** — 500 ta sensor joylashuvi va real-time holati (Plotly)
+- 🗺️ **Xarita** — 500 ta sensor joylashuvi va real-time holati (Leaflet.js)
 - 📈 **Grafiklar** — 8 ta parametr bo'yicha trend va tahlil
 - 🤖 **AI Model** — Hybrid VotingClassifier (RandomForest + MLP)
 - 🔮 **7 kunlik prognoz** — Real ob-havo (Open-Meteo API) + AI bashorat
@@ -38,7 +38,7 @@ Ushbu loyiha elektr uzatish liniyalari uchun to'liq monitoring va AI-bashorat ti
 | **Pandas** | 2.1.3 | Data processing |
 | **NumPy** | 1.26.2 | Hisoblashlar |
 | **scikit-learn** | 1.3.2 | ML model (RF + MLP) |
-| **Plotly** | 5.18.0 | Interaktiv grafiklar |
+| **Leaflet.js** | 1.9.4 | Interaktiv xarita |
 | **Matplotlib** | 3.9.2 | Telegram bot grafiklari |
 | **python-telegram-bot** | 21.3 | Telegram bot framework |
 | **Bootstrap** | 5.3.0 | UI framework |
@@ -145,10 +145,10 @@ Brauzerda oching: [http://localhost:5000](http://localhost:5000)
 | Kirish | `/login` | Autentifikatsiya |
 | Dashboard | `/` | KPI, statistika, xarita, jonli panel |
 | Jadval | `/table` | Sensor ma'lumotlar jadvali |
-| Xarita | `/map` | Sensorlar joylashuvi |
+| Xarita | `/map` | Sensorlar joylashuvi (Leaflet.js, qora matn) |
 | Grafiklar | `/graphs` | 8 parametr trend grafiklari |
 | Model | `/model` | AI prognoz va test |
-| Prognoz | `/forecast` | 7 kunlik bashorat |
+| Prognoz | `/forecast` | 7 kunlik bashorat (real ob-havo, tumanlar bo'yicha) |
 | Sensor | `/sensor/<id>` | Alohida sensor tafsiloti |
 
 ### API Endpoints
@@ -234,12 +234,14 @@ VotingClassifier (soft voting) + StandardScaler pipeline:
 
 Prognoz tizimi quyidagilarni birlashtiradi:
 
-1. **Real ob-havo ma'lumotlari** — Open-Meteo API (Toshkent: 41.31°N, 69.28°E)
+1. **Real ob-havo ma'lumotlari** — Open-Meteo API (har bir tuman uchun alohida, koordinatalar asosida)
 2. **Stoxastik simulyatsiya** — Elektr parametrlarning o'rtachaga qaytish modeli
 3. **AI bashorat** — Har bir 6 soatlik nuqta uchun model prognozi
 4. **Peak-hour effektlari** — Yuqori yuklanish soatlari (8–12, 18–22)
 
-Natija: 28 ta prognoz nuqtasi (7 kun × 4 marta/kun), kunlik xulosa kartalari, risk grafigi va batafsil jadval.
+Natija: 28 ta prognoz nuqtasi (7 kun × 4 marta/kun, har bir tuman uchun), kunlik xulosa kartalari, risk grafigi va batafsil jadval.
+
+**CSV saqlash:** Har bir prognoz natijasi `data/sensor_data_part2.csv` fayliga tuman, koordinata va barcha parametrlar bilan qo'shiladi.
 
 ---
 
@@ -300,6 +302,7 @@ Bot: [@elektr_monitor_bot](https://t.me/elektr_monitor_bot)
 | Prognoz ob-havo xatosi | Internet aloqasini tekshiring (Open-Meteo API) |
 | Telegram bot ishlamayapti | `.env` faylda `TELEGRAM_BOT_TOKEN` borligini tekshiring |
 | Bot conflict xatosi | Boshqa joyda bot ishlayotgan bo'lishi mumkin, avval to'xtating |
+| Flask 404 yoki NameError | `@app.route("/")` va boshqa route'larni `app = Flask(__name__)` dan keyin yozing |
 
 ---
 
