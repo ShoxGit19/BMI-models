@@ -69,6 +69,7 @@ USERS = {
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "")
 
+
 def login_required(f):
     @functools.wraps(f)
     def decorated(*args, **kwargs):
@@ -77,6 +78,9 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated
 
+
+
+# --- Ma'lumot va modelni yuklash funksiyasi ---
 # --- Ma'lumot va modelni yuklash funksiyasi ---
 def load_data_and_model():
     df, hybrid_model = None, None
@@ -107,6 +111,14 @@ def load_data_and_model():
         except Exception as e:
             logger.error(f"Model yuklashda xato: {e}")
     return df, hybrid_model
+
+# --- Ma'lumot va modelni global yuklash ---
+df, hybrid_model = None, None
+def reload_data_and_model():
+    global df, hybrid_model
+    df, hybrid_model = load_data_and_model()
+
+reload_data_and_model()
 
 @app.route("/forecast")
 @login_required
