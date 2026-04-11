@@ -10,8 +10,4 @@ fix_fault_labels.py
 fix_csv_faults.py
 analyze_faults.py
 .env
-.gitignore
-.gitignore
-.gitignore
-.gitignore
 telegram_bot.py

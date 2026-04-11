@@ -1,29 +1,28 @@
-/* ================================
-   PROFESSIONAL STYLING
-   Elektr Monitoring System — Dark Teal Theme
-   ================================ */
+/*
+  Fayl: style.css
+  Maqsad: Elektr monitoring tizimi uchun zamonaviy, yorqin va oson o‘qiladigan dizayn (O‘zbek tilida izohlar)
+  Muallif: ShoxGit19
+*/
 
 :root {
-  --primary-dark: #0f2027;
-  --primary-mid: #203a43;
-  --primary-light: #2c5364;
-  --accent-red: #ef4444;
-  --accent-amber: #f59e0b;
-  --accent-blue: #3b82f6;
-  --accent-green: #10b981;
-  --accent-purple: #8b5cf6;
-  --accent-cyan: #06b6d4;
-  --accent-pink: #ec4899;
-  --accent-slate: #64748b;
-  --bg-page: #f0f2f5;
-  --bg-card: #ffffff;
-  --text-primary: #1a1a2e;
-  --text-secondary: #6b7280;
-  --text-muted: #9ca3af;
-  --border-light: rgba(0,0,0,0.04);
-  --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
+  --primary: #3182ce;
+  --primary-light: #e3f0ff;
+  --primary-dark: #2b6cb0;
+  --accent-green: #38a169;
+  --accent-yellow: #ecc94b;
+  --accent-red: #e53e3e;
+  --accent-orange: #f6ad55;
+  --accent-blue: #4299e1;
+  --accent-gray: #edf2f7;
+  --bg-page: #f7fafc;
+  --bg-card: #fff;
+  --text-primary: #2d3748;
+  --text-secondary: #4a5568;
+  --text-muted: #a0aec0;
+  --border-light: #e2e8f0;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.04);
   --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
-  --shadow-lg: 0 12px 24px rgba(0,0,0,0.1);
+  --shadow-lg: 0 12px 24px rgba(0,0,0,0.10);
   --radius: 16px;
   --radius-sm: 10px;
   --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -57,9 +56,72 @@ main {
   flex: 1;
 }
 
-/* ================================
-   NAVBAR — handled inline via navbar.html
-   ================================ */
+/* Card styles */
+.card {
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-light);
+  transition: var(--transition);
+}
+.card:hover {
+  box-shadow: var(--shadow-md);
+}
+
+/* Navbar light style */
+.navbar {
+  background: #FFFFFF !important;
+  color: var(--text-primary) !important;
+}
+.navbar .navbar-brand, .navbar .nav-link {
+  color: #374151 !important;
+}
+.navbar .nav-link.active, .navbar .nav-link:focus, .navbar .nav-link:hover {
+  background: #EFF6FF !important;
+  color: #2563EB !important;
+}
+
+/* Buttons */
+.btn-primary {
+  background: var(--primary);
+  border: none;
+  color: #fff;
+  border-radius: var(--radius-sm);
+  transition: var(--transition);
+}
+.btn-primary:hover {
+  background: var(--primary-dark);
+}
+
+/* Table */
+.table {
+  background: var(--bg-card);
+  color: var(--text-primary);
+}
+.table thead {
+  background: #e3f0ff;
+}
+
+/* Misc */
+.shadow-sm { box-shadow: var(--shadow-sm) !important; }
+.shadow-md { box-shadow: var(--shadow-md) !important; }
+.shadow-lg { box-shadow: var(--shadow-lg) !important; }
+
+.rounded { border-radius: var(--radius) !important; }
+.rounded-pill { border-radius: 50rem !important; }
+
+.bg-primary { background: var(--primary) !important; color: #fff !important; }
+.bg-light { background: var(--bg-page) !important; }
+.text-primary { color: var(--primary) !important; }
+.text-secondary { color: var(--text-secondary) !important; }
+.text-muted { color: var(--text-muted) !important; }
+
+/* Responsive tweaks */
+@media (max-width: 768px) {
+  .card { border-radius: var(--radius-sm); }
+}
+
+/* NAVBAR — handled inline via navbar.html */
 .navbar-brand:hover {
   opacity: 0.9;
 }
@@ -67,16 +129,16 @@ main {
 .nav-link {
   font-weight: 500;
   transition: var(--transition);
-  color: rgba(255,255,255,0.7) !important;
+  color: #374151 !important;
 }
 
 .nav-link:hover {
-  background: rgba(255,255,255,0.08) !important;
-  color: #fff !important;
+  background: #EFF6FF !important;
+  color: #2563EB !important;
 }
 
 .nav-link.active {
-  color: #fff !important;
+  color: #2563EB !important;
   font-weight: 600;
 }
 
@@ -84,10 +146,11 @@ main {
    PAGE HERO (shared across pages)
    ================================ */
 .page-hero {
-  background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary-mid) 40%, var(--primary-light) 100%);
+  background: linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%);
   padding: 2rem 0 1.5rem;
   position: relative;
   overflow: hidden;
+  border-bottom: 1px solid #BFDBFE;
 }
 .page-hero::before {
   content: '';
@@ -96,34 +159,35 @@ main {
   right: -20%;
   width: 500px;
   height: 500px;
-  background: radial-gradient(circle, rgba(0,212,255,0.06) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(59,130,246,0.06) 0%, transparent 70%);
   border-radius: 50%;
 }
 .page-hero h1 {
   font-size: 1.8rem;
   font-weight: 800;
-  color: #fff;
+  color: #1E3A5F;
   letter-spacing: -0.3px;
 }
 .page-hero p {
-  color: rgba(255,255,255,0.6);
+  color: #6B7280;
   font-size: 0.9rem;
 }
 header {
-  background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary-mid) 40%, var(--primary-light) 100%);
-  color: white;
-  border-bottom: none;
+  background: linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%);
+  color: #1E3A5F;
+  border-bottom: 1px solid #BFDBFE;
 }
 
 header h1 {
   font-size: 1.8rem;
   font-weight: 800;
   letter-spacing: -0.3px;
+  color: #1E3A5F;
 }
 
 header .lead {
   font-size: 0.9rem;
-  opacity: 0.6;
+  color: #6B7280;
 }
 
 /* ================================
@@ -212,20 +276,21 @@ header .lead {
 }
 
 .card-header {
-  border-bottom: none;
+  border-bottom: 1px solid #E5E7EB;
   padding: 1rem 1.5rem !important;
-  background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary-light) 100%);
-  color: white;
+  background: linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%);
+  color: #1E3A5F;
 }
 
 .card-header h5 {
   font-weight: 700;
   margin-bottom: 0;
   font-size: 1rem;
+  color: #1E3A5F;
 }
 
 .card-header small {
-  opacity: 0.65;
+  color: #6B7280;
 }
 
 .card-body {
@@ -585,15 +650,15 @@ header {
   border-radius: 50px;
   font-weight: 600;
   font-size: 0.82rem;
-  color: rgba(255,255,255,0.7);
-  border: 1px solid rgba(255,255,255,0.15);
+  color: #2563EB;
+  border: 1px solid #BFDBFE;
+  background: #fff;
   text-decoration: none;
   transition: var(--transition);
-  backdrop-filter: blur(4px);
 }
 .btn-back:hover {
-  background: rgba(255,255,255,0.1);
-  color: #fff;
+  background: #EFF6FF;
+  color: #1D4ED8;
 }
 
 /* ================================
@@ -708,4 +773,74 @@ body.dark-mode .loading-spinner .spinner {
   min-width: 300px;
   font-size: 0.88rem;
   animation: slideInRight 0.3s ease;
+}
+
+/* Filter panel (universal fix for light background) */
+.filter-panel, .card.filter-panel, .filter-card {
+  background: #e3f0ff !important;
+  border: 1.5px solid #bcd0ee !important;
+  color: #2d3748 !important;
+  box-shadow: 0 2px 12px rgba(59,130,246,0.08);
+}
+.filter-panel input,
+.filter-panel select,
+.filter-panel .form-control {
+  background: #fff !important;
+  border: 1.5px solid #bcd0ee !important;
+  color: #2d3748 !important;
+  font-weight: 500;
+}
+.filter-panel .btn-primary, .filter-panel .btn {
+  background: linear-gradient(90deg, #2563eb 0%, #60a5fa 100%);
+  color: #fff !important;
+  border: none;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(59,130,246,0.10);
+}
+.filter-panel .btn-primary:active, .filter-panel .btn-primary:focus {
+  background: #2563eb !important;
+  color: #fff !important;
+}
+.filter-panel label {
+  color: #2563eb !important;
+  font-weight: 600;
+}
+.filter-panel .form-check-input:checked {
+  background-color: #2563eb !important;
+  border-color: #2563eb !important;
+}
+
+/* Filtr paneli (yorqin va aniq ko‘rinish uchun) */
+.filter-panel, .card.filter-panel, .filter-card {
+  background: #e3f0ff !important;
+  border: 1.5px solid #bcd0ee !important;
+  color: #2d3748 !important;
+  box-shadow: 0 2px 12px rgba(59,130,246,0.08);
+}
+.filter-panel input,
+.filter-panel select,
+.filter-panel .form-control {
+  background: #fff !important;
+  border: 1.5px solid #bcd0ee !important;
+  color: #2d3748 !important;
+  font-weight: 500;
+}
+.filter-panel .btn-primary, .filter-panel .btn {
+  background: linear-gradient(90deg, #2563eb 0%, #60a5fa 100%);
+  color: #fff !important;
+  border: none;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(59,130,246,0.10);
+}
+.filter-panel .btn-primary:active, .filter-panel .btn-primary:focus {
+  background: #2563eb !important;
+  color: #fff !important;
+}
+.filter-panel label {
+  color: #2563eb !important;
+  font-weight: 600;
+}
+.filter-panel .form-check-input:checked {
+  background-color: #2563eb !important;
+  border-color: #2563eb !important;
 }

@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep -l \"page-hero\\\\|dash-hero\\\\|navbar-dark\\\\|#0f2027\\\\|#203a43\\\\|#2c5364\\\\|rgba\\(255,255,255,0.7\\\\|color:white\\\\|color: white\" templates/*.html)",
+      "Bash(python -c ':*)",
+      "Bash(git -C \"C:/Users/Shohjahon/Desktop/BMI_models\" status --short)"
+    ]
+  }
+}
