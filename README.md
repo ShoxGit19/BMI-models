@@ -316,3 +316,41 @@ MIT License — Erkin foydalanish
 
 - Telegram: [@gaybullayeev19](https://t.me/gaybullayeev19)
 - GitHub: [ShoxGit19](https://github.com/ShoxGit19)
+
+---
+
+## 🧩 Qo‘shimcha imkoniyatlar va kengaytirish
+
+- **Yangi monitoring yoki tahlil skriptlari**: `scripts/` papkasiga yangi Python fayl qo‘shing va kerakli funksiyani yozing. Masalan, anomaliyalarni aniqlash, yangi parametrlar bo‘yicha tahlil yoki avtomatik hisobotlar.
+- **AI modelini yangilash**: `train_model.py` faylini o‘zgartirib, boshqa ML algoritmlarini sinab ko‘rish yoki mavjud modelga yangi parametrlar qo‘shish mumkin.
+- **Yangi API endpointlar**: `app.py` fayliga yangi route va API endpointlar qo‘shib, frontend yoki tashqi tizimlar uchun qo‘shimcha xizmatlar yaratish.
+- **Telegram bot kengaytmasi**: `telegram_bot.py` faylida yangi buyruqlar, avtomatik monitoring yoki admin panel imkoniyatlarini kengaytirish.
+- **Dashboard va UI yangilanishi**: `templates/` va `static/` papkalarida yangi sahifalar, grafiklar yoki dizayn elementlari qo‘shish.
+- **Sensor parametrlar diapazonini sozlash**: `config.py` orqali har bir parametr uchun yangi limitlar yoki tumanlar bo‘yicha alohida sozlamalar kiritish.
+- **Avtomatik eksport va backup**: Maʼlumotlarni CSV/PDF formatda avtomatik saqlash yoki tashqi serverga backup qilish uchun skriptlar yozish.
+- **Ob-havo integratsiyasi**: Yangi API (masalan, Gismeteo, AccuWeather) orqali ob-havo maʼlumotlarini kengaytirish.
+- **Xavfsizlik va audit**: Foydalanuvchi harakatlarini logga olish, admin panelga ikki bosqichli autentifikatsiya qo‘shish.
+
+---
+
+## 📝 Foydali so‘rovlar va tezkor amallar
+
+- "AI modelini yangi maʼlumot bilan qanday qayta o‘qitaman?"
+- "Dashboardga yangi sensor parametrini qanday qo‘shaman?"
+- "Har bir sensor uchun to‘g‘ri qiymatlar oraliqlari qanday?"
+- "Bir tumandagi barcha sensor maʼlumotini qanday eksport qilaman?"
+- "Telegram botga yangi buyruq qo‘shish uchun qaysi faylni o‘zgartirishim kerak?"
+- "Yangi API endpoint yaratish uchun qaysi qadamlarni bajaraman?"
+- "Sensorlar uchun avtomatik ogohlantirish tizimini qanday sozlayman?"
+- "Maʼlumotlarni CSV yoki PDF formatda qanday eksport qilaman?"
+
+---
+
+## 📚 Qo‘shimcha hujjatlar va yordam
+
+- `.github/copilot-instructions.md` — Ishchi ko‘rsatmalar va tez-tez uchraydigan muammolar
+- `config.py` — Barcha konfiguratsiya va limitlar
+- `scripts/` — Tahlil va monitoring uchun namunaviy skriptlar
+- [GitHub Issues](https://github.com/ShoxGit19/BMI_models/issues) — Muammolar va takliflar uchun
+
+Agar savollaringiz bo‘lsa yoki yangi imkoniyat qo‘shmoqchi bo‘lsangiz, muallifga yoki GitHub Issues orqali murojaat qiling.
