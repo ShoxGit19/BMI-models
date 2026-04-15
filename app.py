@@ -244,61 +244,28 @@ def sensor_detail(sensor_id):
 # --- API ROUTES ---
 @app.route("/api/forecast")
 def forecast():
-    """So'nggi 7 kun va kelajak uchun xavf prognozi — tez versiya"""
+    """Tuman (latitude, longitude) bo‘yicha 7 kunlik ob-havo prognozi"""
     try:
-        if df is None or df.empty:
-            return jsonify({"error": "Ma'lumot yo'q"}), 404
-
-        now = datetime.datetime.now()
-        week_ago = now - datetime.timedelta(days=7)
-        last_week = df[df["Timestamp"] >= week_ago]
-
-        feature_cols = [
-            "Muhit_harorat (C)", "Shamol_tezligi (km/h)", "Chastota (Hz)", "Kuchlanish (V)",
-            "Vibratsiya", "Sim_mexanik_holati (%)",
-            "Atrof_muhit_humidity (%)", "Quvvati (kW)"
-        ]
-
-        # --- So'nggi 7 kun ---
-        result = []
-        if not last_week.empty and "Fault" in last_week.columns:
-            lw_r = last_week.set_index("Timestamp")[feature_cols + ["Fault"]].resample("6h").mean().dropna()
-            for t, row in lw_r.iterrows():
-                result.append({"timestamp": str(t), "xavf": int(round(float(row["Fault"])))})
-
-        # --- Kelajak 7 kun (tez, API chaqirisiz) ---
-        rng = np.random.default_rng(42)
-        normal_center = np.array([15.0, 5.0, 50.0, 220.0, 0.35, 90.0, 60.0, 3.2])
-        noise_scale   = np.array([1.5,  1.0, 0.15, 3.0,   0.08, 1.5,  3.0,  0.25])
-        reversion     = np.array([0.3,  0.3, 0.4,  0.3,   0.3,  0.15, 0.3,  0.3])
-        bounds = [(-5,50),(0,35),(49.2,50.8),(205,235),(0.05,1.2),(70,100),(25,95),(1.5,5.5)]
-
-        if not last_week.empty:
-            recent = last_week.set_index("Timestamp")[feature_cols].resample("6h").mean().dropna()
-            prev = recent.iloc[-1].values.copy() if len(recent) >= 1 else normal_center.copy()
+        import requests
+        # Parametrlarni olish (query string)
+        lat = request.args.get("latitude", type=float, default=41.3111)
+        lon = request.args.get("longitude", type=float, default=69.2797)
+        resp = requests.get(
+            "https://api.open-meteo.com/v1/forecast",
+            params={
+                "latitude": lat,
+                "longitude": lon,
+                "daily": "temperature_2m_max,temperature_2m_min,wind_speed_10m_max,precipitation_sum",
+                "timezone": "Asia/Tashkent",
+                "forecast_days": 7
+            },
+            timeout=10
+        )
+        if resp.status_code == 200:
+            data = resp.json().get("daily", {})
+            return jsonify({"weather": data})
         else:
-            prev = normal_center.copy()
-
-        future = []
-        for i in range(1, 29):
-            ft = now + datetime.timedelta(hours=i * 6)
-            hour = ft.hour
-            peak = np.array([0.0, 0.0, -0.05, 0.5, 0.03, 0.0, 0.0, 0.2]) * (1.0 if (8<=hour<=12 or 18<=hour<=22) else 0.0)
-            vals = prev + reversion * (normal_center - prev) + rng.normal(0, 1, 8) * noise_scale + peak
-            vals = np.array([np.clip(vals[j], lo, hi) for j,(lo,hi) in enumerate(bounds)])
-            if hybrid_model is not None:
-                pred = int(hybrid_model.predict(pd.DataFrame([vals], columns=feature_cols))[0])
-            else:
-                pred = (2 if vals[0]>45 or vals[3]<200 or vals[3]>240 or vals[4]>1.5 else
-                        1 if vals[0]>40 or vals[3]<210 or vals[3]>230 or vals[4]>1.0 else 0)
-            future.append({
-                "timestamp": ft.strftime("%Y-%m-%d %H:00"),
-                "xavf": pred,
-                "params": {feature_cols[k]: round(float(vals[k]), 2) for k in range(8)}
-            })
-            prev = vals.copy()
-
-        return jsonify({"last_week": result, "future": future})
+            return jsonify({"error": "Ob-havo ma'lumoti olinmadi"}), 503
     except Exception as e:
         logger.error(f"Forecast error: {e}")
         return jsonify({"error": str(e)}), 500
@@ -417,8 +384,10 @@ def map_data():
         if df is None or df.empty:
             return jsonify([]), 404
 
-        # Har bir sensorning OXIRGI o'lchovini olish
+        district = request.args.get('district', None)
         latest = df.sort_values("Timestamp").groupby("SensorID").last().reset_index()
+        if district:
+            latest = latest[latest["District"] == district]
 
         def safe_float(val, default=0.0, ndigits=1):
             try:
