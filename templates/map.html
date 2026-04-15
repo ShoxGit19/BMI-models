@@ -40,7 +40,24 @@
           <h1><i class="fas fa-map-location-dot me-2"></i>Toshkent — Sensor joylashuvi</h1>
           <p class="mb-0">Real vaqt rejimida monitoring xaritasi</p>
         </div>
-        <a href="/" class="btn-back"><i class="fas fa-arrow-left"></i> Orqaga</a>
+        <div class="d-flex align-items-center gap-2">
+          <label for="district-select" class="me-2 mb-0" style="font-size:0.95rem;">Tuman:</label>
+          <select id="district-select" class="form-select form-select-sm" style="width:170px;">
+            <option value="">Barchasi</option>
+            <option value="Bektemir">Bektemir</option>
+            <option value="Chilonzor">Chilonzor</option>
+            <option value="Mirobod">Mirobod</option>
+            <option value="Mirzo Ulug‘bek">Mirzo Ulug‘bek</option>
+            <option value="Olmazor">Olmazor</option>
+            <option value="Sergeli">Sergeli</option>
+            <option value="Shayxontohur">Shayxontohur</option>
+            <option value="Uchtepa">Uchtepa</option>
+            <option value="Yakkasaroy">Yakkasaroy</option>
+            <option value="Yashnobod">Yashnobod</option>
+            <option value="Yunusobod">Yunusobod</option>
+          </select>
+          <a href="/" class="btn-back ms-3"><i class="fas fa-arrow-left"></i> Orqaga</a>
+        </div>
       </div>
     </div>
   </section>
@@ -179,7 +196,10 @@
     let markersLayer = null;
     async function loadMap() {
       try {
-        const response = await fetch('/api/map-data');
+        const district = document.getElementById('district-select').value;
+        let url = '/api/map-data';
+        if (district) url += `?district=${encodeURIComponent(district)}`;
+        const response = await fetch(url);
         const data = await response.json();
         if (!data || data.length === 0) {
           document.getElementById('map').innerHTML = '<div class="alert alert-warning">Ma\'lumot topilmadi</div>';
@@ -253,6 +273,7 @@
     }
     loadMap();
     setInterval(loadMap, 30000);
+    document.getElementById('district-select').addEventListener('change', loadMap);
   </script>
 </body>
     <!-- Theme toggle script -->
