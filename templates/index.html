@@ -3,281 +3,145 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Monitoring Dashboard - Toshkent</title>
+  <title>Asosiy sahifa · ElectroGrid Monitoring</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{url_for('static', filename='style.css')}}">
   <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
   <style>
-    /* ===== DASHBOARD HERO ===== */
-    .dash-hero {
-      background: linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 60%, #BFDBFE 100%);
-      padding: 1.5rem 0 1.2rem;
-      position: relative;
-      overflow: hidden;
-      border-bottom: 1px solid #BFDBFE;
+    .weather-widget {
+      background: rgba(255,255,255,0.12);
+      border: 1px solid rgba(255,255,255,0.18);
+      backdrop-filter: blur(20px);
+      border-radius: var(--radius-md);
+      padding: 0.85rem 1.15rem;
+      display: flex; align-items: center; gap: 14px;
+      min-width: 240px;
+      color: white;
     }
-    .dash-hero::before {
-      content: '';
-      position: absolute;
-      top: -50%;
-      right: -20%;
-      width: 600px;
-      height: 600px;
-      background: radial-gradient(circle, rgba(59,130,246,0.10) 0%, transparent 70%);
-      border-radius: 50%;
-    }
-    .dash-hero .hero-title {
-      font-size: 2rem;
-      font-weight: 800;
-      letter-spacing: -0.5px;
-      color: #1E3A5F;
-    }
-    .dash-hero .hero-sub {
-      color: #6B7280;
-      font-size: 0.95rem;
-    }
-    .status-pill {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 6px 16px;
-      border-radius: 50px;
-      font-weight: 600;
-      font-size: 0.85rem;
-      backdrop-filter: blur(4px);
-    }
-    .status-pill.online {
-      background: #F0FDF4;
-      color: #16A34A;
-      border: 1px solid #BBF7D0;
-    }
-    .status-pulse {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: #22C55E;
-      animation: pulse-dot 2s infinite;
-    }
-    @keyframes pulse-dot {
-      0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(81,207,102,0.5); }
-      50% { opacity: 0.7; box-shadow: 0 0 0 8px rgba(81,207,102,0); }
-    }
+    .weather-widget .icon { font-size: 1.5rem; opacity: 0.9; }
+    .weather-widget .label { font-size: 0.7rem; opacity: 0.7; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; }
+    .weather-widget .temp { font-size: 1.3rem; font-weight: 800; line-height: 1; }
+    .weather-widget .meta { font-size: 0.78rem; opacity: 0.75; margin-top: 3px; }
 
-    /* ===== KPI GRID ===== */
-    .kpi-grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 1rem;
-    }
-    @media (max-width: 1200px) { .kpi-grid { grid-template-columns: repeat(2, 1fr); } }
-    @media (max-width: 576px) { .kpi-grid { grid-template-columns: 1fr; } }
-
-    .kpi-card {
-      background: #fff;
-      border-radius: 16px;
-      padding: 1.25rem 1.5rem;
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      border: 1px solid rgba(0,0,0,0.04);
-      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    .stat-strip {
+      background: var(--bg-elevated);
+      border-bottom: 1px solid var(--border-subtle);
+      padding: 1.25rem 0;
+      box-shadow: var(--shadow-sm);
       position: relative;
-      overflow: hidden;
+      z-index: 5;
+      margin-top: -1.25rem;
     }
-    .kpi-card::after {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 5px;
-      height: 100%;
-      border-radius: 16px 0 0 16px;
+    .stat-item { text-align: center; padding: 0.5rem 1rem; border-right: 1px solid var(--border-subtle); }
+    .stat-item:last-child { border-right: none; }
+    .stat-item .stat-value {
+      font-size: 2rem; font-weight: 800; line-height: 1;
+      letter-spacing: -0.03em;
     }
-    .kpi-card:hover {
-      transform: translateY(-4px);
-      box-shadow: 0 12px 24px rgba(0,0,0,0.1);
-    }
-    .kpi-card .kpi-ic {
-      width: 56px;
-      height: 56px;
-      border-radius: 14px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.5rem;
-      flex-shrink: 0;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-    }
-    .kpi-card .kpi-info { flex: 1; min-width: 0; }
-    .kpi-card .kpi-val {
-      font-size: 1.5rem;
-      font-weight: 800;
-      line-height: 1.1;
-      color: #1a1a2e;
-    }
-    .kpi-card .kpi-lbl {
-      font-size: 0.75rem;
-      color: #556275;
+    .stat-item .stat-label {
+      font-size: 0.7rem;
       text-transform: uppercase;
-      letter-spacing: 0.5px;
+      letter-spacing: 0.08em;
       font-weight: 700;
+      color: var(--text-muted);
+      margin-top: 6px;
     }
-    .kpi-card .kpi-unit {
-      font-size: 0.8rem;
-      color: #7b8a9e;
-      font-weight: 600;
-    }
+    .stat-item.success .stat-value { color: var(--color-success); }
+    .stat-item.warning .stat-value { color: var(--color-warning); }
+    .stat-item.danger .stat-value { color: var(--color-danger); }
 
-    /* KPI color accents */
-    .kpi-card.kpi-temp::after { background: linear-gradient(180deg, #ef4444, #dc2626); }
-    .kpi-card.kpi-temp .kpi-ic { background: linear-gradient(135deg, #fef2f2, #fecaca); color: #dc2626; box-shadow: 0 4px 12px rgba(239,68,68,0.2); }
-    .kpi-card.kpi-temp { border-left: 4px solid #ef4444; }
-
-    .kpi-card.kpi-wind::after { background: linear-gradient(180deg, #8b5cf6, #7c3aed); }
-    .kpi-card.kpi-wind .kpi-ic { background: linear-gradient(135deg, #f5f3ff, #ddd6fe); color: #7c3aed; box-shadow: 0 4px 12px rgba(139,92,246,0.2); }
-    .kpi-card.kpi-wind { border-left: 4px solid #8b5cf6; }
-
-    .kpi-card.kpi-freq::after { background: linear-gradient(180deg, #f59e0b, #d97706); }
-    .kpi-card.kpi-freq .kpi-ic { background: linear-gradient(135deg, #fffbeb, #fde68a); color: #b45309; box-shadow: 0 4px 12px rgba(245,158,11,0.2); }
-    .kpi-card.kpi-freq { border-left: 4px solid #f59e0b; }
-
-    .kpi-card.kpi-volt::after { background: linear-gradient(180deg, #3b82f6, #2563eb); }
-    .kpi-card.kpi-volt .kpi-ic { background: linear-gradient(135deg, #eff6ff, #bfdbfe); color: #1d4ed8; box-shadow: 0 4px 12px rgba(59,130,246,0.2); }
-    .kpi-card.kpi-volt { border-left: 4px solid #3b82f6; }
-
-    .kpi-card.kpi-vib::after { background: linear-gradient(180deg, #ec4899, #db2777); }
-    .kpi-card.kpi-vib .kpi-ic { background: linear-gradient(135deg, #fdf2f8, #fbcfe8); color: #be185d; box-shadow: 0 4px 12px rgba(236,72,153,0.2); }
-    .kpi-card.kpi-vib { border-left: 4px solid #ec4899; }
-
-    .kpi-card.kpi-wire::after { background: linear-gradient(180deg, #10b981, #059669); }
-    .kpi-card.kpi-wire .kpi-ic { background: linear-gradient(135deg, #ecfdf5, #a7f3d0); color: #047857; box-shadow: 0 4px 12px rgba(16,185,129,0.2); }
-    .kpi-card.kpi-wire { border-left: 4px solid #10b981; }
-
-    .kpi-card.kpi-hum::after { background: linear-gradient(180deg, #06b6d4, #0891b2); }
-    .kpi-card.kpi-hum .kpi-ic { background: linear-gradient(135deg, #ecfeff, #a5f3fc); color: #0e7490; box-shadow: 0 4px 12px rgba(6,182,212,0.2); }
-    .kpi-card.kpi-hum { border-left: 4px solid #06b6d4; }
-
-    .kpi-card.kpi-pow::after { background: linear-gradient(180deg, #f97316, #ea580c); }
-    .kpi-card.kpi-pow .kpi-ic { background: linear-gradient(135deg, #fff7ed, #fed7aa); color: #c2410c; box-shadow: 0 4px 12px rgba(249,115,22,0.2); }
-    .kpi-card.kpi-pow { border-left: 4px solid #f97316; }
-
-    /* ===== MAP CARD ===== */
-    .map-card {
-      border-radius: 16px;
-      overflow: hidden;
-      background: #fff;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
-      border: 1px solid rgba(0,0,0,0.04);
-    }
-    .map-card .map-header {
-      padding: 1rem 1.5rem;
-      background: linear-gradient(135deg, #EFF6FF, #DBEAFE);
-      color: #1E3A5F;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      border-bottom: 1px solid #BFDBFE;
-    }
-    .map-card .map-header h5 {
-      font-weight: 700;
-      margin: 0;
-      font-size: 1.05rem;
-    }
-
-    /* ===== LIVE PANEL ===== */
-    .live-panel {
-      border-radius: 16px;
-      background: #fff;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
-      border: 1px solid rgba(0,0,0,0.04);
+    .panel {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-xs);
       overflow: hidden;
     }
-    .live-panel .panel-head {
-      padding: 1rem 1.5rem;
-      background: linear-gradient(135deg, #EFF6FF, #DBEAFE);
-      color: #1E3A5F;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      border-bottom: 1px solid #BFDBFE;
-    }
-    .live-panel .panel-head h5 {
+    .panel-head {
+      padding: 0.95rem 1.25rem;
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex; align-items: center; justify-content: space-between;
       font-weight: 700;
-      margin: 0;
-      font-size: 1.05rem;
+      font-size: 0.95rem;
+      color: var(--text-primary);
     }
+    .panel-head .icon-pill {
+      width: 30px; height: 30px;
+      border-radius: 8px;
+      background: rgba(37, 99, 235, 0.1);
+      color: var(--brand-primary);
+      display: inline-flex; align-items: center; justify-content: center;
+      margin-right: 8px;
+      font-size: 0.85rem;
+    }
+
     .live-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0.65rem 1.5rem;
-      border-bottom: 1px solid #f1f3f5;
-      transition: background 0.2s;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0.7rem 1.25rem;
+      border-bottom: 1px solid var(--border-subtle);
+      transition: background 0.15s;
     }
-    .live-row:hover { background: #f8f9ff; }
     .live-row:last-child { border-bottom: none; }
+    .live-row:hover { background: var(--bg-subtle); }
     .live-row .lr-label {
       font-size: 0.85rem;
-      color: #6b7280;
-      display: flex;
-      align-items: center;
-      gap: 8px;
+      color: var(--text-secondary);
+      display: flex; align-items: center; gap: 8px;
+      font-weight: 500;
+    }
+    .live-row .lr-icon {
+      width: 28px; height: 28px;
+      border-radius: 8px;
+      display: inline-flex; align-items: center; justify-content: center;
+      font-size: 0.85rem;
     }
     .live-row .lr-val {
-      font-size: 1rem;
+      font-size: 0.95rem;
       font-weight: 700;
-      color: #1a1a2e;
+      color: var(--text-primary);
     }
 
-    /* ===== QUICK LINKS ===== */
-    .quick-links {
+    .quick-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 0.6rem;
-      padding: 1rem 1.5rem;
+      padding: 1rem;
     }
     .quick-link {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 0.6rem 1rem;
-      border-radius: 10px;
+      display: flex; align-items: center; gap: 10px;
+      padding: 0.7rem 1rem;
+      border-radius: var(--radius-sm);
       font-weight: 600;
-      font-size: 0.82rem;
-      color: #4b5563;
-      background: #f8f9fa;
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      background: var(--bg-subtle);
       text-decoration: none;
-      transition: all 0.2s;
-      border: 1px solid #e9ecef;
+      transition: var(--transition);
+      border: 1px solid var(--border-subtle);
     }
     .quick-link:hover {
-      background: #eef2ff;
-      color: #3b82f6;
-      border-color: #c7d2fe;
+      background: rgba(37, 99, 235, 0.08);
+      color: var(--brand-primary);
+      border-color: rgba(37, 99, 235, 0.2);
       transform: translateY(-2px);
+      box-shadow: var(--shadow-sm);
     }
-    .quick-link i { font-size: 1rem; opacity: 0.7; }
+    .quick-link i { font-size: 1rem; opacity: 0.85; }
 
-    /* ===== SECTION TITLES ===== */
+    #map-container {
+      height: 540px;
+      border-radius: 0 0 var(--radius-md) var(--radius-md);
+    }
+
     .section-label {
-      font-size: 0.7rem;
+      font-size: 0.72rem;
       text-transform: uppercase;
-      letter-spacing: 1.5px;
+      letter-spacing: 0.1em;
       font-weight: 700;
-      color: #9ca3af;
-      margin-bottom: 0.75rem;
-    }
-
-    /* ===== FOOTER ===== */
-    .dash-footer {
-      background: #EFF6FF;
-      color: #6B7280;
-      border-top: 1px solid #BFDBFE;
-      padding: 1.5rem 0;
-      text-align: center;
-      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-bottom: 0.85rem;
     }
   </style>
 </head>
@@ -285,214 +149,174 @@
 
   {% include 'navbar.html' %}
 
-
   <!-- ===== HERO ===== -->
-  <section class="dash-hero">
-    <div class="container-fluid px-4">
-
-      <!-- Top row: title + weather widget -->
-      <div class="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-3">
+  <section class="page-hero">
+    <div class="container-fluid px-4 position-relative">
+      <div class="d-flex flex-wrap align-items-start justify-content-between gap-3">
         <div>
-          <h1 class="hero-title">⚡ Elektr Uzatish Monitoring</h1>
-          <p class="hero-sub mb-0">Toshkent shahri — 500 sensor, 11 tuman, real-time</p>
-        </div>
-        <!-- Compact weather widget (updated via JS) -->
-        <div id="weather-widget" style="
-          background:#fff; border-radius:14px; padding:0.6rem 1rem;
-          box-shadow:0 2px 14px rgba(30,58,95,0.12);
-          display:flex; align-items:center; gap:12px; min-width:220px;
-        ">
-          <i class="fas fa-cloud-sun fa-lg" style="color:#2563EB;"></i>
-          <div>
-            <div style="font-size:0.72rem;color:#6B7280;font-weight:600;letter-spacing:0.4px;">Toshkent, real vaqt</div>
-            <div class="d-flex align-items-center gap-2 mt-1">
-              <span style="font-size:1.1rem;font-weight:800;color:#DC2626;" id="w-temp">--°C</span>
-              <span style="font-size:0.88rem;color:#0891B2;font-weight:600;" id="w-wind">-- km/h</span>
-            </div>
-            <div style="font-size:0.7rem;color:#9CA3AF;margin-top:2px;" id="w-time">--</div>
+          <h1 class="mb-2">Elektr Uzatish Monitoringi</h1>
+          <p class="mb-3">Toshkent shahri · 1200 sensor · 12 tuman · real vaqt rejimida</p>
+          <div class="d-flex align-items-center gap-3 flex-wrap">
+            <span class="status-pill online">
+              <span class="status-pulse"></span>
+              Tizim faol
+            </span>
+            <span style="color: rgba(255,255,255,0.7); font-size: 0.85rem;" id="update-time">
+              <i class="far fa-clock me-1"></i>Yuklanmoqda...
+            </span>
           </div>
         </div>
-      </div>
-
-      <!-- Tizim faol + time -->
-      <div class="d-flex align-items-center gap-3">
-        <span class="status-pill online">
-          <span class="status-pulse"></span>
-          Tizim faol
-        </span>
-        <span style="color:#6B7280;font-size:0.82rem;" id="update-time">--</span>
+        <!-- Weather widget -->
+        <div class="weather-widget animate-fade">
+          <i class="fas fa-cloud-sun icon"></i>
+          <div>
+            <div class="label">Toshkent · Hozir</div>
+            <div class="d-flex align-items-baseline gap-2 mt-1">
+              <span class="temp" id="w-temp">--°C</span>
+              <span style="font-size: 0.85rem; opacity: 0.85;">
+                <i class="fas fa-wind"></i> <span id="w-wind">--</span>
+              </span>
+            </div>
+            <div class="meta" id="w-time">--</div>
+          </div>
+        </div>
       </div>
     </div>
   </section>
 
-  <!-- ===== STAT STRIP (hero dan tashqarida) ===== -->
-  <div style="background:linear-gradient(90deg,#EFF6FF 0%,#DBEAFE 50%,#EFF6FF 100%); border-bottom:1px solid #BFDBFE; padding:1.1rem 0;">
+  <!-- ===== STAT STRIP ===== -->
+  <div class="stat-strip">
     <div class="container-fluid px-4">
-      <div class="row g-0 text-center">
-        <div class="col-3" style="border-right:1.5px solid #BFDBFE;">
-          <div style="font-size:2.2rem;font-weight:900;color:#1E3A5F;line-height:1;" id="total-sensors">--</div>
-          <div style="font-size:0.68rem;color:#6B7280;text-transform:uppercase;letter-spacing:0.8px;font-weight:700;margin-top:5px;">Jami Sensorlar</div>
+      <div class="row g-0">
+        <div class="col-md-3 col-6 stat-item">
+          <div class="stat-value" id="total-sensors">--</div>
+          <div class="stat-label">Jami Sensor</div>
         </div>
-        <div class="col-3" style="border-right:1.5px solid #BFDBFE;">
-          <div style="font-size:2.2rem;font-weight:900;color:#16A34A;line-height:1;" id="safe-sensors">--</div>
-          <div style="font-size:0.68rem;color:#6B7280;text-transform:uppercase;letter-spacing:0.8px;font-weight:700;margin-top:5px;">Havfsiz</div>
+        <div class="col-md-3 col-6 stat-item success">
+          <div class="stat-value" id="safe-sensors">--</div>
+          <div class="stat-label">Havfsiz</div>
         </div>
-        <div class="col-3" style="border-right:1.5px solid #BFDBFE;">
-          <div style="font-size:2.2rem;font-weight:900;color:#D97706;line-height:1;" id="warn-sensors">--</div>
-          <div style="font-size:0.68rem;color:#6B7280;text-transform:uppercase;letter-spacing:0.8px;font-weight:700;margin-top:5px;">Ogohlantirish</div>
+        <div class="col-md-3 col-6 stat-item warning">
+          <div class="stat-value" id="warn-sensors">--</div>
+          <div class="stat-label">Ogohlantirish</div>
         </div>
-        <div class="col-3">
-          <div style="font-size:2.2rem;font-weight:900;color:#DC2626;line-height:1;" id="fault-sensors">--</div>
-          <div style="font-size:0.68rem;color:#6B7280;text-transform:uppercase;letter-spacing:0.8px;font-weight:700;margin-top:5px;">Muammolar</div>
+        <div class="col-md-3 col-6 stat-item danger">
+          <div class="stat-value" id="fault-sensors">--</div>
+          <div class="stat-label">Muammolar</div>
         </div>
       </div>
     </div>
   </div>
 
+  <!-- ===== MAIN CONTENT ===== -->
   <main class="py-4">
     <div class="container-fluid px-4">
 
-      <!-- ===== KPI GRID ===== -->
-      <div class="section-label">Parametrlar o'rtacha qiymatlari</div>
-      <div class="kpi-grid mb-4">
-        <div class="kpi-card kpi-temp">
-          <div class="kpi-ic"><i class="fas fa-temperature-half"></i></div>
-          <div class="kpi-info">
-            <div class="kpi-lbl">Harorat</div>
-            <div class="kpi-val" id="avg-harorat">--</div>
+      <!-- KPI grid -->
+      <div class="section-label">Real-time parametrlar</div>
+      <div class="row g-3 mb-4">
+        <div class="col-xl col-lg-3 col-md-4 col-6">
+          <div class="kpi-card kpi-danger animate-fade-up delay-1">
+            <div class="kpi-icon"><i class="fas fa-temperature-half"></i></div>
+            <div class="kpi-value" id="kpi-temp">--<span style="font-size:0.7em;font-weight:600;color:var(--text-muted);">°C</span></div>
+            <div class="kpi-label">Harorat</div>
           </div>
-          <span class="kpi-unit">°C</span>
         </div>
-        <div class="kpi-card kpi-wind">
-          <div class="kpi-ic"><i class="fas fa-wind"></i></div>
-          <div class="kpi-info">
-            <div class="kpi-lbl">Shamol</div>
-            <div class="kpi-val" id="avg-shamol">--</div>
+        <div class="col-xl col-lg-3 col-md-4 col-6">
+          <div class="kpi-card kpi-purple animate-fade-up delay-2">
+            <div class="kpi-icon"><i class="fas fa-wind"></i></div>
+            <div class="kpi-value" id="kpi-wind">--<span style="font-size:0.6em;font-weight:600;color:var(--text-muted);">km/h</span></div>
+            <div class="kpi-label">Shamol</div>
           </div>
-          <span class="kpi-unit">km/h</span>
         </div>
-        <div class="kpi-card kpi-freq">
-          <div class="kpi-ic"><i class="fas fa-wave-square"></i></div>
-          <div class="kpi-info">
-            <div class="kpi-lbl">Chastota</div>
-            <div class="kpi-val" id="avg-chastota">--</div>
+        <div class="col-xl col-lg-3 col-md-4 col-6">
+          <div class="kpi-card kpi-warning animate-fade-up delay-3">
+            <div class="kpi-icon"><i class="fas fa-wave-square"></i></div>
+            <div class="kpi-value" id="kpi-freq">--<span style="font-size:0.65em;font-weight:600;color:var(--text-muted);">Hz</span></div>
+            <div class="kpi-label">Chastota</div>
           </div>
-          <span class="kpi-unit">Hz</span>
         </div>
-        <div class="kpi-card kpi-volt">
-          <div class="kpi-ic"><i class="fas fa-bolt"></i></div>
-          <div class="kpi-info">
-            <div class="kpi-lbl">Kuchlanish</div>
-            <div class="kpi-val" id="avg-kuchlanish">--</div>
+        <div class="col-xl col-lg-3 col-md-4 col-6">
+          <div class="kpi-card kpi-info animate-fade-up delay-4">
+            <div class="kpi-icon"><i class="fas fa-bolt"></i></div>
+            <div class="kpi-value" id="kpi-volt">--<span style="font-size:0.7em;font-weight:600;color:var(--text-muted);">V</span></div>
+            <div class="kpi-label">Kuchlanish</div>
           </div>
-          <span class="kpi-unit">V</span>
         </div>
-        <div class="kpi-card kpi-vib">
-          <div class="kpi-ic"><i class="fas fa-water"></i></div>
-          <div class="kpi-info">
-            <div class="kpi-lbl">Vibratsiya</div>
-            <div class="kpi-val" id="avg-vibratsiya">--</div>
+        <div class="col-xl col-lg-3 col-md-4 col-6">
+          <div class="kpi-card kpi-danger animate-fade-up delay-1">
+            <div class="kpi-icon"><i class="fas fa-water"></i></div>
+            <div class="kpi-value" id="kpi-vib">--</div>
+            <div class="kpi-label">Vibratsiya</div>
           </div>
-          <span class="kpi-unit"></span>
         </div>
-        <div class="kpi-card kpi-wire">
-          <div class="kpi-ic"><i class="fas fa-plug-circle-check"></i></div>
-          <div class="kpi-info">
-            <div class="kpi-lbl">Sim holati</div>
-            <div class="kpi-val" id="avg-sim">--</div>
+        <div class="col-xl col-lg-3 col-md-4 col-6">
+          <div class="kpi-card kpi-success animate-fade-up delay-2">
+            <div class="kpi-icon"><i class="fas fa-link"></i></div>
+            <div class="kpi-value" id="kpi-wire">--<span style="font-size:0.7em;font-weight:600;color:var(--text-muted);">%</span></div>
+            <div class="kpi-label">Sim holati</div>
           </div>
-          <span class="kpi-unit">%</span>
         </div>
-        <div class="kpi-card kpi-hum">
-          <div class="kpi-ic"><i class="fas fa-droplet"></i></div>
-          <div class="kpi-info">
-            <div class="kpi-lbl">Namlik</div>
-            <div class="kpi-val" id="avg-humidity">--</div>
+        <div class="col-xl col-lg-3 col-md-4 col-6">
+          <div class="kpi-card kpi-info animate-fade-up delay-3">
+            <div class="kpi-icon"><i class="fas fa-droplet"></i></div>
+            <div class="kpi-value" id="kpi-hum">--<span style="font-size:0.7em;font-weight:600;color:var(--text-muted);">%</span></div>
+            <div class="kpi-label">Namlik</div>
           </div>
-          <span class="kpi-unit">%</span>
         </div>
-        <div class="kpi-card kpi-pow">
-          <div class="kpi-ic"><i class="fas fa-solar-panel"></i></div>
-          <div class="kpi-info">
-            <div class="kpi-lbl">Quvvat</div>
-            <div class="kpi-val" id="avg-quvvat">--</div>
+        <div class="col-xl col-lg-3 col-md-4 col-6">
+          <div class="kpi-card kpi-warning animate-fade-up delay-4">
+            <div class="kpi-icon"><i class="fas fa-gear"></i></div>
+            <div class="kpi-value" id="kpi-pow">--<span style="font-size:0.65em;font-weight:600;color:var(--text-muted);">kW</span></div>
+            <div class="kpi-label">Quvvat</div>
           </div>
-          <span class="kpi-unit">kW</span>
         </div>
       </div>
 
-      <!-- ===== MAP + LIVE PANEL ===== -->
-      <div class="row g-4">
+      <!-- Map + Side panel -->
+      <div class="row g-3">
+        <!-- Map -->
         <div class="col-lg-8">
-          <div class="section-label">Xarita</div>
-          <div class="map-card">
-            <div class="map-header">
-              <h5><i class="fas fa-map-location-dot me-2"></i>Toshkent Sensorlar Xaritasi</h5>
-              <span class="badge bg-light text-dark" id="map-sensor-count">--</span>
+          <div class="panel h-100">
+            <div class="panel-head">
+              <div>
+                <span class="icon-pill"><i class="fas fa-map-location-dot"></i></span>
+                Sensorlar xaritasi
+              </div>
+              <a href="/map" class="btn btn-sm btn-outline-primary">
+                <i class="fas fa-expand me-1"></i> To'liq xarita
+              </a>
             </div>
-            <div id="overview-map" style="height: 480px;"></div>
+            <div id="map-container"></div>
           </div>
         </div>
 
+        <!-- Side: Quick links + Districts -->
         <div class="col-lg-4">
-          <div class="section-label">Jonli ma'lumotlar</div>
-          <div class="live-panel mb-3">
+          <!-- Quick links -->
+          <div class="panel mb-3">
             <div class="panel-head">
-              <i class="fas fa-satellite-dish"></i>
-              <h5>Joriy Qiymatlar</h5>
+              <span><span class="icon-pill"><i class="fas fa-bolt-lightning"></i></span>Tezkor havolalar</span>
             </div>
-            <div class="live-row">
-              <span class="lr-label"><i class="fas fa-temperature-half text-danger"></i> Harorat</span>
-              <span class="lr-val" id="current-harorat">--</span>
-            </div>
-            <div class="live-row">
-              <span class="lr-label"><i class="fas fa-wind text-purple"></i> Shamol</span>
-              <span class="lr-val" id="current-shamol">--</span>
-            </div>
-            <div class="live-row">
-              <span class="lr-label"><i class="fas fa-wave-square text-warning"></i> Chastota</span>
-              <span class="lr-val" id="current-chastota">--</span>
-            </div>
-            <div class="live-row">
-              <span class="lr-label"><i class="fas fa-bolt text-primary"></i> Kuchlanish</span>
-              <span class="lr-val" id="current-kuchlanish">--</span>
-            </div>
-            <div class="live-row">
-              <span class="lr-label"><i class="fas fa-vibrate text-pink"></i> Vibratsiya</span>
-              <span class="lr-val" id="current-vibratsiya">--</span>
-            </div>
-            <div class="live-row">
-              <span class="lr-label"><i class="fas fa-link text-success"></i> Sim holati</span>
-              <span class="lr-val" id="current-sim">--</span>
-            </div>
-            <div class="live-row">
-              <span class="lr-label"><i class="fas fa-droplet text-info"></i> Namlik</span>
-              <span class="lr-val" id="current-humidity">--</span>
-            </div>
-            <div class="live-row">
-              <span class="lr-label"><i class="fas fa-gear text-secondary"></i> Quvvat</span>
-              <span class="lr-val" id="current-quvvat">--</span>
-            </div>
-            <div class="px-3 py-2">
-              <div class="alert alert-info small mb-0 d-flex align-items-center gap-2" style="border-radius:10px;">
-                <i class="fas fa-circle-info"></i>
-                <strong id="system-message">Yuklanmoqda...</strong>
-              </div>
+            <div class="quick-grid">
+              <a href="/forecast" class="quick-link"><i class="fas fa-chart-area"></i> Prognoz</a>
+              <a href="/graphs" class="quick-link"><i class="fas fa-chart-line"></i> Grafiklar</a>
+              <a href="/table" class="quick-link"><i class="fas fa-table"></i> Jadval</a>
+              <a href="/model" class="quick-link"><i class="fas fa-brain"></i> AI Model</a>
+              <a href="/api/export/csv" class="quick-link"><i class="fas fa-file-csv"></i> CSV</a>
+              <a href="/api/export/pdf" class="quick-link"><i class="fas fa-file-pdf"></i> Hisobot</a>
             </div>
           </div>
 
-          <!-- quick links -->
-          <div class="live-panel">
-            <div class="panel-head" style="padding: 0.75rem 1.5rem;">
-              <i class="fas fa-compass"></i>
-              <h5 style="font-size: 0.95rem;">Tezkor havolalar</h5>
+          <!-- Districts -->
+          <div class="panel">
+            <div class="panel-head">
+              <span><span class="icon-pill"><i class="fas fa-city"></i></span>Tumanlar holati</span>
             </div>
-            <div class="quick-links">
-              <a href="/table" class="quick-link"><i class="fas fa-table"></i> Jadval</a>
-              <a href="/graphs" class="quick-link"><i class="fas fa-chart-line"></i> Grafiklar</a>
-              <a href="/map" class="quick-link"><i class="fas fa-map"></i> Xarita</a>
-              <a href="/model" class="quick-link"><i class="fas fa-robot"></i> Model</a>
-              <a href="/forecast" class="quick-link"><i class="fas fa-chart-area"></i> Prognoz</a>
+            <div id="districts-list" style="max-height: 320px; overflow-y: auto;">
+              <div class="text-center py-4 text-muted">
+                <div class="spinner-border spinner-border-sm" role="status"></div>
+              </div>
             </div>
           </div>
         </div>
@@ -501,134 +325,132 @@
     </div>
   </main>
 
-  <footer class="dash-footer">
-    <p class="mb-0">© 2026 Toshkent Elektr Transsmissiya | Monitoring Tizimi</p>
-    <p class="mb-0" style="font-size:.85rem;opacity:.7;">Yaratuvchi: Shohjahon G'aybullayev — Toshkent, Bekobod 2026</p>
+  <footer class="text-center mt-4">
+    <div class="container-fluid px-4">
+      <div>© 2026 Toshkent Elektr Monitoring · Yaratuvchi: G'aybullayev Shohjahon &nbsp;·&nbsp; <span class="status-pill online" style="font-size:0.7rem;padding:3px 10px;"><span class="status-pulse"></span>Tizim faol</span></div>
+    </div>
   </footer>
 
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
   <script>
-    async function updateDashboard() {
-      try {
-        const statsRes = await fetch('/api/stats');
-        const stats = await statsRes.json();
-
-        document.getElementById('total-sensors').textContent = stats.total_sensors || '--';
-        document.getElementById('safe-sensors').textContent = stats.safe_sensors || '--';
-        document.getElementById('warn-sensors').textContent = stats.warn_sensors || '--';
-        document.getElementById('fault-sensors').textContent = stats.danger_sensors || '--';
-        document.getElementById('avg-harorat').textContent = stats.avg_harorat || '--';
-        document.getElementById('avg-shamol').textContent = stats.avg_shamol || '--';
-        document.getElementById('avg-chastota').textContent = stats.avg_chastota || '--';
-        document.getElementById('avg-kuchlanish').textContent = stats.avg_kuchlanish || '--';
-        document.getElementById('avg-vibratsiya').textContent = stats.avg_vibratsiya || '--';
-        document.getElementById('avg-sim').textContent = stats.avg_sim_holati || '--';
-        document.getElementById('avg-humidity').textContent = stats.avg_humidity || '--';
-        document.getElementById('avg-quvvat').textContent = stats.avg_quvvat || '--';
-        document.getElementById('update-time').textContent = new Date().toLocaleString('uz-UZ');
-
-        // System status message
-        const pct = stats.safe_percent || 0;
-        const msgEl = document.getElementById('system-message');
-        if (pct >= 60) {
-          msgEl.textContent = stats.status + ' — ' + pct + '% havfsiz';
-          msgEl.closest('.alert').className = 'alert alert-success small mb-0 d-flex align-items-center gap-2';
-        } else if (pct >= 40) {
-          msgEl.textContent = stats.status + ' — ' + pct + '% havfsiz';
-          msgEl.closest('.alert').className = 'alert alert-warning small mb-0 d-flex align-items-center gap-2';
-        } else {
-          msgEl.textContent = stats.status + ' — ' + pct + '% havfsiz';
-          msgEl.closest('.alert').className = 'alert alert-danger small mb-0 d-flex align-items-center gap-2';
-        }
-
-        const dataRes = await fetch('/api/map-data');
-        const data = await dataRes.json();
-
-        if (data && data.length > 0) {
-          document.getElementById('map-sensor-count').textContent = data.length + ' sensor';
-
-          const latest = data[data.length - 1];
-          document.getElementById('current-harorat').textContent = latest.Harorat + ' °C';
-          document.getElementById('current-shamol').textContent = latest.Shamol + ' km/h';
-          document.getElementById('current-chastota').textContent = latest.Chastota + ' Hz';
-          document.getElementById('current-kuchlanish').textContent = latest.Kuchlanish + ' V';
-          document.getElementById('current-vibratsiya').textContent = latest.Vibratsiya;
-          document.getElementById('current-sim').textContent = latest.Sim_holati + ' %';
-          document.getElementById('current-humidity').textContent = latest.Humidity + ' %';
-          document.getElementById('current-quvvat').textContent = latest.Quvvat + ' kW';
-
-          const lats = data.map(d => d.Latitude);
-          const lons = data.map(d => d.Longitude);
-          const colors = data.map(d => d.Fault === 2 ? '#ef4444' : (d.Fault === 1 ? '#f59e0b' : '#10b981'));
-          const sizes = data.map(d => d.Fault === 2 ? 14 : (d.Fault === 1 ? 11 : 8));
-          const text = data.map(d =>
-            `<b>${d.SensorID} — ${d.District}</b><br>` +
-            `🌡️ ${d.Harorat}°C &nbsp; 🌬️ ${d.Shamol} km/h<br>` +
-            `🔄 ${d.Chastota} Hz &nbsp; 🔌 ${d.Kuchlanish}V<br>` +
-            `⚙️ ${d.Quvvat}kW<br>` +
-            `<b>${d.Fault === 2 ? '🔴 MUAMMO' : (d.Fault === 1 ? '🟡 OGOHLANTIRISH' : '🟢 HAVFSIZ')}</b>`
-          );
-
-          Plotly.newPlot('overview-map', [{
-            type: 'scattermapbox',
-            lat: lats,
-            lon: lons,
-            mode: 'markers',
-            text: text,
-            hovertemplate: '%{text}<extra></extra>',
-            marker: { size: sizes, color: colors, opacity: 0.85 }
-          }], {
-            mapbox: {
-              style: 'open-street-map',
-              center: { lat: 41.3111, lon: 69.2797 },
-              zoom: 10.5
-            },
-            margin: { r: 0, t: 0, l: 0, b: 0 },
-            hovermode: 'closest'
-          }, { responsive: true, displayModeBar: false });
-        }
-      } catch (error) {
-        console.error('Dashboard error:', error);
-      }
+    // ===== UPDATE TIME =====
+    function updateTime() {
+      const now = new Date();
+      const t = now.toLocaleString('uz-UZ', { dateStyle: 'medium', timeStyle: 'short' });
+      document.getElementById('update-time').innerHTML = '<i class="far fa-clock me-1"></i>' + t;
     }
+    updateTime();
+    setInterval(updateTime, 30000);
 
-    updateDashboard();
-    setInterval(updateDashboard, 30000);
-
-    // Real-time weather widget
-    async function updateWeather() {
+    // ===== WEATHER =====
+    async function loadWeather() {
       try {
-        const r = await fetch('/api/weather');
-        if (!r.ok) return;
-        const w = await r.json();
+        const res = await fetch('/api/weather');
+        if (!res.ok) return;
+        const w = await res.json();
         if (w.temperature !== undefined) {
           document.getElementById('w-temp').textContent = w.temperature + '°C';
-        }
-        if (w.windspeed !== undefined) {
-          document.getElementById('w-wind').textContent = '💨 ' + w.windspeed + ' km/h';
-        }
-        if (w.time) {
-          document.getElementById('w-time').textContent = '🕐 ' + w.time;
+          document.getElementById('w-wind').textContent = w.windspeed + ' km/h';
+          document.getElementById('w-time').textContent = w.time || '';
         }
       } catch(e) {}
     }
-    updateWeather();
-    setInterval(updateWeather, 5 * 60 * 1000); // har 5 daqiqada yangilash
+    loadWeather();
+    setInterval(loadWeather, 600000);
 
-    // Alert notification for critical sensors
-    async function checkAlerts() {
+    // ===== STATS + KPI =====
+    async function loadStats() {
       try {
-        const res = await fetch('/api/stats');
-        const s = await res.json();
-        if (s.danger > 0 && typeof showNotification === 'function') {
-          showNotification(`⚠️ ${s.danger} ta sensor muammo holatda!`, 'danger');
+        const r = await fetch('/api/stats');
+        const d = await r.json();
+        if (d.error) return;
+
+        document.getElementById('total-sensors').textContent = d.total_sensors;
+        document.getElementById('safe-sensors').textContent = d.safe_sensors;
+        document.getElementById('warn-sensors').textContent = d.warn_sensors;
+        document.getElementById('fault-sensors').textContent = d.danger_sensors;
+
+        document.getElementById('kpi-temp').innerHTML = (d.avg_harorat ?? '--') + '<span style="font-size:0.7em;font-weight:600;color:var(--text-muted);">°C</span>';
+        document.getElementById('kpi-wind').innerHTML = (d.avg_shamol ?? '--') + '<span style="font-size:0.6em;font-weight:600;color:var(--text-muted);"> km/h</span>';
+        document.getElementById('kpi-freq').innerHTML = (d.avg_chastota ?? '--') + '<span style="font-size:0.65em;font-weight:600;color:var(--text-muted);"> Hz</span>';
+        document.getElementById('kpi-volt').innerHTML = (d.avg_kuchlanish ?? '--') + '<span style="font-size:0.7em;font-weight:600;color:var(--text-muted);">V</span>';
+        document.getElementById('kpi-vib').textContent = d.avg_vibratsiya ?? '--';
+        document.getElementById('kpi-wire').innerHTML = (d.avg_sim_holati ?? '--') + '<span style="font-size:0.7em;font-weight:600;color:var(--text-muted);">%</span>';
+        document.getElementById('kpi-hum').innerHTML = (d.avg_humidity ?? '--') + '<span style="font-size:0.7em;font-weight:600;color:var(--text-muted);">%</span>';
+        document.getElementById('kpi-pow').innerHTML = (d.avg_quvvat ?? '--') + '<span style="font-size:0.65em;font-weight:600;color:var(--text-muted);"> kW</span>';
+
+        // Districts
+        if (d.tumanlar) {
+          const list = document.getElementById('districts-list');
+          list.innerHTML = '';
+          Object.entries(d.tumanlar).forEach(([name, t]) => {
+            const danger = t.muammo, warn = t.ogohlantirish;
+            const icon = danger > 0 ? '🔴' : warn > 0 ? '🟡' : '🟢';
+            const valColor = danger > 0 ? 'var(--color-danger)' : warn > 0 ? 'var(--color-warning)' : 'var(--color-success)';
+            const row = document.createElement('div');
+            row.className = 'live-row';
+            row.innerHTML = `
+              <div class="lr-label">
+                <span style="font-size: 1rem;">${icon}</span> ${name}
+              </div>
+              <div style="display:flex;gap:8px;align-items:center;">
+                <span style="font-size:0.78rem;color:var(--text-muted);">${t.sensorlar} sensor</span>
+                <span class="lr-val" style="color:${valColor};">${danger > 0 ? danger : warn > 0 ? warn : '✓'}</span>
+              </div>
+            `;
+            list.appendChild(row);
+          });
         }
-      } catch(e) {}
+      } catch(e) { console.error(e); }
     }
-    setTimeout(checkAlerts, 3000);
+    loadStats();
+    setInterval(loadStats, 30000);
+
+    // ===== MAP =====
+    let map = null, markers = [];
+    function initMap() {
+      map = L.map('map-container', { zoomControl: true }).setView([41.3111, 69.2797], 11);
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+        attribution: '© OpenStreetMap, © CartoDB',
+        subdomains: 'abcd', maxZoom: 19
+      }).addTo(map);
+    }
+    async function loadMap() {
+      try {
+        const r = await fetch('/api/map-data');
+        const data = await r.json();
+        markers.forEach(m => map.removeLayer(m));
+        markers = [];
+        data.forEach(s => {
+          const m = L.circleMarker([s.Latitude, s.Longitude], {
+            radius: 6,
+            fillColor: s.Color,
+            color: '#fff',
+            weight: 1.5,
+            opacity: 1,
+            fillOpacity: 0.85
+          }).addTo(map);
+          m.bindPopup(`
+            <div style="min-width:180px;font-family:Inter,sans-serif;">
+              <div style="font-weight:700;color:#0F172A;font-size:0.95rem;">${s.SensorID}</div>
+              <div style="font-size:0.78rem;color:#64748B;margin-bottom:8px;">${s.District}</div>
+              <div style="font-size:0.82rem;line-height:1.6;">
+                <div>🔌 <b>${s.Kuchlanish}V</b> · 〰️ <b>${s.Chastota}Hz</b></div>
+                <div>🌡️ ${s.Harorat}°C · 💧 ${s.Humidity}%</div>
+              </div>
+              <a href="/sensor/${s.SensorID}" style="display:inline-block;margin-top:8px;font-size:0.78rem;color:#2563EB;font-weight:600;">Batafsil →</a>
+            </div>
+          `);
+          markers.push(m);
+        });
+      } catch(e) { console.error(e); }
+    }
+    initMap();
+    loadMap();
+    setInterval(loadMap, 60000);
   </script>
 </body>
-
-    <!-- Theme toggle script -->
-    <script src="{{ url_for('static', filename='theme.js') }}"></script>
 </html>

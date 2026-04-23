@@ -1,356 +1,358 @@
-# ⚡ BMI_MODELS — Elektr Uzatish Monitoring va AI Bashorat Tizimi
+# ⚡ BMI_MODELS — Toshkent Elektr Uzatish Monitoring va AI Bashorat Tizimi
 
-![Python](https://img.shields.io/badge/python-3.12-blue?logo=python)
+<div align="center">
+
+![Python](https://img.shields.io/badge/Python-3.12%2B-blue?logo=python&logoColor=white)
 ![Flask](https://img.shields.io/badge/Flask-3.0.0-black?logo=flask)
-![scikit--learn](https://img.shields.io/badge/scikit--learn-1.3.2-orange?logo=scikit-learn)
-![Telegram Bot](https://img.shields.io/badge/Telegram-Bot-blue?logo=telegram)
-![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)
+![scikit-learn](https://img.shields.io/badge/scikit--learn-1.3.2-orange?logo=scikit-learn)
+![Telegram Bot](https://img.shields.io/badge/Telegram-Bot-2CA5E0?logo=telegram)
+![License: MIT](https://img.shields.io/badge/License-MIT-green)
+![Sensors](https://img.shields.io/badge/Sensorlar-1200-brightgreen)
+![Districts](https://img.shields.io/badge/Tumanlar-12-blue)
 
-Toshkent shahri — 500 ta sensor, 11 tuman, real-time monitoring, Telegram bot va sunʼiy intellekt asosida nosozliklarni bashoratlash
+**Toshkent shahri — 1200 ta sensor, 12 tuman, real-time monitoring, Telegram bot va AI bashorat**
+
+[🌐 Demo](#-ishga-tushirish) · [🤖 Bot](#-telegram-bot) · [📊 API](#-api-endpointlar) · [🧠 AI](#-ai-model)
+
+</div>
 
 ---
 
 ## 📋 Loyiha haqida
 
-Ushbu loyiha elektr uzatish liniyalari uchun to'liq monitoring va AI-bashorat tizimini taqdim etadi. Tizim 8 ta parametrni real-time kuzatadi, 3 bosqichli xavf darajasini aniqlaydi va 7 kunlik prognoz beradi.
-
-### Asosiy imkoniyatlar
-
-- 📊 **Dashboard** — KPI kartalar, statistika, jonli ma'lumotlar, Toshkent xaritasi
-- 📋 **Jadval** — 1M qator ma'lumot, pagination, smart sorting, CSV/PDF eksport
-- 🗺️ **Xarita** — 500 ta sensor joylashuvi va real-time holati (Leaflet.js)
-- 📈 **Grafiklar** — 8 ta parametr bo'yicha trend va tahlil
-- 🤖 **AI Model** — Hybrid VotingClassifier (RandomForest + MLP)
-- 🔮 **7 kunlik prognoz** — Real ob-havo (Open-Meteo API) + AI bashorat
-- 🔐 **Autentifikatsiya** — Session-based login, role-based access
-- 🌙 **Dark mode** — To'liq qorong'u rejim
-- 📱 **Responsive** — Mobile, tablet, desktop
-- 🤖 **Telegram Bot** — 24 ta buyruq, grafik, auto-alert, export, admin panel
+Ushbu tizim Toshkent shahrining 12 tumanidagi elektr uzatish liniyalari uchun **toʻliq monitoring, AI bashorat va Telegram orqali ogohlantirish** platformasidir. 1,200,000 qatorli real maʼlumot asosida qurilgan. Tizim 8 ta elektr va atrof-muhit parametrini real-time kuzatadi, 3 bosqichli xavf darajasini aniqlaydi va 7 kunlik prognoz beradi.
 
 ---
 
-## 🏗️ Texnologiyalar
+## ✨ Asosiy imkoniyatlar
 
+| Funksiya | Tavsif |
+|---|---|
+| 📊 **Real-time Dashboard** | KPI kartalar, statistika, jonli sensorlar, trendlar |
+| 🗺️ **Interaktiv Xarita** | 1200 sensor, heatmap, klaster, filtr, mini-grafik popup, CSV eksport |
+| 📈 **Grafiklar** | 8 parametr trend, taqqoslash, tarix |
+| 📋 **Jadval** | 1.2M qator, pagination, sorting, CSV eksport |
+| 🧠 **AI Model** | Hybrid VotingClassifier (RandomForest + MLP), ishonch foizi, batafsil matnli xulosa |
+| 🔮 **7 kunlik Prognoz** | Real ob-havo (Open-Meteo) + AI bashorat, tuman tanlov |
+| 🤖 **Telegram Bot** | 28+ buyruq, grafik, auto-alert, tuman tahlili, ro'yxatdan o'tish |
+| 🔐 **Autentifikatsiya** | Session-based login, admin/operator rollari |
+| 🌙 **Dark/Light Mode** | Avtomatik yoki qo'lda almashtirish |
+| 📱 **Responsive** | Mobile, tablet, desktop |
+| 🌐 **SVG Fon** | Toshkent xaritasi + elektr tarmog'i stilizatsiyasi |
+
+---
+
+## 🏗️ Texnologiyalar steki
+
+### Backend
+| Kutubxona | Versiya | Vazifasi |
+|---|---|---|
+| **Python** | 3.12+ | Asosiy til |
+| **Flask** | 3.0.0 | Web server va API |
+| **Pandas** | 2.1.3 | Ma'lumot tahlili |
+| **NumPy** | 1.26.2 | Matematik hisoblashlar |
+| **scikit-learn** | 1.3.2 | AI model (RF + MLP) |
+| **python-telegram-bot** | 22.7 | Telegram bot |
+| **Matplotlib** | 3.9.2 | Bot grafiklari |
+| **python-dotenv** | — | .env fayl |
+| **requests** | — | Open-Meteo API |
+
+### Frontend
 | Texnologiya | Versiya | Vazifasi |
-| --- | --- | --- |
-| **Python** | 3.12 | Backend til |
-| **Flask** | 3.0.0 | Web framework |
-| **Pandas** | 2.1.3 | Data processing |
-| **NumPy** | 1.26.2 | Hisoblashlar |
-| **scikit-learn** | 1.3.2 | ML model (RF + MLP) |
-| **Leaflet.js** | 1.9.4 | Interaktiv xarita |
-| **Matplotlib** | 3.9.2 | Telegram bot grafiklari |
-| **python-telegram-bot** | 21.3 | Telegram bot framework |
+|---|---|---|
 | **Bootstrap** | 5.3.0 | UI framework |
+| **Leaflet.js** | 1.9.4 | Interaktiv xarita |
+| **Leaflet.heat** | 0.2.0 | Heatmap qatlami |
+| **Leaflet.markercluster** | 1.5.3 | Sensor klasterlash |
+| **Chart.js** | 3.x | Dashboard grafiklar |
 | **Font Awesome** | 6.4.0 | Ikonkalar |
 
 ---
 
 ## 📁 Loyiha tuzilmasi
 
-```text
+```
 BMI_models/
-├── app.py                        # Flask asosiy server
-├── train_model.py                # Model o'qitish skripti
-├── config.py                     # Konfiguratsiya (limitlar, portlar)
-├── telegram_bot.py               # Telegram bot (24 buyruq)
-├── users.json                    # Foydalanuvchilar ro'yxati
-├── requirements.txt              # Python kutubxonalar
-├── README.md
-├── .gitignore
-├── .env                          # Bot token (gitignore'da)
-├── data/                         # Dataset fayllar
-│   ├── sensor_data_part1.csv     # 500K qator (1-qism)
-│   ├── sensor_data_part2.csv     # 500K qator (2-qism)
+├── app.py                         # Flask asosiy server + barcha APIlar
+├── train_model.py                 # AI model o'qitish skripti
+├── config.py                      # Konfiguratsiya (limitlar, portlar, yo'llar)
+├── telegram_bot.py                # Telegram bot (28+ buyruq)
+├── users.json                     # Bot foydalanuvchilari (telefon, ism, tuman)
+├── subscribers.json               # Auto-alert obunachilari
+├── requirements.txt               # Python paketlar ro'yxati
+├── .env                           # Telegram token (gitignore!)
+├── data/
+│   ├── sensor_data_part1.csv      # 600K qator (1-qism)
+│   ├── sensor_data_part2.csv      # 600K qator (2-qism)
 │   └── tashkent_weather_cache.json
-├── models/                       # AI model fayllar
-│   ├── hybrid_model_part1.pkl    # Model (1-qism)
-│   └── hybrid_model_part2.pkl    # Model (2-qism)
-├── scripts/                      # Yordamchi skriptlar
-│   ├── analyze_faults.py
-│   ├── check_ranges.py
-│   ├── debug_model.py
-│   ├── fix_csv_faults.py
-│   ├── fix_fault_labels.py
-│   ├── gen_advanced_monitoring.py
-│   ├── regenerate_csv.py
-│   ├── forecast_params_api.py
-│   ├── bmi_model.py
-│   ├── test_pages.py
-│   └── Untitled.ipynb
-├── logs/                         # Log fayllar
-│   ├── app.log
-│   └── train.log
-├── templates/                    # HTML sahifalar
-│   ├── index.html
-│   ├── navbar.html
-│   ├── login.html
-│   ├── table.html
-│   ├── graphs.html
-│   ├── map.html
-│   ├── model.html
-│   ├── forecast.html
-│   ├── sensor_detail.html
-│   └── error.html
-└── static/                       # CSS, rasmlar
-    ├── style.css
-    └── bg-grid.png
+├── models/
+│   ├── hybrid_model_part1.pkl
+│   └── hybrid_model_part2.pkl
+├── scripts/                       # Yordamchi skriptlar
+├── templates/                     # HTML sahifalar
+├── static/                        # CSS, JS, SVG fon
+└── logs/                          # Server loglari
 ```
 
 ---
 
 ## 🚀 O'rnatish va ishga tushirish
 
+### Talablar
+- Python 3.10+
+- pip
+- Internet (Open-Meteo API va Telegram uchun)
+
+### Qadamlar
+
 ```bash
-# 1. Repozitoriyani klonlash
+# 1. Klonlash
 git clone https://github.com/ShoxGit19/BMI_models.git
 cd BMI_models
 
-# 2. Virtual environment
-python -m venv venv
-venv\Scripts\activate        # Windows
-# source venv/bin/activate   # Linux/Mac
+# 2. Virtual muhit
+python -m venv .venv
+.\.venv\Scripts\activate        # Windows
+# source .venv/bin/activate     # Linux/Mac
 
-# 3. Paketlarni o'rnatish
+# 3. Paketlar
 pip install -r requirements.txt
 
-# 4. Model o'qitish (birinchi marta)
+# 4. .env fayl (Windows PowerShell — BOM yo'q usul)
+[System.IO.File]::WriteAllText("$PWD\.env", "TELEGRAM_BOT_TOKEN=YOUR_TOKEN`n")
+
+# 5. Model o'qitish (bir marta)
 python train_model.py
 
-# 5. Telegram bot tokenni sozlash
-# .env faylga qo'shing:
-# TELEGRAM_BOT_TOKEN=your_token_here
-
-# 6. Serverni ishga tushirish (Flask + Telegram bot birga)
-python app.py
+# 6. Ishga tushirish
+.\.venv\Scripts\python.exe app.py
 ```
 
-Brauzerda oching: [http://localhost:5000](http://localhost:5000)
+> **Brauzerda**: http://localhost:5000
 
-### Kirish ma'lumotlari
+---
+
+## 🔐 Demo kirish ma'lumotlari
 
 | Foydalanuvchi | Parol | Rol |
-| --- | --- | --- |
+|---|---|---|
 | `admin` | `admin123` | Administrator |
 | `operator` | `operator123` | Operator |
 
 ---
 
-## 🌐 Sahifalar va API
-
-### Web sahifalar
+## 🌐 Web sahifalar
 
 | Sahifa | URL | Tavsifi |
-| --- | --- | --- |
-| Kirish | `/login` | Autentifikatsiya |
-| Dashboard | `/` | KPI, statistika, xarita, jonli panel |
-| Jadval | `/table` | Sensor ma'lumotlar jadvali |
-| Xarita | `/map` | Sensorlar joylashuvi (Leaflet.js, qora matn) |
-| Grafiklar | `/graphs` | 8 parametr trend grafiklari |
-| Model | `/model` | AI prognoz va test |
-| Prognoz | `/forecast` | 7 kunlik bashorat (real ob-havo, tumanlar bo'yicha) |
-| Sensor | `/sensor/<id>` | Alohida sensor tafsiloti |
-
-### API Endpoints
-
-| Endpoint | Metod | Tavsifi |
-| --- | --- | --- |
-| `/api/data` | GET | Paginated sensor data (`?page=&per_page=`) |
-| `/api/graph-data` | GET | Grafiklar uchun 1000 ta nuqta |
-| `/api/stats` | GET | Dashboard statistika |
-| `/api/map-data` | GET | Xarita — har bir sensorning oxirgi holati |
-| `/api/forecast` | GET | 7 kunlik prognoz (28 nuqta, har 6 soat) |
-| `/api/forecast-params` | GET | Parametr trendlari (`?param=`) |
-| `/api/sensor/<id>` | GET | Sensor oxirgi 100 o'qish + tarix |
-| `/api/export/csv` | GET | CSV eksport (5000 qator) |
-| `/api/export/pdf` | GET | HTML hisobot |
-| `/api/telegram/test` | POST | Telegram test xabar |
+|---|---|---|
+| Kirish | `/login` | Login forma |
+| Dashboard | `/` | KPI kartalar, statistika, trend grafiklar |
+| Jadval | `/table` | 1.2M qator, filter, sort, CSV eksport |
+| Xarita | `/map` | Leaflet xarita, heatmap, klaster, sensor qidirish |
+| Grafiklar | `/graphs` | 8 parametr trend va taqqoslash |
+| AI Model | `/model` | 8 parametr kiritish → AI xulosa + tavsiyalar |
+| Prognoz | `/forecast` | 7 kunlik ob-havo + AI bashorat |
+| Sensor | `/sensor/<id>` | Alohida sensor: grafik, tarix, holat |
 
 ---
 
-## 🤖 AI Model
+## 📡 API Endpointlar
+
+| Endpoint | Metod | Tavsifi |
+|---|---|---|
+| `/api/data` | GET | Sensor ma'lumotlari (`?page=&per_page=`) |
+| `/api/stats` | GET | Dashboard statistika |
+| `/api/graph-data` | GET | Grafik 1000 nuqta |
+| `/api/map-data` | GET | Xarita — har sensorning so'nggi holati |
+| `/api/forecast` | GET | 7 kunlik prognoz (`?latitude=&longitude=`) |
+| `/api/forecast-params` | GET | Parametr trendlari (`?param=Kuchlanish`) |
+| `/api/sensor/<id>` | GET | Sensor so'nggi 100 o'qish |
+| `/api/sensor-spark/<id>` | GET | Sparkline uchun 30 ta qiymat |
+| `/api/export/csv` | GET | CSV eksport (`?district=&only_faults=1`) |
+| `/api/export/pdf` | GET | HTML hisobot |
+
+---
+
+## 🧠 AI Model
 
 ### Arxitektura
 
-VotingClassifier (soft voting) + StandardScaler pipeline:
+```
+Kirish (8 parametr)
+    ↓
+StandardScaler
+    ↓
+┌──────────────────────────────────┐
+│  RandomForestClassifier (100 tree)│
+│  +                               │
+│  MLPClassifier (100→50 qatlam)   │
+└──────────────────────────────────┘
+    ↓ soft voting
+Natija: 0 / 1 / 2  +  ishonch foizi
+```
 
-| Komponent | Konfiguratsiya |
-| --- | --- |
-| **RandomForestClassifier** | 100 trees, `n_jobs=-1` |
-| **MLPClassifier** | 2 qatlam (100, 50), max_iter=300 |
-| **Preprocessing** | StandardScaler |
-| **Training sample** | 100,000 qator, 80/20 split |
+### 8 ta kirish parametri va normal chegaralar
 
-### 8 ta kirish parametri (features)
+| Parametr | Birlik | Normal | Ogohlantirish | Xavf |
+|---|---|---|---|---|
+| Harorat | °C | < 48 | 48–52 | > 52 |
+| Shamol | km/h | < 22 | 22–28 | > 28 |
+| Chastota | Hz | 49.0–51.0 | 48.5–51.5 | tashqarida |
+| Kuchlanish | V | 200–240 | 190–250 | tashqarida |
+| Vibratsiya | — | < 1.4 | 1.4–1.7 | > 1.7 |
+| Sim holati | % | > 75 | 65–75 | < 65 |
+| Namlik | % | 25–92 | 20–95 | tashqarida |
+| Quvvat | kW | ≤ 5.5 | 5.5–6.0 | > 6.0 |
 
-| # | Parametr | Birlik |
-| --- | --- | --- |
-| 1 | Muhit harorat | °C |
-| 2 | Shamol tezligi | km/h |
-| 3 | Chastota | Hz |
-| 4 | Kuchlanish | V |
-| 5 | Vibratsiya | — |
-| 6 | Sim mexanik holati | % |
-| 7 | Namlik | % |
-| 8 | Quvvat | kW |
+### AI Xulosa paneli
 
-### Natija — 3 bosqichli klassifikatsiya
-
-| Kod | Holat | Rang |
-| --- | --- | --- |
-| 0 | ✅ Havfsiz (Normal) | Yashil |
-| 1 | ⚠️ Ogohlantirish (Warning) | Sariq |
-| 2 | ⛔ Muammo (Danger) | Qizil |
-
----
-
-## 📊 Sensor parametr limitlari
-
-| Parametr | Normal | Ogohlantirish | Xavfli |
-| --- | --- | --- | --- |
-| Kuchlanish (V) | 210–230 | 200–210 / 230–240 | <200 / >240 |
-| Chastota (Hz) | 49.5–50.5 | 49.0–49.5 / 50.5–51.0 | <49 / >51 |
-| Harorat (°C) | <40 | 40–45 | >45 |
-| Shamol (km/h) | <15 | 15–25 | >25 |
-| Vibratsiya | <1.0 | 1.0–1.5 | >1.5 |
-| Sim holati (%) | >85 | 75–85 | <75 |
-| Namlik (%) | 35–85 | 30–35 / 85–90 | <30 / >90 |
-| Quvvat (kW) | ≤5.0 | 5.0–5.5 | >5.5 |
+Model natijasi bilan birga batafsil matnli tahlil chiqadi:
+- Muammoli parametrlar aniq ko'rsatiladi
+- Har bir muammo uchun alohida **tavsiya** beriladi
+- AI **ishonch foizi (%)** ko'rsatiladi
 
 ---
 
 ## 📦 Dataset
 
-- **Fayllar**: `data/sensor_data_part1.csv` + `data/sensor_data_part2.csv` (GitHub 100MB limit uchun bo'lingan)
-- **Qatorlar**: 1,000,000 (har bir faylda 500,000)
-- **Sensorlar**: 500 ta (S001–S500)
-- **Tumanlar**: 11 ta (Toshkent shahri)
-- **Vaqt oralig'i**: 2024-01-01 — 2026-04-05
-- **Ustunlar**: Timestamp, SensorID, District, Latitude, Longitude, 8 parametr, Fault
+| Xususiyat | Qiymat |
+|---|---|
+| Jami qatorlar | 1,200,000 |
+| Fayllar | part1.csv (600K) + part2.csv (600K) |
+| Sensorlar | 1200 ta (S0001–S1200) |
+| Tumanlar | 12 ta |
+| Vaqt oralig'i | 2024-01-01 – 2026-04-23 |
+| Fault taqsimoti | ~77% safe · ~22% warning · ~1% danger |
+
+> CSV fayllar GitHub 100MB limiti tufayli qo'lda `data/` papkasiga joylashtiriladi.
 
 ---
 
-## 🔮 7 kunlik prognoz
+## 🔮 7 kunlik Prognoz
 
-Prognoz tizimi quyidagilarni birlashtiradi:
+1. **Real ob-havo** — Open-Meteo API (har tuman uchun koordinata bo'yicha)
+2. **Stoxastik simulyatsiya** — mean-reversion modeli
+3. **AI bashorat** — Hybrid model har 6 soatlik nuqta uchun
+4. **Peak-hour effekti** — 8–12, 18–22 soatlar
 
-1. **Real ob-havo ma'lumotlari** — Open-Meteo API (har bir tuman uchun alohida, koordinatalar asosida)
-2. **Stoxastik simulyatsiya** — Elektr parametrlarning o'rtachaga qaytish modeli
-3. **AI bashorat** — Har bir 6 soatlik nuqta uchun model prognozi
-4. **Peak-hour effektlari** — Yuqori yuklanish soatlari (8–12, 18–22)
-
-Natija: 28 ta prognoz nuqtasi (7 kun × 4 marta/kun, har bir tuman uchun), kunlik xulosa kartalari, risk grafigi va batafsil jadval.
-
-**CSV saqlash:** Har bir prognoz natijasi `data/sensor_data_part2.csv` fayliga tuman, koordinata va barcha parametrlar bilan qo'shiladi.
+**Natija**: 28 nuqta (7 kun × 4), kunlik xulosa kartalar, risk grafigi
 
 ---
 
 ## 🤖 Telegram Bot
 
-Bot: [@elektr_monitor_bot](https://t.me/elektr_monitor_bot)
+### Ro'yxatdan o'tish
 
-`python app.py` ishga tushganda Flask server va Telegram bot birga ishlaydi.
+```
+/start
+  → 📱 Telefon yuborish (kontakt tugma YOKI +998XXXXXXXXX qo'lda)
+  → ✍️  Ism kiriting
+  → ✍️  Familiya kiriting
+  → 🏘️  12 tumandan birini tanlang
+  → ✅  Bosh menyu
+```
 
-### Buyruqlar (24 ta)
+### Buyruqlar
 
 | Buyruq | Tavsifi |
-| --- | --- |
-| `/start` | Telefon raqam so'rash + Bosh menyu (inline tugmalar) |
-| `/stats` | Umumiy statistika — sensorlar holati, 7 kunlik xavf |
+|---|---|
+| `/start` | Ro'yxatdan o'tish + bosh menyu |
+| `/help` | Barcha buyruqlar |
+| `/stats` | Umumiy statistika |
 | `/forecast` | 7 kunlik prognoz + ob-havo |
-| `/districts` | 11 tuman bo'yicha holat |
-| `/sensor S001` | Bitta sensor batafsil ma'lumoti |
-| `/model` | AI bashorat parametrlarini kiritish |
-| `/predict 30 7 50 220 0.5 90 60 3` | AI model bashorat (8 parametr) |
-| `/danger` | Muammoli sensorlar ro'yxati |
-| `/top` | Top 10 eng xavfli sensor |
-| `/averages` | O'rtacha qiymatlar (min/max) |
-| `/weather` | Toshkent real ob-havo |
-| `/chart S001` | Sensor grafigi (4 ta: kuchlanish, harorat, chastota, vibratsiya) |
-| `/compare S001 S002` | Ikki sensorni taqqoslash + grafik |
-| `/district_compare Chilonzor Sergeli` | Tumanlarni taqqoslash |
-| `/history S001 7` | Sensor tarixi (holat o'zgarishlari) |
-| `/search Chilonzor` | Tuman bo'yicha sensorlar qidiruv |
-| `/filter danger` | Holat bo'yicha filtr (danger/warn/safe) |
-| `/report` | Umumiy hisobot CSV yuklab olish |
-| `/csv S001` | Sensor ma'lumotini CSV faylda |
-| `/map Chilonzor` | Tuman lokatsiyasi xaritada |
-| `/subscribe` | Auto-alert obuna (har 1 soatda) |
-| `/unsubscribe` | Obunani bekor qilish |
-| `/admin` | Admin panel (faqat @gaybullayeev19) |
-| `/broadcast text` | Obunchilarga xabar yuborish |
+| `/districts` | 12 tuman holati |
+| `/sensor S0001` | Sensor tafsiloti |
+| `/predict 30 7 50 220 0.5 90 60 3` | AI bashorat (8 parametr) |
+| `/danger` | Muammoli sensorlar |
+| `/top` | Top 10 xavfli sensor |
+| `/averages` | O'rtacha qiymatlar |
+| `/weather` | Ob-havo |
+| `/chart S0001` | Sensor grafigi (PNG) |
+| `/compare S0001 S0002` | Taqqoslash + grafik |
+| `/district_compare A B` | Tuman taqqoslash |
+| `/history S0001 7` | Sensor tarixi |
+| `/search Chilonzor` | Tuman qidiruv |
+| `/filter danger` | Holat filtri |
+| `/report` | CSV hisobot |
+| `/csv S0001` | Sensor CSV |
+| `/map Chilonzor` | Tuman lokatsiya pin |
+| `/subscribe` | Auto-alert obuna |
+| `/unsubscribe` | Obunani bekor |
+| `/admin` | Admin panel (@gaybullayeev19) |
+| `/broadcast matn` | Ommaviy xabar |
 
-### Bot xususiyatlari
+---
 
-- **Telefon raqam to'plash** — birinchi `/start` da foydalanuvchi kontaktini so'rash va saqlash
-- **Inline keyboard** — barcha funksiyalar tugmalar orqali
-- **Auto-alert** — har 1 soatda xavfli sensorlarni tekshirish va obunchilarga xabar
-- **Grafik** — matplotlib orqali sensor grafiklari PNG rasm sifatida
-- **Export** — CSV hisobot va alohida sensor ma'lumotlarini yuklab olish
-- **Admin panel** — bot statistikasi, broadcast, faqat admin uchun
-- **Xarita** — Telegram lokatsiya orqali tuman joylashuvi
+## 🗺️ 12 Toshkent tumani
+
+| Tuman | Koordinata |
+|---|---|
+| Bektemir | 41.209, 69.335 |
+| Chilonzor | 41.256, 69.204 |
+| Mirabad | 41.286, 69.264 |
+| Mirobod | 41.286, 69.264 |
+| Mirzo Ulug'bek | 41.339, 69.335 |
+| Olmazor | 41.354, 69.212 |
+| Sergeli | 41.232, 69.212 |
+| Shayxontohur | 41.328, 69.229 |
+| Uchtepa | 41.300, 69.184 |
+| Yakkasaroy | 41.300, 69.264 |
+| Yashnobod | 41.339, 69.335 |
+| Yunusobod | 41.354, 69.335 |
 
 ---
 
 ## 🐛 Muammolarni hal qilish
 
 | Muammo | Yechim |
-| --- | --- |
-| `data/sensor_data_part*.csv` topilmadi | Dataset fayllarini `data/` papkasiga qo'ying |
-| `models/hybrid_model_part*.pkl` topilmadi | `python train_model.py` orqali model o'qiting |
-| Port 5000 band | `config.py` da `PORT = 5001` qiling |
-| Prognoz ob-havo xatosi | Internet aloqasini tekshiring (Open-Meteo API) |
-| Telegram bot ishlamayapti | `.env` faylda `TELEGRAM_BOT_TOKEN` borligini tekshiring |
-| Bot conflict xatosi | Boshqa joyda bot ishlayotgan bo'lishi mumkin, avval to'xtating |
-| Flask 404 yoki NameError | `@app.route("/")` va boshqa route'larni `app = Flask(__name__)` dan keyin yozing |
+|---|---|
+| CSV topilmadi | Fayllarni `data/` ga qo'ying |
+| Model topilmadi | `python train_model.py` bajaring |
+| Port 5000 band | `config.py` da `PORT = 5001` |
+| Bot 401 Unauthorized | `.env` tokenni tekshiring |
+| PTB `__stop_running_marker` xatosi | `pip install "python-telegram-bot>=21.10"` |
+| `.env` token o'qilmaydi (\ufeff) | `[System.IO.File]::WriteAllText()` ishlating |
+| Bot conflict 409 | Boshqa bot sessiyalarini to'xtating |
+| ModuleNotFoundError | `.\.venv\Scripts\python.exe app.py` ishlating |
+
+---
+
+## 🔧 Kengaytirish
+
+- **Yangi API** — `app.py` ga `@app.route()` qo'shing
+- **Yangi bot buyruq** — `telegram_bot.py` da `CommandHandler` + `main()` ga qo'shing
+- **Yangi sahifa** — `templates/` ga HTML, `app.py` ga route
+- **AI modelni qayta o'qitish** — `train_model.py` ni o'zgartirib ishga tushiring
+- **Sensor chegaralari** — `app.py` da `check()` blokini o'zgartiring
+- **Yangi tuman** — `DISTRICTS`, `DISTRICT_COORDS` ga qo'shing + `map.html` polygon
 
 ---
 
 ## 📄 Litsenziya
 
-MIT License — Erkin foydalanish
+**MIT License** — erkin foydalanish, o'zgartirish va tarqatish mumkin.
+
+---
 
 ## 👤 Muallif
 
-**Shohjahon G'aybullayev** — Toshkent, Bekobod 2026
+<div align="center">
 
-- Telegram: [@gaybullayeev19](https://t.me/gaybullayeev19)
-- GitHub: [ShoxGit19](https://github.com/ShoxGit19)
+### G'aybullayev Shohjahon
 
----
+🌍 Toshkent, Bekobod · 2024–2026
 
-## 🧩 Qo‘shimcha imkoniyatlar va kengaytirish
+[![Telegram](https://img.shields.io/badge/Telegram-@gaybullayeev19-2CA5E0?logo=telegram)](https://t.me/gaybullayeev19)
+[![GitHub](https://img.shields.io/badge/GitHub-ShoxGit19-181717?logo=github)](https://github.com/ShoxGit19)
 
-- **Yangi monitoring yoki tahlil skriptlari**: `scripts/` papkasiga yangi Python fayl qo‘shing va kerakli funksiyani yozing. Masalan, anomaliyalarni aniqlash, yangi parametrlar bo‘yicha tahlil yoki avtomatik hisobotlar.
-- **AI modelini yangilash**: `train_model.py` faylini o‘zgartirib, boshqa ML algoritmlarini sinab ko‘rish yoki mavjud modelga yangi parametrlar qo‘shish mumkin.
-- **Yangi API endpointlar**: `app.py` fayliga yangi route va API endpointlar qo‘shib, frontend yoki tashqi tizimlar uchun qo‘shimcha xizmatlar yaratish.
-- **Telegram bot kengaytmasi**: `telegram_bot.py` faylida yangi buyruqlar, avtomatik monitoring yoki admin panel imkoniyatlarini kengaytirish.
-- **Dashboard va UI yangilanishi**: `templates/` va `static/` papkalarida yangi sahifalar, grafiklar yoki dizayn elementlari qo‘shish.
-- **Sensor parametrlar diapazonini sozlash**: `config.py` orqali har bir parametr uchun yangi limitlar yoki tumanlar bo‘yicha alohida sozlamalar kiritish.
-- **Avtomatik eksport va backup**: Maʼlumotlarni CSV/PDF formatda avtomatik saqlash yoki tashqi serverga backup qilish uchun skriptlar yozish.
-- **Ob-havo integratsiyasi**: Yangi API (masalan, Gismeteo, AccuWeather) orqali ob-havo maʼlumotlarini kengaytirish.
-- **Xavfsizlik va audit**: Foydalanuvchi harakatlarini logga olish, admin panelga ikki bosqichli autentifikatsiya qo‘shish.
+</div>
 
 ---
 
-## 📝 Foydali so‘rovlar va tezkor amallar
+<div align="center">
 
-- "AI modelini yangi maʼlumot bilan qanday qayta o‘qitaman?"
-- "Dashboardga yangi sensor parametrini qanday qo‘shaman?"
-- "Har bir sensor uchun to‘g‘ri qiymatlar oraliqlari qanday?"
-- "Bir tumandagi barcha sensor maʼlumotini qanday eksport qilaman?"
-- "Telegram botga yangi buyruq qo‘shish uchun qaysi faylni o‘zgartirishim kerak?"
-- "Yangi API endpoint yaratish uchun qaysi qadamlarni bajaraman?"
-- "Sensorlar uchun avtomatik ogohlantirish tizimini qanday sozlayman?"
-- "Maʼlumotlarni CSV yoki PDF formatda qanday eksport qilaman?"
+**⚡ ElectroGrid Monitoring System · Toshkent · 2026**
 
----
+*1,200,000 sensor yozuvi · 12 tuman · Hybrid AI · Real-time monitoring*
 
-## 📚 Qo‘shimcha hujjatlar va yordam
-
-- `.github/copilot-instructions.md` — Ishchi ko‘rsatmalar va tez-tez uchraydigan muammolar
-- `config.py` — Barcha konfiguratsiya va limitlar
-- `scripts/` — Tahlil va monitoring uchun namunaviy skriptlar
-- [GitHub Issues](https://github.com/ShoxGit19/BMI_models/issues) — Muammolar va takliflar uchun
-
-Agar savollaringiz bo‘lsa yoki yangi imkoniyat qo‘shmoqchi bo‘lsangiz, muallifga yoki GitHub Issues orqali murojaat qiling.
+</div>

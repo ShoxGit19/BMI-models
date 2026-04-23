@@ -1,26 +1,28 @@
-// static/theme.js
-// Dark/Light mode toggle
+// theme.js — Dark/Light mavzusi (data-theme attribute orqali)
+(function () {
+  const STORAGE_KEY = 'theme-mode';
+  const DARK = 'dark', LIGHT = 'light';
 
-document.addEventListener('DOMContentLoaded', function () {
-    const btn = document.getElementById('theme-toggle-btn');
+  function setTheme(mode) {
+    document.documentElement.setAttribute('data-theme', mode);
+    localStorage.setItem(STORAGE_KEY, mode);
     const icon = document.getElementById('theme-icon');
-    const darkClass = 'dark-mode';
-    const storageKey = 'theme-mode';
-
-    // Set initial mode from localStorage
-    if (localStorage.getItem(storageKey) === 'dark') {
-        document.body.classList.add(darkClass);
-        if (icon) icon.classList.remove('fa-moon');
-        if (icon) icon.classList.add('fa-sun');
+    if (icon) {
+      icon.classList.toggle('fa-moon', mode === LIGHT);
+      icon.classList.toggle('fa-sun', mode === DARK);
     }
+  }
 
+  // Boshlang'ich rejimni qo'llash
+  const saved = localStorage.getItem(STORAGE_KEY) || LIGHT;
+  setTheme(saved);
+
+  document.addEventListener('DOMContentLoaded', function () {
+    setTheme(localStorage.getItem(STORAGE_KEY) || LIGHT);
+    const btn = document.getElementById('theme-toggle-btn');
     btn && btn.addEventListener('click', function () {
-        document.body.classList.toggle(darkClass);
-        const isDark = document.body.classList.contains(darkClass);
-        if (icon) {
-            icon.classList.toggle('fa-moon', !isDark);
-            icon.classList.toggle('fa-sun', isDark);
-        }
-        localStorage.setItem(storageKey, isDark ? 'dark' : 'light');
+      const current = document.documentElement.getAttribute('data-theme') || LIGHT;
+      setTheme(current === DARK ? LIGHT : DARK);
     });
-});
+  });
+})();

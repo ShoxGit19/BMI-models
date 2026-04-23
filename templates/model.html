@@ -3,25 +3,55 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Model - Prognoz</title>
+  <title>AI Model Prognozi · ElectroGrid</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{url_for('static', filename='style.css')}}">
   <script src="https://cdn.plot.ly/plotly-2.26.0.min.js"></script>
   <style>
-    .param-card { transition: transform 0.2s; border-left: 4px solid #e5e7eb; border-radius: 16px; }
-    .param-card:hover { transform: translateY(-2px); }
-    .param-card.status-normal { border-left-color: var(--accent-green); }
-    .param-card.status-warning { border-left-color: var(--accent-amber); }
-    .param-card.status-danger { border-left-color: var(--accent-red); }
-    .status-badge { font-size: 0.72rem; padding: 3px 10px; border-radius: 50px; font-weight: 600; }
-    .badge-normal { background: rgba(16,185,129,0.12); color: #065f46; }
-    .badge-warning { background: rgba(245,158,11,0.12); color: #92400e; }
-    .badge-danger { background: rgba(239,68,68,0.12); color: #991b1b; }
-    .result-banner { border-radius: 16px; padding: 20px; }
-    .result-success { background: rgba(16,185,129,0.08); border: 2px solid var(--accent-green); }
-    .result-warning { background: rgba(245,158,11,0.08); border: 2px solid var(--accent-amber); }
-    .result-danger { background: rgba(239,68,68,0.08); border: 2px solid var(--accent-red); }
+    .param-card { transition: var(--transition); border-left: 4px solid var(--border-default); border-radius: var(--radius-md); }
+    .param-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+    .param-card.status-normal { border-left-color: var(--color-success); }
+    .param-card.status-warning { border-left-color: var(--color-warning); }
+    .param-card.status-danger { border-left-color: var(--color-danger); }
+    .status-badge { font-size: 0.72rem; padding: 3px 10px; border-radius: var(--radius-pill); font-weight: 600; }
+    .badge-normal { background: var(--color-success-bg); color: #065f46; }
+    .badge-warning { background: var(--color-warning-bg); color: #92400e; }
+    .badge-danger { background: var(--color-danger-bg); color: #991b1b; }
+    .result-banner { border-radius: var(--radius-md); padding: 1.5rem; margin-bottom: 1.5rem; }
+    .result-success { background: rgba(16,185,129,0.06); border: 2px solid var(--color-success); }
+    .result-warning { background: rgba(245,158,11,0.06); border: 2px solid var(--color-warning); }
+    .result-danger { background: rgba(239,68,68,0.06); border: 2px solid var(--color-danger); }
+
+    /* AI summary card */
+    .ai-summary { border-left: 4px solid var(--brand-primary); border-radius: var(--radius-md); }
+    .ai-summary.ai-normal  { border-left-color: var(--color-success);  background: linear-gradient(135deg, rgba(16,185,129,0.05), rgba(255,255,255,0)); }
+    .ai-summary.ai-warning { border-left-color: var(--color-warning);  background: linear-gradient(135deg, rgba(245,158,11,0.06), rgba(255,255,255,0)); }
+    .ai-summary.ai-danger  { border-left-color: var(--color-danger);   background: linear-gradient(135deg, rgba(239,68,68,0.07),  rgba(255,255,255,0)); }
+    .ai-avatar {
+      width: 48px; height: 48px; border-radius: 50%;
+      background: var(--gradient-primary); color: #fff;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.4rem; box-shadow: 0 4px 12px rgba(37,99,235,0.3);
+    }
+    .ai-tag {
+      display: inline-block; font-size: 0.65rem; font-weight: 800;
+      padding: 2px 8px; border-radius: 4px;
+      background: var(--brand-primary); color: #fff;
+      letter-spacing: 0.06em; vertical-align: middle; margin-right: 6px;
+    }
+    .ai-recs {
+      margin-top: 0.8rem; padding: 0.8rem 1rem;
+      background: rgba(37,99,235,0.06); border-radius: var(--radius-sm);
+      border: 1px dashed rgba(37,99,235,0.25);
+    }
+    .ai-recs-title { font-weight: 700; font-size: 0.85rem; margin-bottom: 0.4rem; color: var(--brand-primary); }
+    .ai-recs ul li { font-size: 0.88rem; line-height: 1.6; margin-bottom: 0.2rem; }
+    [data-theme="dark"] .param-card { background: var(--bg-elevated); }
+    [data-theme="dark"] .badge-normal { color: #34D399; }
+    [data-theme="dark"] .badge-warning { color: #FBBF24; }
+    [data-theme="dark"] .badge-danger { color: #F87171; }
   </style>
 </head>
 <body>
@@ -123,6 +153,36 @@
         <!-- O'NG: NATIJALAR -->
         <div class="col-lg-8">
           {% if result %}
+          <!-- ===== AI XULOSA (matnli) ===== -->
+          <div class="card mb-4 ai-summary ai-{{ result.level }}">
+            <div class="card-body p-4">
+              <div class="d-flex align-items-center mb-3">
+                <div class="ai-avatar"><i class="fas fa-brain"></i></div>
+                <div class="ms-3">
+                  <h5 class="mb-0 fw-bold">
+                    <span class="ai-tag">AI Xulosa</span>
+                    {{ result.ai_status_word }}
+                  </h5>
+                  <small class="text-muted">
+                    Hybrid Model (RandomForest + MLP) bashorati
+                    {% if result.ai_confidence %} · ishonch: <b>{{ result.ai_confidence }}%</b>{% endif %}
+                  </small>
+                </div>
+              </div>
+              <p class="mb-3" style="font-size:0.95rem; line-height:1.6;">{{ result.ai_text }}</p>
+              {% if result.ai_recommendations %}
+              <div class="ai-recs">
+                <div class="ai-recs-title"><i class="fas fa-lightbulb me-1"></i> Tavsiyalar:</div>
+                <ul class="mb-0 ps-3">
+                  {% for r in result.ai_recommendations %}
+                  <li>{{ r }}</li>
+                  {% endfor %}
+                </ul>
+              </div>
+              {% endif %}
+            </div>
+          </div>
+
           <!-- UMUMIY XULOSA BANNER -->
           <div class="result-banner result-{{ result.level }} mb-4">
             <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
@@ -226,8 +286,8 @@
   </main>
 
   <footer class="text-center py-3 mt-3">
-    <p class="mb-0">&copy; 2026 Toshkent Elektr Transsmissiya | Monitoring Tizimi</p>
-    <p class="mb-0" style="font-size:.85rem;opacity:.7;">Yaratuvchi: Shohjahon G'aybullayev — Toshkent, Bekobod 2026</p>
+    <p class="mb-0">&copy; 2026 Toshkent Elektr Transmissiya | Monitoring Tizimi</p>
+    <p class="mb-0" style="font-size:.85rem;opacity:.7;">Yaratuvchi: G'aybullayev Shohjahon — Toshkent, Bekobod 2026</p>
   </footer>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>

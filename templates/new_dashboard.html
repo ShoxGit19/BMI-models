@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Monitoring Dashboard — Toshkent Elektr</title>
+  <title>Monitoring Dashboard · ElectroGrid</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
   <link rel="stylesheet" href="{{url_for('static', filename='style.css')}}">
@@ -23,55 +23,56 @@
 
     /* ===== CARDS ===== */
     .nd-card {
-      background: #fff; border-radius: 18px;
-      box-shadow: 0 1px 14px rgba(30,58,95,0.08);
+      background: var(--bg-elevated); border-radius: var(--radius-md);
+      box-shadow: var(--shadow-xs);
+      border: 1px solid var(--border-subtle);
       overflow: hidden;
     }
     .nd-card-head {
       padding: 0.9rem 1.3rem;
-      border-bottom: 1px solid #F3F4F6;
+      border-bottom: 1px solid var(--border-subtle);
       display: flex; align-items: center; justify-content: space-between;
     }
-    .nd-card-head h6 { margin: 0; font-weight: 700; color: #1E3A5F; font-size: 0.93rem; }
+    .nd-card-head h6 { margin: 0; font-weight: 700; color: var(--text-primary); font-size: 0.93rem; }
     .nd-card-body { padding: 1.1rem 1.3rem; }
 
     /* ===== CHART TABS ===== */
-    .chart-tabs { display: inline-flex; gap: 3px; background: #F3F4F6; border-radius: 9px; padding: 3px; }
+    .chart-tabs { display: inline-flex; gap: 3px; background: var(--bg-subtle); border-radius: 9px; padding: 3px; }
     .chart-tabs button {
       border: none; background: transparent; padding: 4px 12px;
-      border-radius: 6px; font-size: 0.78rem; font-weight: 600; color: #6B7280;
-      cursor: pointer; transition: all 0.17s;
+      border-radius: 6px; font-size: 0.78rem; font-weight: 600; color: var(--text-muted);
+      cursor: pointer; transition: var(--transition);
     }
-    .chart-tabs button.active { background: #fff; color: #2563EB; box-shadow: 0 1px 4px rgba(0,0,0,0.09); }
+    .chart-tabs button.active { background: var(--bg-elevated); color: var(--brand-primary); box-shadow: var(--shadow-xs); }
 
     /* ===== PARAM BARS ===== */
     .param-row {
       display: flex; align-items: center; gap: 10px;
-      padding: 0.5rem 0; border-bottom: 1px solid #F3F4F6; font-size: 0.83rem;
+      padding: 0.5rem 0; border-bottom: 1px solid var(--border-subtle); font-size: 0.83rem;
     }
     .param-row:last-child { border-bottom: none; }
-    .param-name { width: 120px; color: #374151; font-weight: 500; flex-shrink: 0; white-space: nowrap; }
-    .param-bar-wrap { flex: 1; height: 7px; background: #F3F4F6; border-radius: 4px; overflow: hidden; }
+    .param-name { width: 120px; color: var(--text-secondary); font-weight: 500; flex-shrink: 0; white-space: nowrap; }
+    .param-bar-wrap { flex: 1; height: 7px; background: var(--bg-subtle); border-radius: 4px; overflow: hidden; }
     .param-bar-fill { height: 100%; border-radius: 4px; transition: width 0.9s; }
-    .param-val { width: 68px; text-align: right; font-weight: 700; color: #1E3A5F; font-size: 0.8rem; flex-shrink: 0; }
+    .param-val { width: 68px; text-align: right; font-weight: 700; color: var(--text-primary); font-size: 0.8rem; flex-shrink: 0; }
     .param-badge { flex-shrink: 0; }
 
     /* ===== DISTRICT ROWS ===== */
     .dist-row {
       display: flex; align-items: center; gap: 7px;
-      padding: 0.48rem 0; border-bottom: 1px solid #F3F4F6; font-size: 0.83rem;
+      padding: 0.48rem 0; border-bottom: 1px solid var(--border-subtle); font-size: 0.83rem;
     }
     .dist-row:last-child { border-bottom: none; }
 
     /* ===== ALERT ITEMS ===== */
     .alert-item {
       display: flex; align-items: flex-start; gap: 10px;
-      padding: 0.6rem 0; border-bottom: 1px solid #F3F4F6;
+      padding: 0.6rem 0; border-bottom: 1px solid var(--border-subtle);
     }
     .alert-item:last-child { border-bottom: none; }
     .alert-dot { width: 9px; height: 9px; border-radius: 50%; margin-top: 5px; flex-shrink: 0; }
-    .alert-sensor { font-weight: 700; color: #1E3A5F; font-size: 0.84rem; }
-    .alert-vals { font-size: 0.75rem; color: #9CA3AF; margin-top: 2px; }
+    .alert-sensor { font-weight: 700; color: var(--text-primary); font-size: 0.84rem; }
+    .alert-vals { font-size: 0.75rem; color: var(--text-muted); margin-top: 2px; }
 
     /* ===== BADGES ===== */
     .bd { border-radius: 20px; padding: 2px 10px; font-size: 0.73rem; font-weight: 700; }
@@ -107,7 +108,7 @@
       50%      { box-shadow: 0 0 0 6px rgba(34,197,94,0); }
     }
 
-    footer { background: #fff; border-top: 1px solid #E5E7EB; padding: 0.8rem; text-align: center; font-size: 0.8rem; color: #9CA3AF; margin-top: 2rem; }
+    footer { background: var(--bg-elevated); border-top: 1px solid var(--border-subtle); padding: 0.8rem; text-align: center; font-size: 0.8rem; color: var(--text-muted); margin-top: 2rem; }
   </style>
 </head>
 <body>
@@ -118,19 +119,19 @@
     <div class="container-fluid px-4">
       <div class="row g-0 text-center">
         <div class="col-3 nd-strip-div">
-          <div class="nd-strip-num" style="color:#1E3A5F;" id="st-total">--</div>
+          <div class="nd-strip-num" style="color:var(--brand-primary);" id="st-total">--</div>
           <div class="nd-strip-lbl">Jami Sensorlar</div>
         </div>
         <div class="col-3 nd-strip-div">
-          <div class="nd-strip-num" style="color:#16A34A;" id="st-safe">--</div>
+          <div class="nd-strip-num" style="color:var(--color-success);" id="st-safe">--</div>
           <div class="nd-strip-lbl">Havfsiz</div>
         </div>
         <div class="col-3 nd-strip-div">
-          <div class="nd-strip-num" style="color:#D97706;" id="st-warn">--</div>
+          <div class="nd-strip-num" style="color:var(--color-warning);" id="st-warn">--</div>
           <div class="nd-strip-lbl">Ogohlantirish</div>
         </div>
         <div class="col-3">
-          <div class="nd-strip-num" style="color:#DC2626;" id="st-danger">--</div>
+          <div class="nd-strip-num" style="color:var(--color-danger);" id="st-danger">--</div>
           <div class="nd-strip-lbl">Muammolar</div>
         </div>
       </div>
@@ -144,15 +145,15 @@
       <div class="nd-statusbar">
         <div class="d-flex align-items-center gap-3 flex-wrap">
           <span><span class="live-dot"></span>
-            <strong style="color:#1E3A5F; font-size:0.93rem;" id="nd-sys-text">Tekshirilmoqda...</strong>
+            <strong style="color:var(--text-primary); font-size:0.93rem;" id="nd-sys-text">Tekshirilmoqda...</strong>
           </span>
           <span class="bd bd-blue" id="nd-pct-badge">--</span>
           <span style="color:#9CA3AF; font-size:0.8rem;" id="nd-time"></span>
         </div>
         <div class="d-flex gap-2">
-          <a href="/"        class="btn btn-sm" style="background:#EFF6FF; color:#2563EB; border:none; font-weight:600; font-size:0.8rem;"><i class="fas fa-home me-1"></i>Bosh sahifa</a>
-          <a href="/map"     class="btn btn-sm" style="background:#F5F3FF; color:#7C3AED; border:none; font-weight:600; font-size:0.8rem;"><i class="fas fa-map me-1"></i>Xarita</a>
-          <a href="/forecast"class="btn btn-sm" style="background:#FFF1F2; color:#BE123C; border:none; font-weight:600; font-size:0.8rem;"><i class="fas fa-chart-area me-1"></i>Prognoz</a>
+          <a href="/"        class="btn btn-sm" style="background:rgba(37,99,235,0.1); color:var(--brand-primary); border:none; font-weight:600; font-size:0.8rem;"><i class="fas fa-home me-1"></i>Bosh sahifa</a>
+          <a href="/map"     class="btn btn-sm" style="background:rgba(139,92,246,0.1); color:var(--accent-purple); border:none; font-weight:600; font-size:0.8rem;"><i class="fas fa-map me-1"></i>Xarita</a>
+          <a href="/forecast"class="btn btn-sm" style="background:rgba(239,68,68,0.1); color:var(--color-danger); border:none; font-weight:600; font-size:0.8rem;"><i class="fas fa-chart-area me-1"></i>Prognoz</a>
         </div>
       </div>
 
@@ -247,7 +248,7 @@
 
   <footer>
     © 2026 Toshkent Elektr Tarmoq — Monitoring Tizimi &nbsp;|&nbsp;
-    Yaratuvchi: Shohjahon G'aybullayev
+    Yaratuvchi: G'aybullayev Shohjahon
   </footer>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>

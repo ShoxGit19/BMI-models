@@ -1,67 +1,248 @@
-<nav class="navbar navbar-expand-lg sticky-top" style="background: #FFFFFF; box-shadow: 0 2px 16px rgba(59,130,246,0.12); border-bottom: 1px solid #E5E7EB; padding: 0.5rem 0;">
+<style>
+  .navbar-brand .brand-version {
+    font-size: 0.6rem;
+    font-weight: 600;
+    background: var(--gradient-primary);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    margin-left: 2px;
+  }
+  .nav-notif {
+    position: relative;
+    width: 34px; height: 34px;
+    border-radius: var(--radius-sm);
+    background: var(--bg-subtle);
+    border: 1px solid var(--border-subtle);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: var(--transition);
+    font-size: 0.85rem;
+  }
+  .nav-notif:hover { color: var(--brand-primary); background: rgba(37,99,235,0.08); border-color: rgba(37,99,235,0.2); }
+  .nav-notif .notif-count {
+    position: absolute;
+    top: -4px; right: -4px;
+    min-width: 16px; height: 16px;
+    border-radius: 8px;
+    background: var(--color-danger);
+    color: white;
+    font-size: 0.6rem;
+    font-weight: 800;
+    display: flex; align-items: center; justify-content: center;
+    padding: 0 3px;
+    border: 1.5px solid var(--bg-elevated);
+    line-height: 1;
+  }
+  .user-pill {
+    display: flex !important;
+    align-items: center;
+    gap: 8px;
+    padding: 0.4rem 0.85rem !important;
+    border-radius: var(--radius-sm) !important;
+  }
+  .user-avatar {
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    background: var(--gradient-primary);
+    display: flex; align-items: center; justify-content: center;
+    color: white;
+    font-size: 0.65rem;
+    font-weight: 800;
+    flex-shrink: 0;
+  }
+  .dropdown-menu-end .dropdown-item i { width: 16px; text-align: center; }
+  .nav-divider {
+    width: 1px;
+    height: 20px;
+    background: var(--border-subtle);
+    margin: 0 4px;
+  }
+  @media (max-width: 991px) {
+    .nav-divider { display: none; }
+    .navbar-collapse .nav-notif { width: 100%; border-radius: var(--radius-sm); justify-content: flex-start; padding-left: 0.95rem; gap: 8px; font-size: 0.88rem; }
+  }
+
+  /* Author badge — yaratuvchi nishonchasi */
+  .author-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 4px 12px 4px 4px;
+    border-radius: 999px;
+    background: linear-gradient(135deg, rgba(37,99,235,0.10), rgba(6,182,212,0.10));
+    border: 1px solid rgba(37,99,235,0.25);
+    text-decoration: none !important;
+    transition: var(--transition);
+    box-shadow: 0 2px 8px rgba(37,99,235,0.08);
+  }
+  .author-badge:hover {
+    background: linear-gradient(135deg, rgba(37,99,235,0.18), rgba(6,182,212,0.18));
+    border-color: rgba(37,99,235,0.45);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 14px rgba(37,99,235,0.18);
+  }
+  .author-avatar {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: var(--gradient-primary);
+    color: #fff;
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    box-shadow: 0 2px 6px rgba(37,99,235,0.35);
+  }
+  .author-info { display: flex; flex-direction: column; line-height: 1.15; }
+  .author-name {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    white-space: nowrap;
+  }
+  .author-handle {
+    font-size: 0.66rem;
+    font-weight: 600;
+    color: var(--brand-primary);
+    display: inline-flex; align-items: center; gap: 4px;
+  }
+  .author-handle i { font-size: 0.78rem; }
+  .author-links { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .author-link {
+    font-size: 0.66rem;
+    font-weight: 600;
+    text-decoration: none !important;
+    display: inline-flex; align-items: center; gap: 3px;
+    transition: var(--transition);
+  }
+  .author-link i { font-size: 0.82rem; }
+  .author-link.tg { color: #229ED9; }
+  .author-link.gh { color: var(--text-primary); }
+  .author-link:hover { transform: translateY(-1px); filter: brightness(1.15); }
+  .author-sep { color: var(--text-muted); font-size: 0.7rem; opacity: 0.6; }
+  @media (max-width: 991px) {
+    .author-badge { width: 100%; justify-content: flex-start; border-radius: var(--radius-sm); padding: 8px 12px; margin-top: 6px; }
+  }
+  @media (max-width: 480px) {
+    .author-info { display: none; }
+  }
+</style>
+
+<nav class="navbar navbar-expand-lg sticky-top">
   <div class="container-fluid px-4">
-    <a class="navbar-brand fw-bold d-flex align-items-center" href="/" style="font-size:1.2rem; letter-spacing:0.5px; color:#2563EB !important;">
-      <span class="me-2" style="font-size: 1.5rem;">⚡</span>
-      <span style="color:#1E3A5F;">ShoxGit19</span>
+    <!-- Brand -->
+    <a class="navbar-brand" href="/">
+      <span class="brand-icon"><i class="fas fa-bolt"></i></span>
+      <div>
+        <div style="line-height:1.1;">ElectroGrid</div>
+        <div class="brand-version">Monitoring · v2.0</div>
+      </div>
     </a>
-    <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse"
-            data-bs-target="#navbarNav" aria-controls="navbarNav">
-      <span class="navbar-toggler-icon"></span>
+
+    <!-- Mobile toggler -->
+    <button class="navbar-toggler border-0 p-1" type="button" data-bs-toggle="collapse"
+            data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false"
+            style="width:38px;height:38px;border-radius:var(--radius-sm);background:var(--bg-subtle);border:1px solid var(--border-subtle) !important;">
+      <span class="navbar-toggler-icon" style="background-size:18px 18px;"></span>
     </button>
+
     <div class="collapse navbar-collapse" id="navbarNav">
-      <ul class="navbar-nav ms-auto gap-1">
+      <!-- Nav links -->
+      <ul class="navbar-nav ms-auto align-items-lg-center gap-1">
         <li class="nav-item">
-          <a class="nav-link px-3 py-2 rounded-pill {% if request.path == '/' %}active{% endif %}" href="/" style="font-size:0.88rem; color:#374151 !important;">
-            <i class="fas fa-home me-1"></i> Bosh sahifa
+          <a class="nav-link {% if request.path == '/' %}active{% endif %}" href="/">
+            <i class="fas fa-gauge-high me-1"></i> Asosiy
           </a>
         </li>
         <li class="nav-item">
-          <a class="nav-link px-3 py-2 rounded-pill {% if request.path.startswith('/table') %}active{% endif %}" href="/table" style="font-size:0.88rem; color:#374151 !important;">
-            <i class="fas fa-table me-1"></i> Jadval
-          </a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link px-3 py-2 rounded-pill {% if request.path.startswith('/map') %}active{% endif %}" href="/map" style="font-size:0.88rem; color:#374151 !important;">
+          <a class="nav-link {% if request.path.startswith('/map') %}active{% endif %}" href="/map">
             <i class="fas fa-map-location-dot me-1"></i> Xarita
           </a>
         </li>
         <li class="nav-item">
-          <a class="nav-link px-3 py-2 rounded-pill {% if request.path.startswith('/graphs') %}active{% endif %}" href="/graphs" style="font-size:0.88rem; color:#374151 !important;">
+          <a class="nav-link {% if request.path.startswith('/graphs') %}active{% endif %}" href="/graphs">
             <i class="fas fa-chart-line me-1"></i> Grafiklar
           </a>
         </li>
         <li class="nav-item">
-          <a class="nav-link px-3 py-2 rounded-pill {% if request.path.startswith('/model') %}active{% endif %}" href="/model" style="font-size:0.88rem; color:#374151 !important;">
-            <i class="fas fa-robot me-1"></i> Model
+          <a class="nav-link {% if request.path.startswith('/table') %}active{% endif %}" href="/table">
+            <i class="fas fa-table me-1"></i> Jadval
           </a>
         </li>
         <li class="nav-item">
-          <a class="nav-link px-3 py-2 rounded-pill {% if request.path.startswith('/forecast') %}active{% endif %}" href="/forecast" style="font-size:0.88rem; color:#374151 !important;">
+          <a class="nav-link {% if request.path.startswith('/forecast') %}active{% endif %}" href="/forecast">
             <i class="fas fa-chart-area me-1"></i> Prognoz
           </a>
         </li>
         <li class="nav-item">
-          <a class="nav-link px-3 py-2 rounded-pill {% if request.path.startswith('/new-dashboard') %}active{% endif %}" href="/new-dashboard" style="font-size:0.88rem; color:#374151 !important;">
-            <i class="fas fa-gauge-high me-1"></i> Yangi
+          <a class="nav-link {% if request.path.startswith('/model') %}active{% endif %}" href="/model">
+            <i class="fas fa-brain me-1"></i> AI Model
           </a>
         </li>
-        <!-- Dark/Light mode -->
-        <li class="nav-item ms-2">
-          <button class="nav-link px-3 py-2 rounded-pill border-0" style="font-size:0.88rem;cursor:pointer;background:#F3F4F6; color:#374151 !important;" title="Rejim o'zgartirish" id="theme-toggle-btn">
+
+        <!-- Divider -->
+        <li class="nav-item d-none d-lg-flex align-items-center">
+          <div class="nav-divider"></div>
+        </li>
+
+        <!-- Notifications -->
+        <li class="nav-item ms-lg-1">
+          <div class="nav-notif" id="nav-notif-btn" title="Ogohlantirishlar">
+            <i class="fas fa-bell"></i>
+            <span class="notif-count" id="nav-notif-count" style="display:none;">0</span>
+          </div>
+        </li>
+
+        <!-- Theme toggle -->
+        <li class="nav-item ms-lg-1">
+          <button class="nav-notif border-0" id="theme-toggle-btn" title="Mavzuni o'zgartirish">
             <i class="fas fa-moon" id="theme-icon"></i>
           </button>
         </li>
+
+        <!-- Author badge -->
+        <li class="nav-item ms-lg-2">
+          <div class="author-badge" title="Yaratuvchi: G'aybullayev Shohjahon">
+            <span class="author-avatar">SH</span>
+            <span class="author-info">
+              <span class="author-name">G'aybullayev Shohjahon</span>
+              <span class="author-links">
+                <a href="https://t.me/gaybullayeev19" target="_blank" rel="noopener" class="author-link tg" title="Telegram">
+                  <i class="fab fa-telegram"></i> @gaybullayeev19
+                </a>
+                <span class="author-sep">·</span>
+                <a href="https://github.com/ShoxGit19" target="_blank" rel="noopener" class="author-link gh" title="GitHub">
+                  <i class="fab fa-github"></i> ShoxGit19
+                </a>
+              </span>
+            </span>
+          </div>
+        </li>
+
         <!-- User menu -->
         {% if session.get('user') %}
-        <li class="nav-item dropdown ms-2">
-          <a class="nav-link dropdown-toggle px-3 py-2 rounded-pill" href="#" data-bs-toggle="dropdown" style="font-size:0.88rem;background:#F3F4F6; color:#374151 !important;">
-            <i class="fas fa-user-circle me-1"></i> {{ session.user }}
+        <li class="nav-item dropdown ms-lg-1">
+          <a class="nav-link user-pill dropdown-toggle" href="#" data-bs-toggle="dropdown">
+            <span class="user-avatar">{{ session.user[0]|upper }}</span>
+            <span>{{ session.user }}</span>
           </a>
-          <ul class="dropdown-menu dropdown-menu-end" style="border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,0.15);">
-            <li><a class="dropdown-item" href="/api/export/pdf"><i class="fas fa-file-pdf me-2 text-danger"></i>PDF hisobot</a></li>
-            <li><a class="dropdown-item" href="/api/export/csv"><i class="fas fa-file-csv me-2 text-success"></i>CSV eksport</a></li>
-            <li><hr class="dropdown-divider"></li>
-            <li><a class="dropdown-item text-danger" href="/logout"><i class="fas fa-sign-out-alt me-2"></i>Chiqish</a></li>
+          <ul class="dropdown-menu dropdown-menu-end" style="min-width:200px;">
+            <li>
+              <div style="padding: 0.6rem 0.85rem; border-bottom: 1px solid var(--border-subtle); margin-bottom: 0.3rem;">
+                <div style="font-weight:700; font-size:0.88rem; color:var(--text-primary);">{{ session.user }}</div>
+                <div style="font-size:0.75rem; color:var(--text-muted);">
+                  {% if session.get('role') == 'admin' %}<i class="fas fa-shield-halved me-1 text-warning"></i>Administrator{% else %}<i class="fas fa-user me-1"></i>Operator{% endif %}
+                </div>
+              </div>
+            </li>
+            <li><a class="dropdown-item" href="/api/export/pdf"><i class="fas fa-file-pdf me-2" style="color:var(--color-danger);"></i>PDF hisobot</a></li>
+            <li><a class="dropdown-item" href="/api/export/csv"><i class="fas fa-file-csv me-2" style="color:var(--color-success);"></i>CSV eksport</a></li>
+            <li><hr class="dropdown-divider" style="margin: 0.3rem 0;"></li>
+            <li><a class="dropdown-item" style="color:var(--color-danger)!important;" href="/logout"><i class="fas fa-sign-out-alt me-2"></i>Chiqish</a></li>
           </ul>
         </li>
         {% endif %}
@@ -70,4 +251,21 @@
   </div>
 </nav>
 
-
+<script src="{{ url_for('static', filename='theme.js') }}"></script>
+<script>
+  // Notification count from API
+  (async function() {
+    try {
+      const r = await fetch('/api/stats');
+      const d = await r.json();
+      if (!d.error) {
+        const count = (d.danger_sensors || 0) + (d.warn_sensors || 0);
+        const el = document.getElementById('nav-notif-count');
+        if (el && count > 0) {
+          el.textContent = count > 99 ? '99+' : count;
+          el.style.display = 'flex';
+        }
+      }
+    } catch(e) {}
+  })();
+</script>

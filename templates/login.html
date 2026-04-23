@@ -3,164 +3,537 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Kirish — Monitoring</title>
+  <title>Kirish · ElectroGrid Monitoring</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
+    /* --- Background --- */
+    .login-bg {
       min-height: 100vh;
+      background: linear-gradient(135deg, #0F172A 0%, #1E293B 50%, #0F2060 100%);
       display: flex;
       align-items: center;
       justify-content: center;
-      background: linear-gradient(135deg, rgba(15,32,39,0.7) 0%, rgba(32,58,67,0.7) 40%, rgba(44,83,100,0.7) 100%);
-      background-image: url('/static/bg-grid.png');
-      background-size: cover;
-      background-position: center;
-      background-blend-mode: overlay;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      padding: 2rem 1rem;
+      position: relative;
+      overflow: hidden;
     }
-    .login-card {
-      background: #fff;
-      border-radius: 20px;
-      padding: 2.5rem;
-      width: 400px;
-      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-      animation: slideUp 0.6s ease;
+    /* Animated background shapes */
+    .bg-shape {
+      position: absolute;
+      border-radius: 50%;
+      opacity: 0.08;
+      animation: float-shape 8s ease-in-out infinite;
+      pointer-events: none;
     }
-    @keyframes slideUp {
-      from { opacity: 0; transform: translateY(30px); }
-      to { opacity: 1; transform: translateY(0); }
+    .bg-shape-1 {
+      width: 600px; height: 600px;
+      background: radial-gradient(circle, #2563EB, transparent);
+      top: -200px; left: -200px;
+      animation-delay: 0s;
     }
-    .login-logo {
-      text-align: center;
-      margin-bottom: 1.5rem;
+    .bg-shape-2 {
+      width: 400px; height: 400px;
+      background: radial-gradient(circle, #06B6D4, transparent);
+      bottom: -100px; right: -100px;
+      animation-delay: -4s;
+      opacity: 0.06;
     }
-    .login-logo .icon {
-      width: 80px;
-      height: 80px;
-      border-radius: 20px;
-      background: linear-gradient(135deg, #2563EB, #3B82F6);
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 2rem;
-      color: #fff;
-      margin-bottom: 0.75rem;
+    .bg-shape-3 {
+      width: 300px; height: 300px;
+      background: radial-gradient(circle, #8B5CF6, transparent);
+      top: 40%; left: 60%;
+      animation-delay: -2s;
+      opacity: 0.05;
     }
-    .login-logo h2 {
+    @keyframes float-shape {
+      0%, 100% { transform: scale(1) translate(0, 0); }
+      33% { transform: scale(1.05) translate(20px, -20px); }
+      66% { transform: scale(0.97) translate(-15px, 10px); }
+    }
+
+    /* Grid overlay */
+    .bg-grid {
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+    }
+
+    /* --- Left panel --- */
+    .login-side {
+      max-width: 900px;
+      width: 100%;
+      display: flex;
+      border-radius: 24px;
+      overflow: hidden;
+      box-shadow: 0 32px 80px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.06);
+      position: relative;
+      z-index: 1;
+    }
+    .login-promo {
+      flex: 1;
+      background: linear-gradient(160deg, rgba(37,99,235,0.9) 0%, rgba(6,182,212,0.7) 100%);
+      padding: 3rem 2.5rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      position: relative;
+      overflow: hidden;
+      min-width: 0;
+    }
+    .login-promo::before {
+      content: '';
+      position: absolute;
+      top: -60px; right: -60px;
+      width: 200px; height: 200px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.08);
+    }
+    .login-promo::after {
+      content: '';
+      position: absolute;
+      bottom: -40px; left: -40px;
+      width: 160px; height: 160px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.06);
+    }
+    .promo-title {
+      font-size: 1.65rem;
       font-weight: 800;
-      color: #1a1a2e;
-      font-size: 1.4rem;
+      color: white;
+      line-height: 1.25;
+      letter-spacing: -0.03em;
     }
-    .login-logo p {
-      color: #9ca3af;
+    .promo-sub {
+      color: rgba(255,255,255,0.8);
+      font-size: 0.9rem;
+      margin-top: 0.5rem;
+      line-height: 1.6;
+    }
+    .promo-stat {
+      background: rgba(255,255,255,0.12);
+      border: 1px solid rgba(255,255,255,0.18);
+      border-radius: 14px;
+      padding: 0.85rem 1.1rem;
+      backdrop-filter: blur(10px);
+    }
+    .promo-stat .ps-val {
+      font-size: 1.8rem;
+      font-weight: 900;
+      color: white;
+      line-height: 1;
+      letter-spacing: -0.04em;
+    }
+    .promo-stat .ps-lbl {
+      font-size: 0.72rem;
+      color: rgba(255,255,255,0.7);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      font-weight: 600;
+      margin-top: 3px;
+    }
+    .promo-features {
+      display: flex;
+      flex-direction: column;
+      gap: 0.7rem;
+    }
+    .promo-feat {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: rgba(255,255,255,0.85);
       font-size: 0.85rem;
     }
-    .form-control {
-      border-radius: 12px;
-      padding: 0.75rem 1rem 0.75rem 2.8rem;
-      border: 2px solid #e5e7eb;
-      font-size: 0.95rem;
-      transition: all 0.3s;
+    .promo-feat i {
+      width: 28px; height: 28px;
+      border-radius: 8px;
+      background: rgba(255,255,255,0.15);
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      font-size: 0.75rem;
     }
-    .form-control:focus {
-      border-color: #3B82F6;
-      box-shadow: 0 0 0 3px rgba(59,130,246,0.18);
+
+    /* --- Right form panel --- */
+    .login-form-panel {
+      width: 400px;
+      flex-shrink: 0;
+      background: #FFFFFF;
+      padding: 2.75rem 2.5rem;
+      display: flex;
+      flex-direction: column;
     }
-    .input-group { position: relative; margin-bottom: 1rem; }
-    .input-icon {
+    .login-logo {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      margin-bottom: 2rem;
+    }
+    .login-logo .logo-icon {
+      width: 44px; height: 44px;
+      border-radius: 13px;
+      background: linear-gradient(135deg, #2563EB, #06B6D4);
+      display: flex; align-items: center; justify-content: center;
+      color: white;
+      font-size: 1.2rem;
+      box-shadow: 0 6px 16px rgba(37,99,235,0.3);
+      flex-shrink: 0;
+    }
+    .login-logo .logo-name {
+      font-weight: 800;
+      font-size: 1.05rem;
+      color: #0F172A;
+      letter-spacing: -0.02em;
+      line-height: 1.1;
+    }
+    .login-logo .logo-sub {
+      font-size: 0.72rem;
+      color: #94A3B8;
+      font-weight: 500;
+    }
+
+    .login-title { font-size: 1.5rem; font-weight: 800; color: #0F172A; letter-spacing: -0.03em; margin-bottom: 0.25rem; }
+    .login-desc { font-size: 0.88rem; color: #94A3B8; margin-bottom: 1.75rem; }
+
+    .field-group { position: relative; margin-bottom: 1rem; }
+    .field-group label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #475569;
+      margin-bottom: 0.4rem;
+    }
+    .field-group .field-wrap { position: relative; }
+    .field-group .field-icon {
       position: absolute;
-      left: 1rem;
+      left: 0.85rem;
       top: 50%;
       transform: translateY(-50%);
-      color: #9ca3af;
+      color: #94A3B8;
+      font-size: 0.85rem;
       z-index: 5;
-      font-size: 1rem;
+      pointer-events: none;
+      transition: color 0.2s;
     }
+    .field-group .form-control {
+      padding-left: 2.5rem !important;
+      padding-top: 0.65rem !important;
+      padding-bottom: 0.65rem !important;
+      font-size: 0.9rem !important;
+      border-color: #E2E8F0 !important;
+      background: #F8FAFC !important;
+      transition: all 0.2s !important;
+    }
+    .field-group .form-control:focus {
+      border-color: #2563EB !important;
+      background: #fff !important;
+      box-shadow: 0 0 0 3px rgba(37,99,235,0.12) !important;
+    }
+    .field-group .form-control:focus + .field-icon,
+    .field-group .field-wrap:focus-within .field-icon { color: #2563EB; }
+    .field-group .toggle-pw {
+      position: absolute;
+      right: 0.85rem;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      color: #94A3B8;
+      cursor: pointer;
+      font-size: 0.85rem;
+      padding: 0;
+      z-index: 5;
+      transition: color 0.2s;
+    }
+    .field-group .toggle-pw:hover { color: #475569; }
+
+    .remember-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1.5rem;
+      font-size: 0.82rem;
+    }
+    .remember-row .form-check { display: flex; align-items: center; gap: 7px; margin: 0; }
+    .remember-row .form-check-input { width: 15px; height: 15px; margin: 0; cursor: pointer; }
+    .remember-row .form-check-label { color: #475569; font-weight: 500; cursor: pointer; }
+
     .btn-login {
       width: 100%;
       padding: 0.75rem;
-      border-radius: 12px;
+      font-size: 0.95rem;
       font-weight: 700;
-      font-size: 1rem;
-      background: linear-gradient(135deg, #2563EB, #3B82F6);
       border: none;
-      color: #fff;
-      transition: all 0.3s;
-      margin-top: 0.5rem;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #2563EB, #06B6D4);
+      color: white;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.2s;
+      box-shadow: 0 4px 12px rgba(37,99,235,0.3);
+      letter-spacing: 0.01em;
     }
     .btn-login:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 8px 20px rgba(59,130,246,0.35);
-      background: linear-gradient(135deg, #1D4ED8, #2563EB);
-      color: #fff;
+      transform: translateY(-1px);
+      box-shadow: 0 8px 20px rgba(37,99,235,0.4);
     }
-    .error-msg {
-      background: rgba(239,68,68,0.1);
-      color: #dc2626;
-      border-radius: 10px;
-      padding: 0.6rem 1rem;
-      font-size: 0.85rem;
-      margin-bottom: 1rem;
-      text-align: center;
-      font-weight: 600;
+    .btn-login:active { transform: translateY(0); }
+    .btn-login.loading { pointer-events: none; opacity: 0.8; }
+    .btn-login .spin { animation: spin 0.8s linear infinite; }
+
+    .demo-box {
+      background: #F8FAFC;
+      border: 1px solid #E2E8F0;
+      border-radius: 12px;
+      padding: 0.9rem 1rem;
+      margin-top: 1.25rem;
+      font-size: 0.8rem;
     }
-    .demo-info {
-      text-align: center;
-      margin-top: 1.5rem;
-      padding-top: 1rem;
-      border-top: 1px solid #f1f3f5;
-    }
-    .demo-info p {
+    .demo-box .demo-head {
+      font-weight: 700;
       font-size: 0.78rem;
-      color: #9ca3af;
-      margin-bottom: 0.25rem;
+      color: #475569;
+      margin-bottom: 0.6rem;
+      display: flex;
+      align-items: center;
+      gap: 6px;
     }
-    .demo-info code {
-      background: #f3f4f6;
-      padding: 2px 8px;
+    .demo-box .demo-head i { color: #3B82F6; }
+    .demo-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.35rem 0;
+      border-bottom: 1px solid #E2E8F0;
+      cursor: pointer;
       border-radius: 6px;
-      font-size: 0.78rem;
-      color: #374151;
+      padding: 0.35rem 0.5rem;
+      transition: background 0.15s;
+    }
+    .demo-row:last-child { border-bottom: none; }
+    .demo-row:hover { background: #EFF6FF; }
+    .demo-row .dr-role { font-weight: 600; color: #334155; font-size: 0.79rem; }
+    .demo-row .dr-cred { color: #64748B; font-size: 0.76rem; }
+    .demo-row code {
+      background: #E0EAFF;
+      color: #2563EB;
+      padding: 1px 5px;
+      border-radius: 4px;
+      font-weight: 700;
+      font-size: 0.75rem;
+    }
+
+    .login-footer {
+      margin-top: auto;
+      padding-top: 1.5rem;
+      font-size: 0.73rem;
+      color: #94A3B8;
+      text-align: center;
+    }
+
+    .alert-danger {
+      background: #FEF2F2;
+      border: 1px solid rgba(239,68,68,0.2);
+      color: #991B1B;
+      border-radius: 10px;
+      font-size: 0.85rem;
+      padding: 0.75rem 1rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 1rem;
+    }
+
+    /* Responsive: hide promo panel on mobile */
+    @media (max-width: 767px) {
+      .login-promo { display: none; }
+      .login-side { max-width: 420px; border-radius: 20px; }
+      .login-form-panel { width: 100%; padding: 2rem 1.5rem; }
     }
   </style>
 </head>
-<body>
-  <div class="login-card">
-    <div class="login-logo">
-      <div class="icon">⚡</div>
-      <h2>Monitoring Tizimi</h2>
-      <p>Toshkent Elektr Uzatish</p>
+<body class="login-bg">
+  <!-- Background decorations -->
+  <div class="bg-shape bg-shape-1"></div>
+  <div class="bg-shape bg-shape-2"></div>
+  <div class="bg-shape bg-shape-3"></div>
+  <div class="bg-grid"></div>
+
+  <div class="login-side animate-fade-up">
+    <!-- Left promo panel -->
+    <div class="login-promo">
+      <div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:2rem;">
+          <div style="width:40px;height:40px;border-radius:12px;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;backdrop-filter:blur(10px);">
+            <i class="fas fa-bolt" style="color:white;font-size:1.1rem;"></i>
+          </div>
+          <span style="color:white;font-weight:800;font-size:1rem;letter-spacing:-0.02em;">ElectroGrid</span>
+        </div>
+        <div class="promo-title">Toshkent Elektr<br>Monitoring Tizimi</div>
+        <div class="promo-sub">Real vaqt rejimida 500+ sensor ma'lumoti, AI bashorati va to'liq nazorat.</div>
+      </div>
+
+      <!-- Stats -->
+      <div class="row g-2" style="position:relative;z-index:1;">
+        <div class="col-6">
+          <div class="promo-stat">
+            <div class="ps-val">500+</div>
+            <div class="ps-lbl">Sensor</div>
+          </div>
+        </div>
+        <div class="col-6">
+          <div class="promo-stat">
+            <div class="ps-val">11</div>
+            <div class="ps-lbl">Tuman</div>
+          </div>
+        </div>
+        <div class="col-6">
+          <div class="promo-stat">
+            <div class="ps-val">24/7</div>
+            <div class="ps-lbl">Monitoring</div>
+          </div>
+        </div>
+        <div class="col-6">
+          <div class="promo-stat">
+            <div class="ps-val">AI</div>
+            <div class="ps-lbl">Bashorat</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Features -->
+      <div class="promo-features" style="position:relative;z-index:1;">
+        <div class="promo-feat">
+          <i class="fas fa-map-location-dot" style="display:flex;align-items:center;justify-content:center;"></i>
+          <span>Interaktiv xarita va tumanlar tahlili</span>
+        </div>
+        <div class="promo-feat">
+          <i class="fas fa-chart-line" style="display:flex;align-items:center;justify-content:center;"></i>
+          <span>Trend grafiklari va 7 kunlik prognoz</span>
+        </div>
+        <div class="promo-feat">
+          <i class="fas fa-robot" style="display:flex;align-items:center;justify-content:center;"></i>
+          <span>VotingClassifier AI nosozlik aniqlash</span>
+        </div>
+        <div class="promo-feat">
+          <i class="fab fa-telegram" style="display:flex;align-items:center;justify-content:center;"></i>
+          <span>Telegram bot orqali real vaqt ogohlantirishlari</span>
+        </div>
+      </div>
     </div>
 
-    {% if error %}
-    <div class="error-msg">
-      <i class="fas fa-exclamation-circle me-1"></i>{{ error }}
-    </div>
-    {% endif %}
-
-    <form method="POST">
-      <div class="input-group">
-        <i class="fas fa-user input-icon"></i>
-        <input type="text" name="username" class="form-control" placeholder="Login" required autofocus>
+    <!-- Right form panel -->
+    <div class="login-form-panel">
+      <!-- Logo -->
+      <div class="login-logo">
+        <div class="logo-icon"><i class="fas fa-bolt"></i></div>
+        <div>
+          <div class="logo-name">ElectroGrid</div>
+          <div class="logo-sub">Monitoring · v2.0</div>
+        </div>
       </div>
-      <div class="input-group">
-        <i class="fas fa-lock input-icon"></i>
-        <input type="password" name="password" class="form-control" placeholder="Parol" required>
-      </div>
-      <button type="submit" class="btn btn-login">
-        <i class="fas fa-sign-in-alt me-2"></i>Kirish
-      </button>
-    </form>
 
-    <div class="demo-info">
-      <p>Demo kirish:</p>
-      <p><code>admin</code> / <code>admin123</code></p>
-      <p><code>operator</code> / <code>operator123</code></p>
+      <div class="login-title">Xush kelibsiz 👋</div>
+      <div class="login-desc">Davom etish uchun tizimga kiring</div>
+
+      {% if error %}
+      <div class="alert-danger">
+        <i class="fas fa-circle-exclamation"></i> {{ error }}
+      </div>
+      {% endif %}
+
+      <form method="POST" action="/login" id="login-form">
+        <!-- Username -->
+        <div class="field-group">
+          <label for="username">Foydalanuvchi nomi</label>
+          <div class="field-wrap">
+            <i class="fas fa-user field-icon"></i>
+            <input type="text" name="username" id="username" class="form-control"
+                   placeholder="admin yoki operator" required autofocus autocomplete="username">
+          </div>
+        </div>
+
+        <!-- Password -->
+        <div class="field-group">
+          <label for="password">Parol</label>
+          <div class="field-wrap">
+            <i class="fas fa-lock field-icon"></i>
+            <input type="password" name="password" id="password" class="form-control"
+                   placeholder="Parolni kiriting" required autocomplete="current-password">
+            <button type="button" class="toggle-pw" onclick="togglePassword()" id="toggle-pw-btn" title="Ko'rish">
+              <i class="fas fa-eye" id="pw-eye-icon"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Remember me -->
+        <div class="remember-row">
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="remember" name="remember">
+            <label class="form-check-label" for="remember">Eslab qolish</label>
+          </div>
+        </div>
+
+        <button type="submit" class="btn-login" id="submit-btn">
+          <i class="fas fa-arrow-right-to-bracket" id="login-icon"></i>
+          <span id="login-text">Kirish</span>
+        </button>
+      </form>
+
+      <!-- Demo accounts -->
+      <div class="demo-box">
+        <div class="demo-head"><i class="fas fa-circle-info"></i> Demo hisoblar — bosib kirish uchun</div>
+        <div class="demo-row" onclick="fillCreds('admin','admin123')">
+          <span class="dr-role"><i class="fas fa-shield-halved me-1" style="color:#F59E0B;"></i>Admin</span>
+          <span class="dr-cred"><code>admin</code> / <code>admin123</code></span>
+        </div>
+        <div class="demo-row" onclick="fillCreds('operator','operator123')">
+          <span class="dr-role"><i class="fas fa-user me-1" style="color:#3B82F6;"></i>Operator</span>
+          <span class="dr-cred"><code>operator</code> / <code>operator123</code></span>
+        </div>
+      </div>
+
+      <div class="login-footer">
+        © 2026 Toshkent Elektr Monitoring &nbsp;·&nbsp; Barcha huquqlar himoyalangan
+      </div>
     </div>
   </div>
+
+  <script>
+    function togglePassword() {
+      const pw = document.getElementById('password');
+      const icon = document.getElementById('pw-eye-icon');
+      if (pw.type === 'password') {
+        pw.type = 'text';
+        icon.className = 'fas fa-eye-slash';
+      } else {
+        pw.type = 'password';
+        icon.className = 'fas fa-eye';
+      }
+    }
+
+    function fillCreds(user, pass) {
+      document.getElementById('username').value = user;
+      document.getElementById('password').value = pass;
+      document.getElementById('username').dispatchEvent(new Event('input'));
+    }
+
+    document.getElementById('login-form').addEventListener('submit', function() {
+      const btn = document.getElementById('submit-btn');
+      const icon = document.getElementById('login-icon');
+      const text = document.getElementById('login-text');
+      btn.classList.add('loading');
+      icon.className = 'fas fa-circle-notch spin';
+      text.textContent = 'Tekshirilmoqda...';
+    });
+  </script>
 </body>
-    <!-- Theme toggle script -->
-    <script src="{{ url_for('static', filename='theme.js') }}"></script>
 </html>

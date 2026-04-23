@@ -3,181 +3,257 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Xarita - Sensor Monitoring</title>
+  <title>Xarita · ElectroGrid Monitoring</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{url_for('static', filename='style.css')}}">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" crossorigin=""/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" crossorigin=""/>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js" crossorigin=""></script>
+  <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js" crossorigin=""></script>
+  <style>
+    .map-avg-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.6rem 0;
+      border-bottom: 1px solid var(--border-subtle);
+      font-size: 0.85rem;
+    }
+    .map-avg-row:last-child { border-bottom: none; }
+    .map-avg-row .mar-label { color: var(--text-secondary); display: flex; align-items: center; gap: 6px; }
+    .map-avg-row .mar-val { font-weight: 700; color: var(--text-primary); }
+    .legend-dot { width: 11px; height: 11px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+    .leaflet-popup-content-wrapper { border-radius: 12px !important; box-shadow: 0 8px 24px rgba(0,0,0,0.15) !important; }
+    .leaflet-popup-content { font-family: 'Inter', sans-serif !important; font-size: 0.82rem !important; margin: 12px 14px !important; }
+    [data-theme="dark"] .leaflet-tile-pane { filter: brightness(0.85) saturate(0.9); }
+
+    .map-toolbar-btn {
+      display:flex;align-items:center;gap:6px;
+      background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.2);
+      border-radius:10px;padding:0.4rem 0.85rem;color:white;
+      font-size:0.82rem;font-weight:600;cursor:pointer;text-decoration:none;
+    }
+    .map-toolbar-btn:hover { background: rgba(255,255,255,0.2); color: white; }
+    .map-toolbar-btn.active { background: rgba(255,255,255,0.28); border-color: rgba(255,255,255,0.45); }
+
+    .sensor-search-box {
+      display:flex;align-items:center;gap:6px;
+      background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.2);
+      border-radius:10px;padding:0.3rem 0.6rem;
+    }
+    .sensor-search-box input {
+      background:transparent;border:none;outline:none;color:white;
+      font-size:0.82rem;font-weight:600;width:120px;
+    }
+    .sensor-search-box input::placeholder { color: rgba(255,255,255,0.6); font-weight:500; }
+
+    .spark-svg { width: 100%; height: 38px; display:block; }
+    .spark-loading { font-size: 0.7rem; color:#94A3B8; padding: 6px 0; text-align:center; }
+  </style>
 </head>
 <body>
-
-  <style>
-    body, .card, .card-header, .card-body, .section-label, h1, h3, h5, h6, p, span, strong, small, .legend, .fw-bold, .mb-0, .opacity-65, .text-muted, .btn-back {
-      color: #111 !important;
-    }
-    .fa,
-    .fas,
-    .far {
-      color: inherit !important;
-    }
-    .card {
-      background: #fff !important;
-    }
-    .alert, .btn, .navbar, .page-hero {
-      color: #111 !important;
-    }
-    #map {
-      color: #111 !important;
-    }
-  </style>
   {% include 'navbar.html' %}
 
   <section class="page-hero">
     <div class="container-fluid px-4">
-      <div class="d-flex align-items-center justify-content-between">
+      <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
         <div>
-          <h1><i class="fas fa-map-location-dot me-2"></i>Toshkent — Sensor joylashuvi</h1>
-          <p class="mb-0">Real vaqt rejimida monitoring xaritasi</p>
+          <h1><i class="fas fa-map-location-dot me-2"></i>Toshkent — Sensor xaritasi</h1>
+          <p class="mb-0">Real vaqt rejimida monitoring · 1200 sensor · 12 tuman</p>
         </div>
-        <div class="d-flex align-items-center gap-2">
-          <label for="district-select" class="me-2 mb-0" style="font-size:0.95rem;">Tuman:</label>
-          <select id="district-select" class="form-select form-select-sm" style="width:170px;">
-            <option value="">Barchasi</option>
-            <option value="Bektemir">Bektemir</option>
-            <option value="Chilonzor">Chilonzor</option>
-            <option value="Mirobod">Mirobod</option>
-            <option value="Mirzo Ulug‘bek">Mirzo Ulug‘bek</option>
-            <option value="Olmazor">Olmazor</option>
-            <option value="Sergeli">Sergeli</option>
-            <option value="Shayxontohur">Shayxontohur</option>
-            <option value="Uchtepa">Uchtepa</option>
-            <option value="Yakkasaroy">Yakkasaroy</option>
-            <option value="Yashnobod">Yashnobod</option>
-            <option value="Yunusobod">Yunusobod</option>
-          </select>
-          <a href="/" class="btn-back ms-3"><i class="fas fa-arrow-left"></i> Orqaga</a>
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+
+          <!-- Sensor qidiruv -->
+          <div class="sensor-search-box">
+            <i class="fas fa-search" style="color:rgba(255,255,255,0.7);font-size:0.78rem;"></i>
+            <input id="sensor-search" type="text" placeholder="SensorID..." autocomplete="off">
+            <button id="sensor-search-btn" class="map-toolbar-btn" style="padding:0.2rem 0.6rem;font-size:0.75rem;" title="Topish">
+              <i class="fas fa-arrow-right"></i>
+            </button>
+          </div>
+
+          <!-- Tuman tanlash -->
+          <div style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.2);border-radius:10px;padding:0.4rem 0.85rem;">
+            <i class="fas fa-filter" style="color:rgba(255,255,255,0.7);font-size:0.8rem;"></i>
+            <select id="district-select" class="form-select form-select-sm border-0 p-0" style="background:transparent;color:white;width:auto;font-size:0.85rem;font-weight:600;box-shadow:none;">
+              <option value="" style="color:#0F172A;">Barcha tumanlar</option>
+              <option value="Bektemir" style="color:#0F172A;">Bektemir</option>
+              <option value="Chilonzor" style="color:#0F172A;">Chilonzor</option>
+              <option value="Mirabad" style="color:#0F172A;">Mirabad</option>
+              <option value="Mirobod" style="color:#0F172A;">Mirobod</option>
+              <option value="Mirzo Ulug'bek" style="color:#0F172A;">Mirzo Ulug'bek</option>
+              <option value="Olmazor" style="color:#0F172A;">Olmazor</option>
+              <option value="Sergeli" style="color:#0F172A;">Sergeli</option>
+              <option value="Shayxontohur" style="color:#0F172A;">Shayxontohur</option>
+              <option value="Uchtepa" style="color:#0F172A;">Uchtepa</option>
+              <option value="Yakkasaroy" style="color:#0F172A;">Yakkasaroy</option>
+              <option value="Yashnobod" style="color:#0F172A;">Yashnobod</option>
+              <option value="Yunusobod" style="color:#0F172A;">Yunusobod</option>
+            </select>
+          </div>
+
+          <!-- Faqat muammolar -->
+          <button id="faults-toggle" type="button" class="map-toolbar-btn" onclick="toggleFaultsOnly()" title="Faqat muammoli sensorlarni ko'rsatish">
+            <i class="fas fa-triangle-exclamation"></i> <span id="faults-label">Muammolar: OFF</span>
+          </button>
+
+          <!-- Heatmap -->
+          <button id="heatmap-toggle" type="button" class="map-toolbar-btn" onclick="toggleHeatmap()" title="Issiqlik xaritasi">
+            <i class="fas fa-fire"></i> <span id="heatmap-label">Heatmap: OFF</span>
+          </button>
+
+          <!-- Klaster -->
+          <button id="cluster-toggle" type="button" class="map-toolbar-btn active" onclick="toggleClustering()" title="Klasterlashni yoq/o'chir">
+            <i class="fas fa-layer-group"></i> <span id="cluster-label">Klaster: ON</span>
+          </button>
+
+          <!-- Eksport -->
+          <a id="export-csv" href="/api/export/map-csv" class="map-toolbar-btn" title="Xarita ma'lumotini CSV qilib yuklab olish">
+            <i class="fas fa-download"></i> CSV
+          </a>
+
+          <a href="/" class="btn-back"><i class="fas fa-arrow-left"></i> Orqaga</a>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- ===== STATS STRIP ===== -->
-  <div style="background: linear-gradient(90deg, #EFF6FF 0%, #DBEAFE 50%, #EFF6FF 100%); border-bottom: 1px solid #BFDBFE; padding: 1.15rem 0;">
+  <!-- Stats Strip -->
+  <div class="map-stat-strip">
     <div class="container-fluid px-4">
       <div class="row g-0 text-center">
-        <div class="col-3" style="border-right: 1.5px solid #BFDBFE;">
-          <div style="font-size: 2.2rem; font-weight: 900; color: #1E3A5F; line-height: 1;" id="ss-total">--</div>
-          <div style="font-size: 0.69rem; color: #6B7280; text-transform: uppercase; letter-spacing: 0.8px; font-weight: 700; margin-top: 4px;">Jami Sensorlar</div>
+        <div class="col-3 map-stat-item">
+          <div class="msv" style="color:var(--brand-primary);" id="ss-total">--</div>
+          <div class="msl">Jami Sensorlar</div>
         </div>
-        <div class="col-3" style="border-right: 1.5px solid #BFDBFE;">
-          <div style="font-size: 2.2rem; font-weight: 900; color: #16A34A; line-height: 1;" id="ss-safe">--</div>
-          <div style="font-size: 0.69rem; color: #6B7280; text-transform: uppercase; letter-spacing: 0.8px; font-weight: 700; margin-top: 4px;">Havfsiz</div>
+        <div class="col-3 map-stat-item">
+          <div class="msv" style="color:var(--color-success);" id="ss-safe">--</div>
+          <div class="msl">Havfsiz</div>
         </div>
-        <div class="col-3" style="border-right: 1.5px solid #BFDBFE;">
-          <div style="font-size: 2.2rem; font-weight: 900; color: #D97706; line-height: 1;" id="ss-warn">--</div>
-          <div style="font-size: 0.69rem; color: #6B7280; text-transform: uppercase; letter-spacing: 0.8px; font-weight: 700; margin-top: 4px;">Ogohlantirish</div>
+        <div class="col-3 map-stat-item">
+          <div class="msv" style="color:var(--color-warning);" id="ss-warn">--</div>
+          <div class="msl">Ogohlantirish</div>
         </div>
-        <div class="col-3">
-          <div style="font-size: 2.2rem; font-weight: 900; color: #DC2626; line-height: 1;" id="ss-danger">--</div>
-          <div style="font-size: 0.69rem; color: #6B7280; text-transform: uppercase; letter-spacing: 0.8px; font-weight: 700; margin-top: 4px;">Muammolar</div>
+        <div class="col-3 map-stat-item" style="border-right:none;">
+          <div class="msv" style="color:var(--color-danger);" id="ss-danger">--</div>
+          <div class="msl">Muammolar</div>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Loading spinner -->
-  <div id="map-loading" class="text-center py-5">
-    <div class="spinner-border" style="width:3rem;height:3rem;color:#3B82F6;" role="status"></div>
-    <p class="mt-3 text-muted">Xarita yuklanmoqda...</p>
+  <!-- Loading -->
+  <div id="map-loading" class="loading-overlay">
+    <div class="spinner-ring"></div>
+    <p>Xarita yuklanmoqda...</p>
   </div>
 
   <main class="py-4" id="map-main" style="display:none;">
     <div class="container-fluid px-4">
-      <div class="row g-4">
+      <div class="row g-3">
         <!-- Map -->
         <div class="col-lg-8">
-          <div class="card h-100">
-            <div class="card-header d-flex justify-content-between align-items-center">
-              <h5 class="mb-0"><i class="fas fa-location-dot me-2"></i>Sensor joylashuvi</h5>
-              <small class="opacity-65">11 ta tumanda 500 sensor</small>
+          <div class="panel" style="height:600px;display:flex;flex-direction:column;">
+            <div class="panel-head">
+              <div>
+                <span class="icon-pill"><i class="fas fa-location-dot"></i></span>
+                Sensor joylashuvi
+              </div>
+              <small style="color:var(--text-muted);">12 ta tumanda 1200 sensor</small>
             </div>
-            <div class="card-body p-3">
-              <div id="map" style="width:100%;height:550px;border-radius:12px;"></div>
-            <style>
-              #map { width: 100%; height: 550px; border-radius: 12px; }
-            </style>
+            <div style="flex:1;min-height:0;padding:0.75rem;">
+              <div id="map" style="width:100%;height:100%;border-radius:10px;"></div>
             </div>
           </div>
         </div>
 
-        <!-- Stats -->
-        <div class="col-lg-4">
-          <div class="card mb-3">
-            <div class="card-header">
-              <h5 class="mb-0"><i class="fas fa-chart-pie me-2"></i>Statistika</h5>
+        <!-- Right panel -->
+        <div class="col-lg-4 d-flex flex-column gap-3">
+          <!-- Avg values -->
+          <div class="panel">
+            <div class="panel-head">
+              <span><span class="icon-pill"><i class="fas fa-chart-simple"></i></span>O'rtacha qiymatlar</span>
             </div>
-            <div class="card-body">
-              <div class="mb-3">
-                <small class="section-label">Jami Sensorlar</small>
-                <h3 class="fw-bold" style="color: var(--primary-light);" id="total-sensors">--</h3>
+            <div style="padding: 0.5rem 1.25rem 0.75rem;">
+              <div class="map-avg-row">
+                <span class="mar-label"><i class="fas fa-temperature-half" style="color:var(--color-danger);"></i> Harorat</span>
+                <span class="mar-val" id="avg-harorat">--</span>
               </div>
-
-              <div class="mb-3">
-                <small class="section-label">Havfsiz</small>
-                <h3 class="fw-bold" style="color: var(--accent-green);" id="safe-sensors">--</h3>
+              <div class="map-avg-row">
+                <span class="mar-label"><i class="fas fa-wave-square" style="color:var(--brand-primary);"></i> Chastota</span>
+                <span class="mar-val" id="avg-chastota">--</span>
               </div>
-
-              <div class="mb-3">
-                <small class="section-label">Muammolar</small>
-                <h3 class="fw-bold" style="color: var(--accent-red);" id="fault-sensors">--</h3>
+              <div class="map-avg-row">
+                <span class="mar-label"><i class="fas fa-bolt" style="color:var(--color-warning);"></i> Kuchlanish</span>
+                <span class="mar-val" id="avg-kuchlanish">--</span>
               </div>
+              <div class="map-avg-row">
+                <span class="mar-label"><i class="fas fa-gear" style="color:var(--accent-cyan);"></i> Quvvat</span>
+                <span class="mar-val" id="avg-quvvat">--</span>
+              </div>
+            </div>
+          </div>
 
-              <hr style="border-color: #f1f3f5;">
-
-              <h6 class="fw-bold mb-3" style="font-size:0.85rem;">O'rtacha qiymatlar</h6>
-              <div class="small">
-                <div class="d-flex justify-content-between mb-2 py-1" style="border-bottom:1px solid #f7f8fa;">
-                  <span><i class="fas fa-temperature-half text-danger me-1"></i>Harorat:</span>
-                  <strong id="avg-harorat">--</strong>
+          <!-- Sensor counts -->
+          <div class="panel">
+            <div class="panel-head">
+              <span><span class="icon-pill"><i class="fas fa-chart-pie"></i></span>Sensorlar holati</span>
+            </div>
+            <div style="padding:1rem 1.25rem;">
+              <div class="d-flex align-items-center justify-content-between mb-3">
+                <div>
+                  <div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;font-weight:700;letter-spacing:0.06em;">Jami sensorlar</div>
+                  <div style="font-size:2rem;font-weight:900;letter-spacing:-0.04em;color:var(--brand-primary);" id="total-sensors">--</div>
                 </div>
-                <div class="d-flex justify-content-between mb-2 py-1" style="border-bottom:1px solid #f7f8fa;">
-                  <span><i class="fas fa-wave-square text-primary me-1"></i>Chastota:</span>
-                  <strong id="avg-chastota">--</strong>
+              </div>
+              <div class="d-flex justify-content-between gap-2 mb-2">
+                <div style="flex:1;background:var(--color-success-bg);border-radius:10px;padding:0.7rem;text-align:center;">
+                  <div style="font-size:1.4rem;font-weight:800;color:var(--color-success);" id="safe-sensors">--</div>
+                  <div style="font-size:0.7rem;color:var(--color-success);font-weight:600;text-transform:uppercase;">Havfsiz</div>
                 </div>
-                <div class="d-flex justify-content-between mb-2 py-1" style="border-bottom:1px solid #f7f8fa;">
-                  <span><i class="fas fa-bolt text-warning me-1"></i>Kuchlanish:</span>
-                  <strong id="avg-kuchlanish">--</strong>
+                <div style="flex:1;background:var(--color-warning-bg);border-radius:10px;padding:0.7rem;text-align:center;">
+                  <div style="font-size:1.4rem;font-weight:800;color:var(--color-warning);" id="warn-sensors">--</div>
+                  <div style="font-size:0.7rem;color:var(--color-warning);font-weight:600;text-transform:uppercase;">Ogoh.</div>
                 </div>
-                <div class="d-flex justify-content-between py-1">
-                  <span><i class="fas fa-gear text-info me-1"></i>Quvvat:</span>
-                  <strong id="avg-quvvat">--</strong>
+                <div style="flex:1;background:var(--color-danger-bg);border-radius:10px;padding:0.7rem;text-align:center;">
+                  <div style="font-size:1.4rem;font-weight:800;color:var(--color-danger);" id="fault-sensors">--</div>
+                  <div style="font-size:0.7rem;color:var(--color-danger);font-weight:600;text-transform:uppercase;">Muammo</div>
                 </div>
               </div>
             </div>
           </div>
 
-          <div class="card">
-            <div class="card-header">
-              <h5 class="mb-0"><i class="fas fa-circle-info me-2"></i>Legend</h5>
+          <!-- Legend -->
+          <div class="panel">
+            <div class="panel-head">
+              <span><span class="icon-pill"><i class="fas fa-circle-info"></i></span>Belgilar izohi</span>
             </div>
-            <div class="card-body small">
-              <div class="d-flex align-items-center mb-2">
-                <span style="width:12px;height:12px;border-radius:50%;background:var(--accent-green);display:inline-block;" class="me-2"></span>
-                <span>Havfsiz — Normal</span>
+            <div style="padding:0.75rem 1.25rem;">
+              <div class="d-flex align-items-center gap-3 mb-2 py-1">
+                <span class="legend-dot" style="background:var(--color-success);box-shadow:0 0 0 3px rgba(16,185,129,0.2);"></span>
+                <div>
+                  <div style="font-size:0.85rem;font-weight:600;color:var(--text-primary);">Havfsiz</div>
+                  <div style="font-size:0.75rem;color:var(--text-muted);">Barcha parametrlar normal</div>
+                </div>
               </div>
-              <div class="d-flex align-items-center mb-2">
-                <span style="width:12px;height:12px;border-radius:50%;background:var(--accent-amber);display:inline-block;" class="me-2"></span>
-                <span>Ogohlantirish</span>
+              <div class="d-flex align-items-center gap-3 mb-2 py-1">
+                <span class="legend-dot" style="background:var(--color-warning);box-shadow:0 0 0 3px rgba(245,158,11,0.2);"></span>
+                <div>
+                  <div style="font-size:0.85rem;font-weight:600;color:var(--text-primary);">Ogohlantirish</div>
+                  <div style="font-size:0.75rem;color:var(--text-muted);">Chegaraga yaqin qiymatlar</div>
+                </div>
               </div>
-              <div class="d-flex align-items-center mb-3">
-                <span style="width:12px;height:12px;border-radius:50%;background:var(--accent-red);display:inline-block;" class="me-2"></span>
-                <span>Muammo — Xavf</span>
+              <div class="d-flex align-items-center gap-3 py-1">
+                <span class="legend-dot" style="background:var(--color-danger);box-shadow:0 0 0 3px rgba(239,68,68,0.2);"></span>
+                <div>
+                  <div style="font-size:0.85rem;font-weight:600;color:var(--text-primary);">Muammo — Xavf</div>
+                  <div style="font-size:0.75rem;color:var(--text-muted);">Marker o'lchami xavf darajasiga qarab</div>
+                </div>
               </div>
-              <p class="text-muted mb-0" style="font-size:0.8rem;">
-                <i class="fas fa-info-circle me-1"></i>
-                Marker o'lchami chastota og'ishiga qarab
-              </p>
             </div>
           </div>
         </div>
@@ -185,97 +261,379 @@
     </div>
   </main>
 
-  <footer class="text-center py-3 mt-3">
-    <p class="mb-0">© 2026 Toshkent Elektr Transsmissiya | Monitoring Tizimi</p>
-    <p class="mb-0" style="font-size:.85rem;opacity:.7;">Yaratuvchi: Shohjahon G'aybullayev — Toshkent, Bekobod 2026</p>
+  <footer class="text-center mt-4">
+    <div class="container-fluid px-4">
+      <div>© 2026 Toshkent Elektr Monitoring · Yaratuvchi: G'aybullayev Shohjahon</div>
+    </div>
   </footer>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
   <script>
     let leafletMap = null;
-    let markersLayer = null;
+    let clusterLayer = null;
+    let plainLayer = null;
+    let heatLayer = null;
+    let districtPolygons = [];
+    let clusteringEnabled = true;
+    let heatmapEnabled = false;
+    let faultsOnly = false;
+    let lastData = [];
+    let sensorMarkerIndex = {}; // SensorID -> {marker, latlng}
+
+    // Realistik (multi-vertex) tuman polygonlari — Toshkent shaharlari uchun
+    // approximated GeoJSON-style polygons (LatLng pairs).
+    const DISTRICT_BOUNDS = {
+      "Bektemir": [
+        [41.225,69.310],[41.232,69.345],[41.250,69.378],[41.275,69.395],
+        [41.300,69.388],[41.310,69.360],[41.298,69.330],[41.272,69.312],
+        [41.245,69.305]
+      ],
+      "Chilonzor": [
+        [41.260,69.150],[41.268,69.180],[41.275,69.210],[41.295,69.222],
+        [41.318,69.215],[41.328,69.195],[41.322,69.165],[41.305,69.145],
+        [41.282,69.140]
+      ],
+      "Mirabad": [
+        [41.255,69.205],[41.262,69.230],[41.272,69.255],[41.288,69.262],
+        [41.298,69.250],[41.295,69.225],[41.282,69.205],[41.268,69.198]
+      ],
+      "Mirobod": [
+        [41.270,69.245],[41.278,69.268],[41.290,69.290],[41.305,69.295],
+        [41.314,69.280],[41.310,69.258],[41.298,69.245],[41.282,69.240]
+      ],
+      "Mirzo Ulug'bek": [
+        [41.305,69.330],[41.318,69.360],[41.335,69.388],[41.358,69.395],
+        [41.385,69.388],[41.395,69.365],[41.388,69.340],[41.368,69.325],
+        [41.340,69.320],[41.318,69.322]
+      ],
+      "Olmazor": [
+        [41.330,69.215],[41.342,69.240],[41.358,69.265],[41.378,69.280],
+        [41.395,69.275],[41.392,69.250],[41.378,69.225],[41.358,69.215],
+        [41.342,69.215]
+      ],
+      "Sergeli": [
+        [41.170,69.245],[41.182,69.280],[41.200,69.310],[41.225,69.335],
+        [41.250,69.338],[41.260,69.315],[41.252,69.285],[41.230,69.260],
+        [41.205,69.248],[41.182,69.245]
+      ],
+      "Shayxontohur": [
+        [41.285,69.245],[41.292,69.270],[41.305,69.295],[41.322,69.302],
+        [41.335,69.288],[41.330,69.265],[41.315,69.248],[41.298,69.243]
+      ],
+      "Uchtepa": [
+        [41.285,69.150],[41.295,69.175],[41.310,69.205],[41.335,69.225],
+        [41.358,69.220],[41.365,69.195],[41.355,69.168],[41.335,69.150],
+        [41.310,69.148]
+      ],
+      "Yakkasaroy": [
+        [41.270,69.198],[41.276,69.215],[41.288,69.235],[41.302,69.242],
+        [41.310,69.228],[41.305,69.208],[41.292,69.198],[41.280,69.195]
+      ],
+      "Yashnobod": [
+        [41.215,69.275],[41.225,69.302],[41.240,69.328],[41.258,69.348],
+        [41.275,69.350],[41.272,69.325],[41.258,69.298],[41.240,69.278]
+      ],
+      "Yunusobod": [
+        [41.318,69.288],[41.328,69.315],[41.345,69.345],[41.365,69.368],
+        [41.388,69.370],[41.392,69.342],[41.380,69.315],[41.358,69.295],
+        [41.338,69.288]
+      ]
+    };
+    const DISTRICT_COLORS = {
+      "Bektemir":"#6366F1","Chilonzor":"#8B5CF6","Mirabad":"#EC4899","Mirobod":"#F43F5E",
+      "Mirzo Ulug'bek":"#0EA5E9","Olmazor":"#10B981","Sergeli":"#F59E0B","Shayxontohur":"#14B8A6",
+      "Uchtepa":"#F97316","Yakkasaroy":"#EF4444","Yashnobod":"#84CC16","Yunusobod":"#06B6D4"
+    };
+
+    // ===== Toolbar tugmalar =====
+    function _setBtnActive(btnId, active) {
+      const el = document.getElementById(btnId);
+      if (!el) return;
+      el.classList.toggle('active', active);
+    }
+
+    function toggleClustering() {
+      clusteringEnabled = !clusteringEnabled;
+      document.getElementById('cluster-label').textContent = 'Klaster: ' + (clusteringEnabled ? 'ON' : 'OFF');
+      _setBtnActive('cluster-toggle', clusteringEnabled);
+      renderMarkers();
+    }
+
+    function toggleHeatmap() {
+      heatmapEnabled = !heatmapEnabled;
+      document.getElementById('heatmap-label').textContent = 'Heatmap: ' + (heatmapEnabled ? 'ON' : 'OFF');
+      _setBtnActive('heatmap-toggle', heatmapEnabled);
+      renderHeatmap();
+    }
+
+    function toggleFaultsOnly() {
+      faultsOnly = !faultsOnly;
+      document.getElementById('faults-label').textContent = 'Muammolar: ' + (faultsOnly ? 'ON' : 'OFF');
+      _setBtnActive('faults-toggle', faultsOnly);
+      renderMarkers();
+      renderHeatmap();
+      updateExportLink();
+    }
+
+    function updateExportLink() {
+      const district = document.getElementById('district-select').value;
+      const params = new URLSearchParams();
+      if (district) params.set('district', district);
+      if (faultsOnly) params.set('only_faults', '1');
+      const qs = params.toString();
+      document.getElementById('export-csv').href = '/api/export/map-csv' + (qs ? ('?' + qs) : '');
+    }
+
+    function drawDistrictPolygons(selectedDistrict) {
+      districtPolygons.forEach(p => leafletMap.removeLayer(p));
+      districtPolygons = [];
+      const entries = selectedDistrict
+        ? Object.entries(DISTRICT_BOUNDS).filter(([k]) => k === selectedDistrict)
+        : Object.entries(DISTRICT_BOUNDS);
+      entries.forEach(([name, coords]) => {
+        const color = DISTRICT_COLORS[name] || '#64748B';
+        const poly = L.polygon(coords, {
+          color: color, weight: 1.5, opacity: 0.6,
+          fillColor: color, fillOpacity: 0.06, dashArray: '6,4',
+          smoothFactor: 1.2
+        }).addTo(leafletMap);
+        poly.bindTooltip('<b>' + name + '</b>', {permanent: false, direction: 'center'});
+        districtPolygons.push(poly);
+      });
+    }
+
+    // ===== Popup va sparkline =====
+    function buildPopupHtml(d) {
+      const slabel = d.Fault === 2
+        ? '<span style="color:#EF4444;font-weight:700;">&#x1F534; MUAMMO</span>'
+        : d.Fault === 1
+          ? '<span style="color:#F59E0B;font-weight:700;">&#x1F7E1; OGOHLANTIRISH</span>'
+          : '<span style="color:#10B981;font-weight:700;">&#x1F7E2; HAVFSIZ</span>';
+      return '<div style="min-width:215px;font-family:Inter,sans-serif;line-height:1.55;">'
+        + '<div style="font-weight:800;font-size:0.93rem;color:#0F172A;margin-bottom:2px;">' + d.SensorID + '</div>'
+        + '<div style="font-size:0.77rem;color:#64748B;margin-bottom:8px;">' + d.District + '</div>'
+        + '<div style="font-size:0.8rem;border-top:1px solid #f1f5f9;padding-top:6px;">'
+        + '<div>&#x1F321;&#xFE0F; <b>' + d.Harorat + ' °C</b> &nbsp;&#x1F4A7; <b>' + d.Humidity + '%</b></div>'
+        + '<div>&#x26A1; <b>' + d.Kuchlanish + ' V</b> &nbsp;&#x3030;&#xFE0F; <b>' + d.Chastota + ' Hz</b></div>'
+        + '<div>&#x1F4A8; <b>' + d.Shamol + ' km/h</b> &nbsp;&#x2699;&#xFE0F; <b>' + d.Quvvat + ' kW</b></div>'
+        + '</div>'
+        + '<div style="margin-top:8px;font-size:0.7rem;color:#64748B;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;">Kuchlanish (oxirgi 30 ta)</div>'
+        + '<div class="spark-container" data-sensor="' + d.SensorID + '">'
+        +   '<div class="spark-loading">Sparkline yuklanmoqda...</div>'
+        + '</div>'
+        + '<div style="margin-top:6px;">' + slabel + '</div>'
+        + '<a href="/sensor/' + d.SensorID + '" style="display:inline-block;margin-top:6px;font-size:0.78rem;color:#2563EB;font-weight:600;text-decoration:none;">Batafsil →</a></div>';
+    }
+
+    async function loadSparklineInto(container, sensorId) {
+      try {
+        const resp = await fetch('/api/sensor-spark/' + encodeURIComponent(sensorId));
+        const data = await resp.json();
+        const vals = (data && data.values) || [];
+        if (!vals.length) {
+          container.innerHTML = '<div class="spark-loading">Tarix yo\'q</div>';
+          return;
+        }
+        const w = 215, h = 38, pad = 2;
+        const min = Math.min(...vals), max = Math.max(...vals);
+        const range = (max - min) || 1;
+        const stepX = (w - pad*2) / Math.max(1, vals.length - 1);
+        const ptsArr = vals.map((v,i) => {
+          const x = pad + i * stepX;
+          const y = pad + (h - pad*2) * (1 - (v - min) / range);
+          return x.toFixed(1) + ',' + y.toFixed(1);
+        });
+        const pts = ptsArr.join(' ');
+        const last = vals[vals.length - 1];
+        const lastFault = (data.faults && data.faults[data.faults.length - 1]) || 0;
+        const lineColor = lastFault === 2 ? '#EF4444' : (lastFault === 1 ? '#F59E0B' : '#2563EB');
+        const fillColor = lastFault === 2 ? 'rgba(239,68,68,0.15)' : (lastFault === 1 ? 'rgba(245,158,11,0.15)' : 'rgba(37,99,235,0.15)');
+        const areaPath = 'M' + pad + ',' + (h - pad) + ' L' + ptsArr.join(' L') + ' L' + (w - pad) + ',' + (h - pad) + ' Z';
+        container.innerHTML =
+          '<svg class="spark-svg" viewBox="0 0 ' + w + ' ' + h + '" preserveAspectRatio="none">'
+          + '<path d="' + areaPath + '" fill="' + fillColor + '" stroke="none"/>'
+          + '<polyline points="' + pts + '" fill="none" stroke="' + lineColor + '" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>'
+          + '</svg>'
+          + '<div style="display:flex;justify-content:space-between;font-size:0.7rem;color:#64748B;margin-top:2px;">'
+          +   '<span>min ' + min.toFixed(1) + 'V</span>'
+          +   '<span style="color:' + lineColor + ';font-weight:700;">' + last.toFixed(1) + 'V</span>'
+          +   '<span>max ' + max.toFixed(1) + 'V</span>'
+          + '</div>';
+      } catch (e) {
+        container.innerHTML = '<div class="spark-loading">Xato: ' + e + '</div>';
+      }
+    }
+
+    function bindSparklinePopup(marker, d) {
+      marker.on('popupopen', (ev) => {
+        const popupEl = ev.popup.getElement();
+        if (!popupEl) return;
+        const node = popupEl.querySelector('.spark-container[data-sensor="' + d.SensorID + '"]');
+        if (node && !node.dataset.loaded) {
+          node.dataset.loaded = '1';
+          loadSparklineInto(node, d.SensorID);
+        }
+      });
+    }
+
+    function makeMarker(d) {
+      const col = d.Fault === 2 ? '#EF4444' : (d.Fault === 1 ? '#F59E0B' : '#10B981');
+      const opts = {
+        radius: d.Fault===2 ? 9 : (d.Fault===1 ? 7 : 5),
+        color: 'rgba(255,255,255,0.85)',
+        fillColor: col, fillOpacity: 0.9, weight: 1.5,
+        _fault: d.Fault, _sensorId: d.SensorID
+      };
+      const m = L.circleMarker([d.Latitude, d.Longitude], opts).bindPopup(buildPopupHtml(d));
+      bindSparklinePopup(m, d);
+      return m;
+    }
+
+    function renderMarkers() {
+      if (!leafletMap) return;
+      if (clusterLayer) leafletMap.removeLayer(clusterLayer);
+      if (plainLayer)   leafletMap.removeLayer(plainLayer);
+
+      const filtered = faultsOnly ? lastData.filter(d => d.Fault === 2) : lastData;
+
+      clusterLayer = L.markerClusterGroup({
+        maxClusterRadius: 38,
+        showCoverageOnHover: false,
+        iconCreateFunction: function(cluster) {
+          const children = cluster.getAllChildMarkers();
+          const hasFault = children.some(m => m.options._fault === 2);
+          const hasWarn  = children.some(m => m.options._fault === 1);
+          const col = hasFault ? '#EF4444' : (hasWarn ? '#F59E0B' : '#10B981');
+          const cnt = cluster.getChildCount();
+          const sz  = cnt > 100 ? 44 : cnt > 30 ? 36 : 28;
+          return L.divIcon({
+            html: '<div style="width:' + sz + 'px;height:' + sz + 'px;border-radius:50%;background:' + col
+              + ';display:flex;align-items:center;justify-content:center;color:white;font-weight:800;font-size:'
+              + (sz > 36 ? 13 : 11) + 'px;box-shadow:0 2px 8px rgba(0,0,0,0.25);border:2px solid rgba(255,255,255,0.85);">'
+              + cnt + '</div>',
+            className: '', iconSize: [sz, sz]
+          });
+        }
+      });
+      plainLayer = L.layerGroup();
+      sensorMarkerIndex = {};
+
+      filtered.forEach(d => {
+        const m1 = makeMarker(d);
+        const m2 = makeMarker(d);
+        clusterLayer.addLayer(m1);
+        plainLayer.addLayer(m2);
+        sensorMarkerIndex[d.SensorID] = {
+          latlng: [d.Latitude, d.Longitude],
+          marker: clusteringEnabled ? m1 : m2
+        };
+      });
+
+      if (clusteringEnabled) clusterLayer.addTo(leafletMap);
+      else plainLayer.addTo(leafletMap);
+    }
+
+    function renderHeatmap() {
+      if (!leafletMap) return;
+      if (heatLayer) { leafletMap.removeLayer(heatLayer); heatLayer = null; }
+      if (!heatmapEnabled) return;
+      const src = faultsOnly ? lastData.filter(d => d.Fault === 2) : lastData;
+      // Heatmap intensity: muammo > ogohlantirish > havfsiz
+      const points = src.map(d => {
+        const intensity = d.Fault === 2 ? 1.0 : (d.Fault === 1 ? 0.55 : 0.18);
+        return [d.Latitude, d.Longitude, intensity];
+      });
+      heatLayer = L.heatLayer(points, {
+        radius: 28, blur: 22, maxZoom: 15, minOpacity: 0.35,
+        gradient: { 0.2: '#10B981', 0.4: '#84CC16', 0.6: '#F59E0B', 0.8: '#F97316', 1.0: '#EF4444' }
+      }).addTo(leafletMap);
+    }
+
+    // ===== Sensor qidiruv =====
+    function searchSensor() {
+      const q = (document.getElementById('sensor-search').value || '').trim().toUpperCase();
+      if (!q) return;
+      let matchKey = Object.keys(sensorMarkerIndex).find(k => k.toUpperCase() === q);
+      if (!matchKey) {
+        matchKey = Object.keys(sensorMarkerIndex).find(k => k.toUpperCase().startsWith(q));
+      }
+      if (!matchKey) {
+        alert('Sensor topilmadi: ' + q + (faultsOnly ? '\n\n(Faqat muammolar filtri yoqilgan)' : ''));
+        return;
+      }
+      const entry = sensorMarkerIndex[matchKey];
+      leafletMap.setView(entry.latlng, 16, { animate: true });
+      // Klaster ichida bo'lsa ham popup ochish
+      setTimeout(() => {
+        try { entry.marker.openPopup(); } catch(e) {}
+      }, 450);
+    }
+
+    // ===== Asosiy yuklash =====
     async function loadMap() {
       try {
         const district = document.getElementById('district-select').value;
         let url = '/api/map-data';
-        if (district) url += `?district=${encodeURIComponent(district)}`;
+        if (district) url += '?district=' + encodeURIComponent(district);
         const response = await fetch(url);
         const data = await response.json();
         if (!data || data.length === 0) {
-          document.getElementById('map').innerHTML = '<div class="alert alert-warning">Ma\'lumot topilmadi</div>';
+          document.getElementById('map').innerHTML = '<div class="alert alert-warning m-3">Ma\'lumot topilmadi</div>';
           return;
         }
-
-        // Update stats
+        lastData = data;
         const total = data.length;
-        const safe = data.filter(d => d.Fault === 0).length;
-        const warns = data.filter(d => d.Fault === 1).length;
+        const safe   = data.filter(d => d.Fault === 0).length;
+        const warns  = data.filter(d => d.Fault === 1).length;
         const faults = data.filter(d => d.Fault === 2).length;
+
         document.getElementById('total-sensors').textContent = total;
-        document.getElementById('safe-sensors').textContent = safe;
-        document.getElementById('fault-sensors').textContent = warns + faults;
-        // Stats strip
+        document.getElementById('safe-sensors').textContent  = safe;
+        document.getElementById('warn-sensors').textContent  = warns;
+        document.getElementById('fault-sensors').textContent = faults;
         document.getElementById('ss-total').textContent  = total;
         document.getElementById('ss-safe').textContent   = safe;
         document.getElementById('ss-warn').textContent   = warns;
         document.getElementById('ss-danger').textContent = faults;
-        document.getElementById('avg-harorat').textContent = (data.reduce((sum, d) => sum + d.Harorat, 0) / total).toFixed(1) + '°C';
-        document.getElementById('avg-chastota').textContent = (data.reduce((sum, d) => sum + d.Chastota, 0) / total).toFixed(2) + ' Hz';
-        document.getElementById('avg-kuchlanish').textContent = (data.reduce((sum, d) => sum + d.Kuchlanish, 0) / total).toFixed(0) + 'V';
-        document.getElementById('avg-quvvat').textContent = (data.reduce((sum, d) => sum + d.Quvvat, 0) / total).toFixed(2) + 'kW';
+        document.getElementById('avg-harorat').textContent    = (data.reduce((s,d)=>s+d.Harorat,0)/total).toFixed(1) + ' °C';
+        document.getElementById('avg-chastota').textContent   = (data.reduce((s,d)=>s+d.Chastota,0)/total).toFixed(2) + ' Hz';
+        document.getElementById('avg-kuchlanish').textContent = (data.reduce((s,d)=>s+d.Kuchlanish,0)/total).toFixed(0) + ' V';
+        document.getElementById('avg-quvvat').textContent     = (data.reduce((s,d)=>s+d.Quvvat,0)/total).toFixed(2) + ' kW';
 
-        // Show map container
         document.getElementById('map-loading').style.display = 'none';
-        document.getElementById('map-main').style.display = 'block';
+        document.getElementById('map-main').style.display    = 'block';
 
-        // Initialize Leaflet map only once
         if (!leafletMap) {
-          leafletMap = L.map('map').setView([41.3111, 69.2797], 11);
-          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 18,
-            attribution: '© OpenStreetMap contributors'
+          leafletMap = L.map('map', {preferCanvas: true}).setView([41.2900, 69.2700], 11);
+          L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+            attribution: '© OpenStreetMap, © CartoDB', subdomains: 'abcd', maxZoom: 19
           }).addTo(leafletMap);
         }
-        // Remove old markers
-        if (markersLayer) {
-          leafletMap.removeLayer(markersLayer);
+
+        renderMarkers();
+        renderHeatmap();
+        drawDistrictPolygons(district);
+        updateExportLink();
+
+        if (district && DISTRICT_BOUNDS[district]) {
+          const c = DISTRICT_BOUNDS[district];
+          const lats = c.map(x=>x[0]), lons = c.map(x=>x[1]);
+          leafletMap.fitBounds([[Math.min(...lats),Math.min(...lons)],[Math.max(...lats),Math.max(...lons)]], {padding:[30,30]});
         }
-        markersLayer = L.layerGroup();
-        data.forEach(d => {
-          const color = d.Fault === 2 ? '#dc3545' : (d.Fault === 1 ? '#ffc107' : '#28a745');
-          const marker = L.circleMarker([d.Latitude, d.Longitude], {
-            radius: d.Fault === 2 ? 12 : (d.Fault === 1 ? 9 : 7),
-            color: '#222',
-            fillColor: color,
-            fillOpacity: 0.85,
-            weight: 1.5
-          });
-          marker.bindPopup(`
-            <b>${d.SensorID} — ${d.District}</b><br>
-            🌡️ Harorat: ${d.Harorat}°C<br>
-            🌬️ Shamol: ${d.Shamol} km/h<br>
-            🔄 Chastota: ${d.Chastota} Hz<br>
-            🔌 Kuchlanish: ${d.Kuchlanish}V<br>
-            ⚙️ Quvvat: ${d.Quvvat}kW<br>
-            <strong>${d.Fault === 2 ? '🔴 MUAMMO' : (d.Fault === 1 ? '🟡 OGOHLANTIRISH' : '🟢 HAVFSIZ')}</strong>
-          `);
-          markersLayer.addLayer(marker);
-        });
-        markersLayer.addTo(leafletMap);
-      } catch (error) {
-        document.getElementById('map').innerHTML = `
-          <div class="alert alert-danger">
-            <i class="fas fa-exclamation-circle me-2"></i>
-            Xarita yuklanmadi: ${error.message}
-          </div>
-        `;
+      } catch(e) {
+        console.error('Map error:', e);
+        document.getElementById('map-loading').innerHTML =
+          '<div class="alert alert-danger m-3"><i class="fas fa-exclamation-circle me-2"></i>Xarita yuklanmadi</div>';
       }
     }
+
     loadMap();
     setInterval(loadMap, 30000);
-    document.getElementById('district-select').addEventListener('change', loadMap);
+    document.getElementById('district-select').addEventListener('change', () => { loadMap(); });
+    document.getElementById('sensor-search-btn').addEventListener('click', searchSensor);
+    document.getElementById('sensor-search').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); searchSensor(); }
+    });
   </script>
 </body>
-    <!-- Theme toggle script -->
-    <script src="{{ url_for('static', filename='theme.js') }}"></script>
 </html>

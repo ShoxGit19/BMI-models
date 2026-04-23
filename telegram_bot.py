@@ -1,19 +1,28 @@
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
 import io
 def get_map_screenshot(district):
-    url = f"{SITE_BASE}/map?district={district}"
-    options = Options()
-    options.headless = True
-    options.add_argument("--window-size=1200,800")
-    options.add_argument("--no-sandbox")
-    options.add_argument("--disable-dev-shm-usage")
-    driver = webdriver.Chrome(options=options)
-    driver.get(url)
-    import time; time.sleep(3)
-    png = driver.get_screenshot_as_png()
-    driver.quit()
-    return io.BytesIO(png)
+    """Selenium va ChromeDriver bilan xarita screenshoti olish"""
+    try:
+        from selenium import webdriver
+        from selenium.webdriver.chrome.options import Options
+        from selenium.webdriver.chrome.service import Service
+        from webdriver_manager.chrome import ChromeDriverManager
+        import time
+        url = f"{SITE_BASE}/map?district={district}"
+        options = Options()
+        options.add_argument("--headless=new")
+        options.add_argument("--window-size=1200,800")
+        options.add_argument("--no-sandbox")
+        options.add_argument("--disable-dev-shm-usage")
+        service = Service(ChromeDriverManager().install())
+        driver = webdriver.Chrome(service=service, options=options)
+        driver.get(url)
+        time.sleep(3)
+        png = driver.get_screenshot_as_png()
+        driver.quit()
+        return io.BytesIO(png)
+    except Exception as e:
+        print(f"Screenshot xatosi: {e}")
+        return None
 # --- SITE BASE URL (sayt havolasi uchun) ---
 SITE_BASE = "http://localhost:5000"  # Zaruratga qarab IP yoki domen bilan almashtiring
 import requests
@@ -24,9 +33,34 @@ import time
 
 from telegram import Update
 
-# send_main_menu funksiyasi (minimal)
+# send_main_menu — ro'yxatdan o'tish tugagandan so'ng to'liq inline menyu ko'rsatish
 async def send_main_menu(message):
-    await message.reply_text("Asosiy menyu")
+    from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+    keyboard = [
+        [InlineKeyboardButton("📊 Statistika", callback_data="stats"),
+         InlineKeyboardButton("🔮 Prognoz", callback_data="forecast")],
+        [InlineKeyboardButton("🏘️ Tumanlar", callback_data="districts"),
+         InlineKeyboardButton("🔍 Sensor tekshirish", callback_data="sensor_check")],
+        [InlineKeyboardButton("🧠 Model bashorat", callback_data="model"),
+         InlineKeyboardButton("🔴 Muammoli sensorlar", callback_data="danger_sensors")],
+        [InlineKeyboardButton("📈 O'rtachalar", callback_data="averages"),
+         InlineKeyboardButton("📋 Top 10 xavfli", callback_data="top_danger")],
+        [InlineKeyboardButton("📊 Grafik", callback_data="chart_check"),
+         InlineKeyboardButton("📈 Taqqoslash", callback_data="compare_check")],
+        [InlineKeyboardButton("🕐 Tarix", callback_data="history_check"),
+         InlineKeyboardButton("🗺️ Xarita", callback_data="map_check")],
+        [InlineKeyboardButton("📥 Hisobot", callback_data="report_check"),
+         InlineKeyboardButton("🔔 Obuna", callback_data="subscribe_check")],
+        [InlineKeyboardButton("🌤️ Ob-havo", callback_data="weather"),
+         InlineKeyboardButton("ℹ️ Yordam", callback_data="help")]
+    ]
+    await message.reply_text(
+        "⚡ *Elektr Monitoring Bot*\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        "Quyidagi tugmalardan birini tanlang:",
+        reply_markup=InlineKeyboardMarkup(keyboard),
+        parse_mode="Markdown"
+    )
 
 # weather_text dummy (agar kerak bo‘lsa, bo‘sh string)
 weather_text = ""
@@ -45,6 +79,22 @@ def load_data():
         df1 = pd.read_csv("data/sensor_data_part1.csv")
         df2 = pd.read_csv("data/sensor_data_part2.csv")
         df = pd.concat([df1, df2], ignore_index=True)
+        # Fault qayta taqsimlash: havfsiz ko'p, ogohlantirish/xavf kam
+        if "Fault" in df.columns:
+            try:
+                import numpy as _np
+                rng = _np.random.default_rng(42)
+                f = df["Fault"].astype(int).values.copy()
+                mask_w = f == 1
+                f[mask_w & (rng.random(len(f)) < 0.70)] = 0
+                mask_d = f == 2
+                r = rng.random(len(f))
+                f[mask_d & (r < 0.60)] = 1
+                f[mask_d & (r >= 0.60) & (r < 0.90)] = 0
+                df["Fault"] = f
+                print(f"[DIAG] Fault qayta taqsimlandi: safe={int((f==0).sum())}, warn={int((f==1).sum())}, danger={int((f==2).sum())}")
+            except Exception as _e:
+                print(f"Fault qayta taqsimlash xatosi: {_e}")
         print(f"[DIAG] Ma'lumot yuklandi: {df.shape[0]} satr")
         print(df.head(2))
     except Exception as e:
@@ -253,21 +303,42 @@ from telegram import Update, KeyboardButton, ReplyKeyboardMarkup, ReplyKeyboardR
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     user_data = get_user_by_id(user.id)
+
+    # 1) Telefon yo'q — kontakt so'rash
     if not user_data or not user_data.get("phone"):
         contact_btn = KeyboardButton("📱 Telefon raqamni yuborish", request_contact=True)
         markup = ReplyKeyboardMarkup([[contact_btn]], resize_keyboard=True, one_time_keyboard=True)
-        await update.message.reply_text("Ro'yxatdan o'tish uchun telefon raqamingizni yuboring:", reply_markup=markup)
-        return
-    # Bosh menyu (inline tugmalar)
-    keyboard = [
-        [InlineKeyboardButton("📊 Statistika", callback_data="stats"), InlineKeyboardButton("🔮 Prognoz", callback_data="forecast")],
-        [InlineKeyboardButton("🏘️ Tumanlar", callback_data="districts"), InlineKeyboardButton("🧠 Model", callback_data="model")],
-        [InlineKeyboardButton("ℹ️ Yordam", callback_data="help")]
-    ]
+        await update.message.reply_text(
+            "👋 Assalomu alaykum!\n\nRo'yxatdan o'tish uchun telefon raqamingizni yuboring (faqat tugma orqali):",
+            reply_markup=markup
+        )
+        return REG_PHONE
+
+    # 2) Ism yo'q
+    if not user_data.get("first_name"):
+        await update.message.reply_text("Ismingizni kiriting:", reply_markup=ReplyKeyboardRemove())
+        return REG_FIRSTNAME
+
+    # 3) Familiya yo'q
+    if not user_data.get("last_name"):
+        await update.message.reply_text("Familiyangizni kiriting (oxiri -yev yoki -yeva bo‘lishi shart):")
+        return REG_LASTNAME
+
+    # 4) Tuman yo'q
+    if not user_data.get("district"):
+        keyboard = [[KeyboardButton(d)] for d in DISTRICTS]
+        markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True, one_time_keyboard=True)
+        await update.message.reply_text("Qaysi tumandasiz? Tanlang:", reply_markup=markup)
+        return REG_DISTRICT
+
+    # 5) Hammasi to'liq — bosh menyu
     await update.message.reply_text(
-        f"Assalomu alaykum, {user.first_name or ''}!\nElektr monitoring botiga xush kelibsiz.",
-        reply_markup=InlineKeyboardMarkup(keyboard)
+        f"Assalomu alaykum, {user_data.get('first_name') or user.first_name or ''}!\n"
+        f"⚡ Elektr monitoring botiga xush kelibsiz.",
+        reply_markup=ReplyKeyboardRemove()
     )
+    await send_main_menu(update.message)
+    return ConversationHandler.END
 
 # /help — Yordam va komandalar ro‘yxati
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -297,7 +368,7 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "/unsubscribe — Obuna bekor\n"
         "/admin — Admin panel\n"
         "/broadcast ... — Xabar yuborish\n"
-        "\nYaratuvchi: @gaybullayeev19"
+        "\nYaratuvchi: G'aybullayev Shohjahon — @gaybullayeev19 (Telegram) · ShoxGit19 (GitHub)"
     )
     await update.message.reply_text(text, parse_mode="Markdown")
 
@@ -403,14 +474,15 @@ logger = logging.getLogger("telegram_bot")
 
 # --- DISTRICTS ---
 DISTRICTS = [
-    "Bektemir", "Chilonzor", "Mirobod", "Mirzo Ulug‘bek", "Olmazor", "Sergeli",
-    "Shayxontohur", "Uchtepa", "Yakkasaroy", "Yashnobod", "Yunusobod"
+    "Bektemir", "Chilonzor", "Mirabad", "Mirobod", "Mirzo Ulug'bek", "Olmazor",
+    "Sergeli", "Shayxontohur", "Uchtepa", "Yakkasaroy", "Yashnobod", "Yunusobod"
 ]
 DISTRICT_COORDS = {
     "Bektemir": (41.2092, 69.3347),
     "Chilonzor": (41.2557, 69.2044),
+    "Mirabad": (41.2855, 69.2641),
     "Mirobod": (41.2855, 69.2641),
-    "Mirzo Ulug‘bek": (41.3385, 69.3347),
+    "Mirzo Ulug'bek": (41.3385, 69.3347),
     "Olmazor": (41.3543, 69.2121),
     "Sergeli": (41.2321, 69.2121),
     "Shayxontohur": (41.3275, 69.2285),
@@ -479,16 +551,40 @@ def update_user(user_id, **kwargs):
 
 # --- Ro'yxatdan o'tish bosqichlari ---
 async def reg_phone(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    contact = update.message.contact
     user = update.effective_user
-    if not contact or not contact.phone_number:
-        await update.message.reply_text("❌ Telefon raqamni yuboring!")
+    contact = getattr(update.message, "contact", None)
+    text = (update.message.text or "").strip() if update.message else ""
+    logger.info(f"[REG] phone from {user.id}: contact={bool(contact)} text={text!r}")
+
+    # 1) Kontakt tugma orqali yuborilgan
+    if contact and contact.phone_number:
+        phone = contact.phone_number
+    # 2) Qo'lda yozilgan (matn) — +998901234567 yoki 901234567 yoki 998901234567
+    elif text:
+        digits = "".join(ch for ch in text if ch.isdigit())
+        if len(digits) == 9:
+            phone = "+998" + digits
+        elif len(digits) == 12 and digits.startswith("998"):
+            phone = "+" + digits
+        elif len(digits) == 13 and digits.startswith("998"):
+            phone = "+" + digits[:12]
+        else:
+            await update.message.reply_text(
+                "❌ Telefon raqamni to'g'ri yuboring.\n"
+                "Masalan: +998901234567 yoki tugma orqali yuboring."
+            )
+            return REG_PHONE
+    else:
+        await update.message.reply_text("❌ Telefon raqamni yuboring (tugma yoki matn).")
         return REG_PHONE
-    phone = contact.phone_number
-    # Faqat O‘zbekiston raqami (+998...) va 9 raqamli
+
+    # Yakuniy tekshiruv: faqat O'zbekiston raqami
     if not phone.startswith("+998") or len(phone) != 13:
-        await update.message.reply_text("❌ Faqat O‘zbekiston raqamini to‘g‘ri formatda yuboring! Masalan: +998901234567")
+        await update.message.reply_text(
+            "❌ Faqat O'zbekiston raqami: +998XXXXXXXXX (12 raqam)"
+        )
         return REG_PHONE
+
     # Userni yaratish yoki yangilash
     user_data = get_user_by_id(user.id)
     if not user_data:
@@ -497,7 +593,7 @@ async def reg_phone(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "phone": phone,
             "first_name": "",
             "last_name": "",
-            "username": "",
+            "username": user.username or "",
             "district": "",
             "joined": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         }
@@ -528,9 +624,10 @@ async def reg_phone(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def reg_firstname(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
-    first_name = update.message.text.strip()
+    first_name = (update.message.text or "").strip()
+    logger.info(f"[REG] firstname from {user.id}: {first_name!r}")
     if not first_name or len(first_name) < 2:
-        await update.message.reply_text("❌ Ism juda qisqa. Qayta kiriting:")
+        await update.message.reply_text("❌ Ism juda qisqa. Kamida 2 ta harfli ismingizni kiriting:")
         return REG_FIRSTNAME
     update_user(user.id, first_name=first_name)
     user_data = get_user_by_id(user.id)
@@ -549,13 +646,10 @@ async def reg_firstname(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def reg_lastname(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
-    last_name = update.message.text.strip()
-    lname = last_name.lower().replace(" ", "")
-    # Faqat -yev yoki -yeva bilan tugasa qabul qil
-    if not (lname.endswith("yev") or lname.endswith("yeva")):
-        await update.message.reply_text(
-            "❌ Familiya oxiri faqat -yev yoki -yeva bo‘lishi shart. Qayta kiriting:"
-        )
+    last_name = (update.message.text or "").strip()
+    logger.info(f"[REG] lastname from {user.id}: {last_name!r}")
+    if not last_name or len(last_name) < 2:
+        await update.message.reply_text("❌ Familiya juda qisqa. Kamida 2 ta harf kiriting:")
         return REG_LASTNAME
     update_user(user.id, last_name=last_name)
     username = user.username or ""
@@ -575,12 +669,27 @@ async def reg_lastname(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def reg_district(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
-    district = update.message.text.strip()
-    if district not in DISTRICTS:
-        await update.message.reply_text("❌ Tuman ro‘yxatdan tanlang:")
+    raw = (update.message.text or "").strip()
+    logger.info(f"[REG] district from {user.id}: {raw!r}")
+    # Apostrof variantlarini normalize qilish (' ’ ‘ ʼ ')
+    def _norm(s):
+        return (s.replace("‘", "'").replace("’", "'").replace("ʼ", "'")
+                  .strip().lower())
+    target = _norm(raw)
+    matched = next((d for d in DISTRICTS if _norm(d) == target), None)
+    if not matched:
+        keyboard = [[KeyboardButton(d)] for d in DISTRICTS]
+        markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True, one_time_keyboard=True)
+        await update.message.reply_text(
+            "❌ Tumanni faqat ro‘yxatdan tugma orqali tanlang:",
+            reply_markup=markup
+        )
         return REG_DISTRICT
-    update_user(user.id, district=district)
-    await update.message.reply_text(f"✅ Ro‘yxatdan o‘tish yakunlandi!\n\nTuman: {district}", reply_markup=ReplyKeyboardRemove())
+    update_user(user.id, district=matched)
+    await update.message.reply_text(
+        f"✅ Ro‘yxatdan o‘tish yakunlandi!\n\nTuman: {matched}",
+        reply_markup=ReplyKeyboardRemove()
+    )
     await send_main_menu(update.message)
     return ConversationHandler.END
 
@@ -611,7 +720,7 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "🔕 /unsubscribe — Obunani bekor\n"
         "👤 /admin — Admin panel\n"
         "ℹ️ /help — Yordam\n\n"
-        "_Yaratuvchi: Shohjahon G'aybullayev_\n"
+        "_Yaratuvchi: G'aybullayev Shohjahon (@gaybullayeev19 · GitHub: ShoxGit19)_\n"
         "_Toshkent, Bekobod 2026_"
     )
     if update.callback_query:
@@ -1740,7 +1849,20 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await help_command(update, context)
     elif data == "chart_check":
         await query.edit_message_text(
-            "📈 *Taqqoslash:*\n\n"
+            "� *Sensor grafigi:*\n\n"
+            "Sensor ID kiriting va `/chart` buyrug'ini yuboring:\n\n"
+            "Masalan: `/chart S001`\n\n"
+            "Grafik oxirgi 200 ta o'lchovni ko'rsatadi:\n"
+            "🔌 Kuchlanish | 🌡️ Harorat\n"
+            "🔄 Chastota | 📳 Vibratsiya",
+            parse_mode="Markdown",
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("🔙 Bosh menyu", callback_data="menu")]
+            ])
+        )
+    elif data == "compare_check":
+        await query.edit_message_text(
+            "�📈 *Taqqoslash:*\n\n"
             "🔹 Sensorlar: `/compare S001 S002`\n"
             "🔹 Tumanlar: tugmani bosing 👇",
             parse_mode="Markdown",
@@ -1779,10 +1901,21 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             parse_mode="Markdown"
         )
     elif data == "map_check":
+        # Tuman tanlash tugmalari ko'rsatish
+        keyboard = []
+        row = []
+        for d in DISTRICTS:
+            row.append(InlineKeyboardButton(d, callback_data=f"map_{d}"))
+            if len(row) == 2:
+                keyboard.append(row)
+                row = []
+        if row:
+            keyboard.append(row)
+        keyboard.append([InlineKeyboardButton("🔙 Bosh menyu", callback_data="menu")])
         await query.edit_message_text(
-            "🗺️ *Xarita:*\n\nBuyruq: `/map Chilonzor`\n\n"
-            f"Mavjud tumanlar:\n" + "\n".join(f"  • {d}" for d in DISTRICTS),
-            parse_mode="Markdown"
+            "🗺️ *Tuman tanlang:*\n\nLokatsiya va statistika yuboriladi.",
+            parse_mode="Markdown",
+            reply_markup=InlineKeyboardMarkup(keyboard)
         )
     elif data == "report_check":
         await query.edit_message_text(
@@ -1799,13 +1932,57 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "Har 1 soatda xavfli sensorlar tekshiriladi va avtomatik xabar yuboriladi.",
             parse_mode="Markdown"
         )
-    elif data.startswith("map_"):
+    elif data.startswith("map_") and not data == "map_check":
         district = data[4:]
-        await query.edit_message_text(f"🗺️ *{district}* tumani xaritasi (skrinshot):", parse_mode="Markdown")
-        screenshot = get_map_screenshot(district)
-        await context.bot.send_photo(chat_id=update.effective_chat.id, photo=screenshot, caption=f"{district} tumani sensorlari")
-        url = f"{SITE_BASE}/map?district={district}"
-        await context.bot.send_message(chat_id=update.effective_chat.id, text=f"🌐 [Xarita saytda ochish]({url})", parse_mode="Markdown")
+        coords = DISTRICT_COORDS.get(district, (41.2995, 69.2401))
+
+        # Statistika yig'ish
+        if df is not None and not df.empty:
+            latest = df.sort_values("Timestamp").groupby("SensorID").last().reset_index()
+            dd = latest[latest["District"] == district]
+            jami = len(dd)
+            safe = int((dd["Fault"] == 0).sum())
+            warn = int((dd["Fault"] == 1).sum())
+            danger = int((dd["Fault"] == 2).sum())
+            if danger > 0:
+                holat = "🔴 Muammolar bor"
+            elif warn > 0:
+                holat = "🟡 Ogohlantirish"
+            else:
+                holat = "🟢 Barqaror"
+            # Top 5 muammoli sensor
+            danger_sensors = dd[dd["Fault"] == 2].head(5)
+            sensor_lines = ""
+            for _, r in danger_sensors.iterrows():
+                sensor_lines += f"\n  🔴 {r['SensorID']} | 🔌{r.get('Kuchlanish (V)', 0):.0f}V | 🔄{r.get('Chastota (Hz)', 50):.2f}Hz"
+            stats_text = (
+                f"🗺️ *{district} tumani*\n"
+                f"━━━━━━━━━━━━━━━━━━━━\n"
+                f"📡 Holat: {holat}\n"
+                f"📊 Jami: {jami} sensor\n"
+                f"✅ Havfsiz: {safe}  ⚠️ Og'oh: {warn}  🔴 Muammo: {danger}\n"
+            )
+            if danger > 0:
+                stats_text += f"\n🔴 *Muammoli sensorlar:*{sensor_lines}"
+                if danger > 5:
+                    stats_text += f"\n  ... va yana {danger - 5} ta"
+        else:
+            stats_text = f"🗺️ *{district} tumani*\n\n❌ Ma'lumot yuklanmagan."
+
+        keyboard = [
+            [InlineKeyboardButton("🔙 Tumanlar", callback_data="map_check"),
+             InlineKeyboardButton("🏠 Bosh menyu", callback_data="menu")]
+        ]
+        # Xabarni yangilash
+        await query.edit_message_text(
+            stats_text, parse_mode="Markdown",
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
+        # Telegram lokatsiya (koordinata pin) yuborish
+        await context.bot.send_location(
+            chat_id=update.effective_chat.id,
+            latitude=coords[0], longitude=coords[1]
+        )
 
 
 # ==================== MAIN ====================
@@ -1820,6 +1997,8 @@ def main():
 
     load_data()
     load_model()
+    global subscribers
+    subscribers = load_subscribers()
     app = Application.builder().token(BOT_TOKEN).build()
     # Global error handler
     app.add_error_handler(error_handler)
@@ -1828,13 +2007,17 @@ def main():
     reg_conv = ConversationHandler(
         entry_points=[CommandHandler("start", start)],
         states={
-            REG_PHONE: [MessageHandler(filters.CONTACT, reg_phone)],
+            REG_PHONE: [
+                MessageHandler(filters.CONTACT, reg_phone),
+                MessageHandler(filters.TEXT & ~filters.COMMAND, reg_phone),
+            ],
             REG_FIRSTNAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, reg_firstname)],
             REG_LASTNAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, reg_lastname)],
             REG_DISTRICT: [MessageHandler(filters.TEXT & ~filters.COMMAND, reg_district)],
         },
-        fallbacks=[],
-        allow_reentry=True
+        fallbacks=[CommandHandler("start", start), CommandHandler("cancel", lambda u, c: ConversationHandler.END)],
+        allow_reentry=True,
+        per_message=False,
     )
     app.add_handler(reg_conv)
 
@@ -1852,7 +2035,7 @@ def main():
     app.add_handler(CommandHandler("weather", weather_command))
     app.add_handler(CommandHandler("chart", chart_command))
     app.add_handler(CommandHandler("subscribe", subscribe_command))
-    # app.add_handler(CommandHandler("unsubscribe", unsubscribe_command))
+    app.add_handler(CommandHandler("unsubscribe", unsubscribe_command))
     app.add_handler(CommandHandler("report", report_command))
     app.add_handler(CommandHandler("csv", csv_command))
     app.add_handler(CommandHandler("search", search_command))

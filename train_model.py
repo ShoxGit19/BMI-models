@@ -45,7 +45,12 @@ target_col = "Fault"
 X = df[feature_cols].copy()
 y = df[target_col].copy()
 
-logger.info(f"Features shape: {X.shape}")
+# NaN qatorlarni tashlab yuborish
+mask = X.notna().all(axis=1) & y.notna()
+X = X[mask]
+y = y[mask].astype(int)
+
+logger.info(f"Features shape (NaN tozalangan): {X.shape}")
 
 # Sample for faster training (keep deterministic)
 sample_size = min(100000, len(X))
