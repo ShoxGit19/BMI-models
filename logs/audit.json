@@ -363,5 +363,24 @@
       "phone": "+998901234567",
       "district": "Mirobod"
     }
+  },
+  {
+    "timestamp": "2026-05-02T02:41:45.055656",
+    "user": "admin",
+    "action": "logout",
+    "ip": "127.0.0.1",
+    "details": {
+      "username": "admin"
+    }
+  },
+  {
+    "timestamp": "2026-05-02T02:42:01.037417",
+    "user": "admin",
+    "action": "login",
+    "ip": "127.0.0.1",
+    "details": {
+      "username": "admin",
+      "role": "admin"
+    }
   }
 ]
