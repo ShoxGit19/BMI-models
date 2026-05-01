@@ -1,3 +1,50 @@
+<!-- ============ LANG SWITCHER STYLE ============ -->
+<style>
+  .nav-lang-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    background: var(--bg-subtle, #f1f5f9);
+    border: 1px solid var(--border-subtle, #e2e8f0);
+    border-radius: 8px;
+    padding: 2px;
+  }
+  .nav-lang-btn {
+    background: transparent;
+    color: var(--text-muted, #64748b);
+    border: none;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    cursor: pointer;
+    letter-spacing: 0.03em;
+    transition: all 0.15s ease;
+    line-height: 1.3;
+    white-space: nowrap;
+  }
+  .nav-lang-btn:hover { color: var(--text-primary, #1e293b); background: rgba(37,99,235,0.06); }
+  .nav-lang-btn.active {
+    background: var(--gradient-primary, linear-gradient(135deg,#3b82f6,#2563eb));
+    color: #fff !important;
+    box-shadow: 0 1px 4px rgba(37,99,235,0.3);
+  }
+  [data-theme="dark"] .nav-lang-group {
+    background: rgba(255,255,255,0.06);
+    border-color: rgba(255,255,255,0.08);
+  }
+  [data-theme="dark"] .nav-lang-btn { color: #94a3b8; }
+  [data-theme="dark"] .nav-lang-btn:hover { color: #e2e8f0; background: rgba(255,255,255,0.08); }
+  [data-theme="dark"] .nav-lang-btn.active {
+    background: linear-gradient(135deg,#3b82f6,#2563eb);
+    color: #fff !important;
+  }
+  @media (max-width: 991px) {
+    .nav-lang-group { width: 100%; justify-content: center; margin-top: 6px; padding: 3px; }
+    .nav-lang-btn { flex: 1; text-align: center; padding: 6px 8px; font-size: 0.78rem; }
+  }
+</style>
+
 <style>
   .navbar-brand .brand-version {
     font-size: 0.6rem;
@@ -178,11 +225,35 @@
             <i class="fas fa-chart-area me-1"></i> Prognoz
           </a>
         </li>
+        {% if session.get('role') == 'admin' %}
         <li class="nav-item">
           <a class="nav-link {% if request.path.startswith('/model') %}active{% endif %}" href="/model">
             <i class="fas fa-brain me-1"></i> AI Model
           </a>
         </li>
+        <li class="nav-item">
+          <a class="nav-link {% if request.path.startswith('/compare') %}active{% endif %}" href="/compare">
+            <i class="fas fa-code-compare me-1"></i> Taqqoslash
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link {% if request.path.startswith('/calendar') %}active{% endif %}" href="/calendar">
+            <i class="fas fa-calendar-days me-1"></i> Kalendar
+          </a>
+        </li>
+        {% endif %}
+        <li class="nav-item">
+          <a class="nav-link {% if request.path.startswith('/tickets') %}active{% endif %}" href="/tickets">
+            <i class="fas fa-tools me-1"></i> Buyurtmalar
+          </a>
+        </li>
+        {% if session.get('role') == 'admin' %}
+        <li class="nav-item">
+          <a class="nav-link {% if request.path.startswith('/admin/audit') %}active{% endif %}" href="/admin/audit">
+            <i class="fas fa-clipboard-list me-1"></i> Audit
+          </a>
+        </li>
+        {% endif %}
 
         <!-- Divider -->
         <li class="nav-item d-none d-lg-flex align-items-center">
@@ -204,22 +275,11 @@
           </button>
         </li>
 
-        <!-- Author badge -->
-        <li class="nav-item ms-lg-2">
-          <div class="author-badge" title="Yaratuvchi: G'aybullayev Shohjahon">
-            <span class="author-avatar">SH</span>
-            <span class="author-info">
-              <span class="author-name">G'aybullayev Shohjahon</span>
-              <span class="author-links">
-                <a href="https://t.me/gaybullayeev19" target="_blank" rel="noopener" class="author-link tg" title="Telegram">
-                  <i class="fab fa-telegram"></i> @gaybullayeev19
-                </a>
-                <span class="author-sep">·</span>
-                <a href="https://github.com/ShoxGit19" target="_blank" rel="noopener" class="author-link gh" title="GitHub">
-                  <i class="fab fa-github"></i> ShoxGit19
-                </a>
-              </span>
-            </span>
+        <!-- Language switcher -->
+        <li class="nav-item ms-lg-1" data-current-lang="{{ session.get('lang','uz') }}">
+          <div class="nav-lang-group">
+            <button type="button" class="nav-lang-btn lang-opt" data-lang="uz">Lotin</button>
+            <button type="button" class="nav-lang-btn lang-opt" data-lang="uz_cyr">Кирилл</button>
           </div>
         </li>
 
@@ -241,6 +301,7 @@
             </li>
             <li><a class="dropdown-item" href="/api/export/pdf"><i class="fas fa-file-pdf me-2" style="color:var(--color-danger);"></i>PDF hisobot</a></li>
             <li><a class="dropdown-item" href="/api/export/csv"><i class="fas fa-file-csv me-2" style="color:var(--color-success);"></i>CSV eksport</a></li>
+            <li><a class="dropdown-item" href="/api/export/excel"><i class="fas fa-file-excel me-2" style="color:#10B981;"></i>Excel eksport</a></li>
             <li><hr class="dropdown-divider" style="margin: 0.3rem 0;"></li>
             <li><a class="dropdown-item" style="color:var(--color-danger)!important;" href="/logout"><i class="fas fa-sign-out-alt me-2"></i>Chiqish</a></li>
           </ul>
@@ -251,9 +312,726 @@
   </div>
 </nav>
 
+<!-- ============ AUTHOR FOOTER (pastki o'ng burchak) ============ -->
+<style>
+  .author-footer {
+    position: fixed;
+    left: 16px;
+    bottom: 16px;
+    z-index: 999;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 14px 6px 6px;
+    border-radius: 999px;
+    background: linear-gradient(135deg, rgba(37,99,235,0.92), rgba(6,182,212,0.92));
+    color: #fff;
+    text-decoration: none !important;
+    box-shadow: 0 6px 18px rgba(37,99,235,0.35);
+    backdrop-filter: blur(8px);
+    transition: all 0.2s ease;
+    font-family: inherit;
+  }
+  .author-footer:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 24px rgba(37,99,235,0.45);
+  }
+  .author-footer .af-avatar {
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.2);
+    color: #fff;
+    font-size: 0.7rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    border: 1.5px solid rgba(255,255,255,0.35);
+  }
+  .author-footer .af-info { display: flex; flex-direction: column; line-height: 1.2; }
+  .author-footer .af-name {
+    font-size: 0.74rem;
+    font-weight: 700;
+    color: #fff;
+    white-space: nowrap;
+  }
+  .author-footer .af-links {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-size: 0.66rem;
+    font-weight: 600;
+  }
+  .author-footer .af-links a {
+    color: rgba(255,255,255,0.9);
+    text-decoration: none !important;
+    display: inline-flex; align-items: center; gap: 3px;
+    transition: opacity 0.15s;
+  }
+  .author-footer .af-links a:hover { opacity: 0.7; }
+  .author-footer .af-sep { color: rgba(255,255,255,0.5); }
+
+  /* Mobile bottom nav bilan to'qnashmaslik uchun */
+  @media (max-width: 768px) {
+    .author-footer {
+      bottom: 78px;
+      left: 12px;
+      padding: 4px 12px 4px 4px;
+    }
+    .author-footer .af-avatar { width: 26px; height: 26px; font-size: 0.62rem; }
+    .author-footer .af-name { font-size: 0.68rem; }
+    .author-footer .af-links { font-size: 0.6rem; gap: 5px; }
+  }
+  @media (max-width: 420px) {
+    .author-footer .af-info { display: none; }
+    .author-footer { padding: 4px; }
+  }
+</style>
+<div class="author-footer" title="Yaratuvchi: G'aybullayev Shohjahon">
+  <span class="af-avatar">SH</span>
+  <span class="af-info">
+    <span class="af-name">G'aybullayev Shohjahon</span>
+    <span class="af-links">
+      <a href="https://t.me/gaybullayeev19" target="_blank" rel="noopener" title="Telegram">
+        <i class="fab fa-telegram"></i> @gaybullayeev19
+      </a>
+      <span class="af-sep">·</span>
+      <a href="https://github.com/ShoxGit19" target="_blank" rel="noopener" title="GitHub">
+        <i class="fab fa-github"></i> ShoxGit19
+      </a>
+    </span>
+  </span>
+</div>
+
 <script src="{{ url_for('static', filename='theme.js') }}"></script>
+
+<!-- ElectroGrid premium UI enhance qatlami -->
+<link rel="stylesheet" href="{{ url_for('static', filename='enhance.css') }}">
+<script defer src="{{ url_for('static', filename='enhance.js') }}"></script>
+
+<!-- PWA Meta & Manifest -->
+<link rel="manifest" href="/static/manifest.json">
+<meta name="theme-color" content="#2563EB">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="ElectroGrid">
+<link rel="apple-touch-icon" href="/static/icon-192.png">
+
+<!-- Mobile Bottom Navigation -->
+<style>
+  .mobile-bottom-nav { display: none; }
+  @media (max-width: 768px) {
+    body { padding-bottom: 70px; }
+    .mobile-bottom-nav {
+      display: flex;
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      background: var(--bg-elevated, #fff);
+      border-top: 1px solid var(--border-subtle, #e5e7eb);
+      padding: .4rem 0;
+      z-index: 1030;
+      box-shadow: 0 -4px 12px rgba(0,0,0,.06);
+      justify-content: space-around;
+    }
+    .mobile-bottom-nav a {
+      flex: 1;
+      text-align: center;
+      padding: .35rem;
+      color: var(--text-muted, #6b7280);
+      text-decoration: none;
+      font-size: .68rem;
+      font-weight: 600;
+    }
+    .mobile-bottom-nav a i { font-size: 1.15rem; display: block; margin-bottom: 2px; }
+    .mobile-bottom-nav a.active { color: #2563eb; }
+  }
+</style>
+<nav class="mobile-bottom-nav">
+  <a href="/" class="{% if request.path == '/' %}active{% endif %}"><i class="fas fa-house"></i>Asosiy</a>
+  <a href="/map" class="{% if request.path.startswith('/map') %}active{% endif %}"><i class="fas fa-map-location-dot"></i>Xarita</a>
+  <a href="/tickets" class="{% if request.path.startswith('/tickets') %}active{% endif %}"><i class="fas fa-tools"></i>Buyurtma</a>
+  <a href="/graphs" class="{% if request.path.startswith('/graphs') %}active{% endif %}"><i class="fas fa-chart-line"></i>Grafik</a>
+  {% if session.get('role') == 'admin' %}
+  <a href="/admin/audit" class="{% if request.path.startswith('/admin') %}active{% endif %}"><i class="fas fa-clipboard-list"></i>Audit</a>
+  {% else %}
+  <a href="/forecast" class="{% if request.path.startswith('/forecast') %}active{% endif %}"><i class="fas fa-chart-area"></i>Prognoz</a>
+  {% endif %}
+</nav>
+
+<!-- Language Switcher Script — TEZ va TO'LIQ -->
 <script>
-  // Notification count from API
+(function(){
+  // === Tarjima lug'ati (UZ Lotin → UZ Kirill) ===
+  const DICT = {
+    uz_cyr: {
+      "Asosiy":"Асосий","Xarita":"Харита","Jadval":"Жадвал","Grafiklar":"Графиклар","Grafik":"График",
+      "Prognoz":"Прогноз","AI Model":"AI Модел","Taqqoslash":"Таққослаш","Kalendar":"Календар",
+      "Buyurtmalar":"Буюртмалар","Buyurtma":"Буюртма","Ogohlantirishlar":"Огоҳлантиришлар","Ogohlantirish":"Огоҳлантириш",
+      "Audit":"Аудит","Bildirishnomalar":"Билдиришномалар","Bildirishnoma":"Билдиришнома",
+      "Chiqish":"Чиқиш","Kirish":"Кириш","Foydalanuvchi":"Фойдаланувчи","Foydalanuvchilar":"Фойдаланувчилар",
+      "Administrator":"Администратор","Operator":"Оператор","Profil":"Профил","Sozlamalar":"Созламалар",
+      "Parol":"Парол","Login":"Логин","Ism":"Исм","Familiya":"Фамилия","Telefon":"Телефон",
+      "Email":"Email","Manzil":"Манзил","Ro'yxatdan o'tish":"Рўйхатдан ўтиш",
+      "Til":"Тил","Til / Язык":"Тил","Qorong'i rejim":"Қоронғи режим","Yorug' rejim":"Ёруғ режим",
+      "Tema":"Мавзу","Mavzu":"Мавзу",
+      "Xavfsiz":"Хавфсиз","Havfsiz":"Ҳавфсиз","Xavfli":"Хавфли","Muammo":"Муаммо","Muammoli":"Муаммоли",
+      "Ogoh":"Огоҳ","Ogohlantirilgan":"Огоҳлантирилган","Normal":"Нормал","Yaxshi":"Яхши","Yomon":"Ёмон",
+      "Faol":"Фаол","Nofaol":"Нофаол","Ochiq":"Очиқ","Yopilgan":"Ёпилган",
+      "Yangi":"Янги","Hal qilingan":"Ҳал қилинган","Kutilmoqda":"Кутилмоқда","Bajarilmoqda":"Бажарилмоқда",
+      "Bekor qilingan":"Бекор қилинган","Tugatilgan":"Тугатилган",
+      "Kuchlanish":"Кучланиш","Chastota":"Частота","Harorat":"Ҳарорат","Muhit harorati":"Муҳит ҳарорати",
+      "Muhit_harorat":"Муҳит_ҳарорат","Tok":"Ток","Quvvat":"Қувват","Tebranish":"Тебраниш",
+      "Sensor":"Сенсор","Sensorlar":"Сенсорлар","Yaqin sensorlar":"Яқин сенсорлар","Sensor ID":"Сенсор ID",
+      "Tuman":"Туман","Tumanlar":"Туманлар","Joylashuv":"Жойлашув","Koordinata":"Координата",
+      "Status":"Статус","Holat":"Ҳолат","Vaqt":"Вақт","Sana":"Сана","Ob-havo":"Об-ҳаво",
+      "Ta'mirlashda":"Таъмирлашда","Buzilish ehtimoli":"Бузилиш эҳтимоли","Ishonchlilik":"Ишончлилик",
+      "Ma'lumot yo'q":"Маълумот йўқ","Ma'lumot":"Маълумот","Ma'lumotlar":"Маълумотлар",
+      "Yangilash":"Янгилаш","Yuklab olish":"Юклаб олиш","Eksport":"Экспорт","Eksport qilish":"Экспорт қилиш",
+      "Yuklash":"Юклаш","Yuborish":"Юбориш","Qayta yuborish":"Қайта юбориш",
+      "PDF hisobot":"PDF ҳисобот","CSV eksport":"CSV экспорт","Excel eksport":"Excel экспорт",
+      "Bosh menyu":"Бош меню","Menyu":"Меню","Saqlash":"Сақлаш","Bekor qilish":"Бекор қилиш",
+      "Tasdiqlash":"Тасдиқлаш","Yopish":"Ёпиш","Qo'shish":"Қўшиш","O'chirish":"Ўчириш",
+      "Tahrirlash":"Таҳрирлаш","Ko'rish":"Кўриш","Tanlash":"Танлаш",
+      "Qidiruv":"Қидирув","Qidirish":"Қидириш","Filtr":"Фильтр","Filtrlash":"Фильтрлаш","Saralash":"Саралаш",
+      "Jami":"Жами","O'rtacha":"Ўртача","Maksimal":"Максимал","Minimal":"Минимал","Yig'indi":"Йиғинди",
+      "Soni":"Сони","Foiz":"Фоиз",
+      "Toshkent Elektr Tarmog'i Monitoring":"Тошкент Электр Тармоғи Мониторинг",
+      "Elektr Monitoring":"Электр Мониторинг","Dashboard":"Бошқарув панели","Boshqaruv paneli":"Бошқарув панели",
+      "Yuklanmoqda":"Юкланмоқда","Yuklanmoqda...":"Юкланмоқда...","Iltimos kuting":"Илтимос кутинг",
+      "Hisobot":"Ҳисобот","Hisobotlar":"Ҳисоботлар","Tahlil":"Таҳлил","Statistika":"Статистика",
+      "Umumiy":"Умумий","Tafsilot":"Тафсилот","Batafsil":"Батафсил","Tarix":"Тарих",
+      "So'nggi":"Сўнгги","So'nggi hisobot":"Сўнгги ҳисобот","Eski":"Эски",
+      "Soat":"Соат","Daqiqa":"Дақиқа","Soniya":"Сония","Kun":"Кун","Hafta":"Ҳафта","Oy":"Ой","Yil":"Йил",
+      "Bugun":"Бугун","Kecha":"Кеча","Ertaga":"Эртага","Hozir":"Ҳозир","O'tgan":"Ўтган",
+      "Sodir bo'ldi":"Содир бўлди","Yangilandi":"Янгиланди","Yaratildi":"Яратилди","O'chirildi":"Ўчирилди",
+      "Tahrirlandi":"Таҳрирланди","Yuborildi":"Юборилди","Qabul qilindi":"Қабул қилинди",
+      "Nomi":"Номи","Turi":"Тури","Qiymat":"Қиймат","Birlik":"Бирлик",
+      "Tavsif":"Тавсиф","Izoh":"Изоҳ","Sabab":"Сабаб","Natija":"Натижа",
+      "Muhim":"Муҳим","Yuqori":"Юқори","O'rta":"Ўрта","Past":"Паст","Kritik":"Критик",
+      "Bektemir":"Бектемир","Chilonzor":"Чилонзор","Mirobod":"Миробод","Mirzo Ulug'bek":"Мирзо Улуғбек",
+      "Olmazor":"Олмазор","Sergeli":"Сергели","Shayxontohur":"Шайхонтохур","Uchtepa":"Учтепа",
+      "Yakkasaroy":"Яккасарой","Yashnobod":"Яшнобод","Yunusobod":"Юнусобод","Yangihayot":"Янгиҳаёт",
+      "Salom":"Салом","Xush kelibsiz":"Хуш келибсиз","Rahmat":"Раҳмат","Yo'q":"Йўқ","Ha":"Ҳа",
+      "Tarjima":"Таржима","Yangi xabar":"Янги хабар","Hech narsa topilmadi":"Ҳеч нарса топилмади"
+    }
+  };
+
+  // === Original matnlarni keshlash (WeakMap orqali tezkor revert) ===
+  const ORIG_TEXT = new WeakMap();    // textNode → original UZ text
+  const ORIG_ATTR = new WeakMap();    // element → {placeholder, title}
+
+  // === Tezkor regex compile (har bir til uchun bir marta) ===
+  const RE_CACHE = {};
+  function getRegex(lang) {
+    if (RE_CACHE[lang]) return RE_CACHE[lang];
+    const map = DICT[lang];
+    if (!map) return null;
+    const keys = Object.keys(map).sort((a,b)=>b.length-a.length);
+    const escaped = keys.map(k => k.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'));
+    RE_CACHE[lang] = new RegExp(escaped.join('|'),'g');
+    return RE_CACHE[lang];
+  }
+
+  // === TreeWalker — eng tez DOM kezish usuli ===
+  function translateSubtree(root, lang) {
+    if (lang === 'uz') {
+      // Asl matnga qaytarish — keshdan
+      const tw = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
+      let n;
+      while ((n = tw.nextNode())) {
+        const o = ORIG_TEXT.get(n);
+        if (o !== undefined) n.nodeValue = o;
+      }
+      // Atributlarni qaytarish
+      root.querySelectorAll('[placeholder],[title]').forEach(el => {
+        const o = ORIG_ATTR.get(el);
+        if (!o) return;
+        if (o.placeholder !== undefined) el.setAttribute('placeholder', o.placeholder);
+        if (o.title !== undefined) el.setAttribute('title', o.title);
+      });
+      return;
+    }
+
+    const map = DICT[lang]; if (!map) return;
+    const re = getRegex(lang);
+
+    // 1) Matn nodelar
+    const tw = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+      acceptNode(node) {
+        if (!node.nodeValue || !node.nodeValue.trim()) return NodeFilter.FILTER_REJECT;
+        const p = node.parentNode;
+        if (!p) return NodeFilter.FILTER_REJECT;
+        const tag = p.tagName;
+        if (tag === 'SCRIPT' || tag === 'STYLE' || tag === 'CODE' || tag === 'PRE' || tag === 'TEXTAREA') {
+          return NodeFilter.FILTER_REJECT;
+        }
+        return NodeFilter.FILTER_ACCEPT;
+      }
+    });
+    let n;
+    const batch = [];
+    while ((n = tw.nextNode())) batch.push(n);
+    // batch ichida o'zgartirish — DOM mutation walker'ni buzmaydi
+    for (const node of batch) {
+      // Asl matn keshda yo'q bo'lsa — qo'shamiz
+      if (!ORIG_TEXT.has(node)) ORIG_TEXT.set(node, node.nodeValue);
+      const orig = ORIG_TEXT.get(node);
+      re.lastIndex = 0;
+      const newText = orig.replace(re, m => map[m] || m);
+      if (newText !== node.nodeValue) node.nodeValue = newText;
+    }
+
+    // 2) placeholder/title atributlar
+    const els = root.querySelectorAll('[placeholder],[title]');
+    for (const el of els) {
+      if (!ORIG_ATTR.has(el)) {
+        ORIG_ATTR.set(el, {
+          placeholder: el.getAttribute('placeholder') || undefined,
+          title: el.getAttribute('title') || undefined
+        });
+      }
+      const o = ORIG_ATTR.get(el);
+      if (o.placeholder) {
+        re.lastIndex = 0;
+        el.setAttribute('placeholder', o.placeholder.replace(re, m => map[m] || m));
+      }
+      if (o.title) {
+        re.lastIndex = 0;
+        el.setAttribute('title', o.title.replace(re, m => map[m] || m));
+      }
+    }
+  }
+
+  let CURRENT_LANG = 'uz';
+
+  function applyLang(lang) {
+    CURRENT_LANG = lang;
+    document.documentElement.dataset.curLang = lang;
+    const t0 = performance.now();
+    translateSubtree(document.body, lang);
+    const dt = (performance.now() - t0).toFixed(1);
+    console.log(`[lang] → ${lang} (${dt}ms)`);
+  }
+
+  function setActive(lang) {
+    document.querySelectorAll('.nav-lang-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.lang === lang);
+    });
+  }
+
+  // === Boshlang'ich til ===
+  const initial = (document.querySelector('[data-current-lang]')?.dataset.currentLang) ||
+                  localStorage.getItem('lang') || 'uz';
+  setActive(initial);
+  CURRENT_LANG = initial;
+  if (initial !== 'uz') {
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => applyLang(initial));
+    } else {
+      applyLang(initial);
+    }
+  }
+
+  // === MutationObserver — dinamik kontent (AJAX, fetch keyin qo'shilgan elementlar) ===
+  function startObserver() {
+    const obs = new MutationObserver(muts => {
+      if (CURRENT_LANG === 'uz') return;
+      // Faqat yangi qo'shilgan elementlarni tarjima qilamiz (tez)
+      for (const m of muts) {
+        for (const node of m.addedNodes) {
+          if (node.nodeType === 1) translateSubtree(node, CURRENT_LANG);
+          else if (node.nodeType === 3 && node.parentNode) {
+            const p = node.parentNode.tagName;
+            if (p && p !== 'SCRIPT' && p !== 'STYLE') {
+              if (!ORIG_TEXT.has(node)) ORIG_TEXT.set(node, node.nodeValue || '');
+              const map = DICT[CURRENT_LANG]; const re = getRegex(CURRENT_LANG);
+              if (map && re && node.nodeValue) {
+                re.lastIndex = 0;
+                node.nodeValue = node.nodeValue.replace(re, m => map[m] || m);
+              }
+            }
+          }
+        }
+      }
+    });
+    obs.observe(document.body, { childList: true, subtree: true });
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', startObserver);
+  } else {
+    startObserver();
+  }
+
+  // === Til tugmasi bosilganda — RELOAD YO'Q, darhol qo'llash ===
+  document.querySelectorAll('.lang-opt').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.preventDefault();
+      const lang = btn.dataset.lang;
+      setActive(lang);
+      localStorage.setItem('lang', lang);
+      // Sessionga yozamiz (background, kutmaymiz)
+      fetch('/api/set-language', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({lang})
+      }).catch(()=>{});
+      applyLang(lang);  // darhol — reloadsiz
+    });
+  });
+})();
+</script>
+
+<!-- AI Chatbot Widget -->
+<style>
+  .chatbot-fab {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: var(--gradient-primary);
+    color: white;
+    border: none;
+    font-size: 1.3rem;
+    cursor: pointer;
+    box-shadow: 0 4px 20px rgba(37,99,235,0.4);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .chatbot-fab:hover { transform: scale(1.1); box-shadow: 0 6px 28px rgba(37,99,235,0.5); }
+  .chatbot-panel {
+    position: fixed;
+    bottom: 90px;
+    right: 24px;
+    width: 380px;
+    max-height: 520px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-subtle);
+    border-radius: 16px;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.2);
+    z-index: 9998;
+    display: none;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .chatbot-panel.open { display: flex; }
+  .chatbot-header {
+    padding: 0.85rem 1rem;
+    background: var(--gradient-primary);
+    color: white;
+    font-weight: 700;
+    font-size: 0.92rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .chatbot-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0.75rem;
+    max-height: 360px;
+    min-height: 200px;
+  }
+  .chat-msg {
+    margin-bottom: 0.6rem;
+    font-size: 0.84rem;
+    line-height: 1.5;
+    max-width: 90%;
+  }
+  .chat-msg.bot {
+    background: var(--bg-subtle);
+    border-radius: 12px 12px 12px 2px;
+    padding: 0.6rem 0.85rem;
+    color: var(--text-primary);
+  }
+  .chat-msg.user {
+    background: var(--brand-primary);
+    color: white;
+    border-radius: 12px 12px 2px 12px;
+    padding: 0.6rem 0.85rem;
+    margin-left: auto;
+  }
+  .chatbot-input {
+    display: flex;
+    border-top: 1px solid var(--border-subtle);
+    padding: 0.5rem;
+    gap: 6px;
+  }
+  .chatbot-input input {
+    flex: 1;
+    border: 1px solid var(--border-subtle);
+    border-radius: 10px;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.85rem;
+    background: var(--bg-subtle);
+    color: var(--text-primary);
+    outline: none;
+  }
+  .chatbot-input input:focus { border-color: var(--brand-primary); }
+  .chatbot-input button {
+    background: var(--brand-primary);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    padding: 0.5rem 0.85rem;
+    font-size: 0.85rem;
+    cursor: pointer;
+    font-weight: 600;
+  }
+  .chatbot-input button:hover { opacity: 0.9; }
+
+  /* Cards (rich responses) */
+  .chat-cards { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+  .chat-card {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 10px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-subtle);
+    border-left: 3px solid var(--brand-primary);
+    border-radius: 8px;
+    text-decoration: none;
+    color: var(--text-primary);
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+  .chat-card:hover { transform: translateX(3px); box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+  .chat-card-icon {
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    color: white; font-size: 0.85rem; flex-shrink: 0;
+  }
+  .chat-card-body { flex: 1; min-width: 0; }
+  .chat-card-title { font-weight: 600; font-size: 0.82rem; color: var(--text-primary); }
+  .chat-card-sub { font-size: 0.72rem; color: var(--text-secondary); margin-top: 1px; }
+
+  /* Quick reply chips */
+  .chat-quick {
+    display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px;
+  }
+  .chat-chip {
+    background: var(--bg-subtle);
+    border: 1px solid var(--border-subtle);
+    color: var(--brand-primary);
+    border-radius: 999px;
+    padding: 4px 10px;
+    font-size: 0.74rem;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-weight: 500;
+  }
+  .chat-chip:hover {
+    background: var(--brand-primary);
+    color: white;
+    border-color: var(--brand-primary);
+  }
+
+  /* Typing indicator */
+  .chat-typing-dots { display: inline-flex; gap: 3px; }
+  .chat-typing-dots span {
+    width: 6px; height: 6px; background: var(--brand-primary);
+    border-radius: 50%; animation: chat-bounce 1.2s infinite ease-in-out;
+  }
+  .chat-typing-dots span:nth-child(2) { animation-delay: 0.15s; }
+  .chat-typing-dots span:nth-child(3) { animation-delay: 0.3s; }
+  @keyframes chat-bounce {
+    0%, 60%, 100% { transform: translateY(0); opacity: 0.5; }
+    30% { transform: translateY(-4px); opacity: 1; }
+  }
+
+  /* WebSocket live indicator */
+  .ws-live-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: #10B981;
+    display: inline-block;
+    animation: ws-pulse 2s infinite;
+  }
+  @keyframes ws-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  @media (max-width: 480px) {
+    .chatbot-panel { width: calc(100vw - 32px); right: 16px; bottom: 84px; }
+  }
+</style>
+
+<!-- Chatbot FAB -->
+<button class="chatbot-fab" id="chatbot-fab" onclick="toggleChatbot()" title="AI Yordamchi">
+  <i class="fas fa-robot"></i>
+</button>
+
+<!-- Chatbot Panel -->
+<div class="chatbot-panel" id="chatbot-panel">
+  <div class="chatbot-header">
+    <i class="fas fa-robot"></i>
+    AI Yordamchi
+    <span style="margin-left:auto;font-size:0.7rem;opacity:0.8;">Beta</span>
+  </div>
+  <div class="chatbot-messages" id="chatbot-messages">
+    <div class="chat-msg bot">
+      👋 Salom! Men <strong>ElectroGrid AI</strong> yordamchisiman.<br>
+      <small style="opacity:0.75;">Sensor, tuman, kuchlanish — istalgan savol bering.</small>
+      <div class="chat-quick">
+        <button class="chat-chip" onclick="sendChatMessage('Statistika')">📊 Statistika</button>
+        <button class="chat-chip" onclick="sendChatMessage('Xavfli sensorlar')">🔴 Xavflilar</button>
+        <button class="chat-chip" onclick="sendChatMessage('Eng past kuchlanish')">⚡ Eng past V</button>
+        <button class="chat-chip" onclick="sendChatMessage('Yordam')">❓ Yordam</button>
+      </div>
+    </div>
+  </div>
+  <div class="chatbot-input">
+    <input type="text" id="chatbot-input" placeholder="Savol yozing..." autocomplete="off"
+           onkeydown="if(event.key==='Enter')sendChatMessage()">
+    <button onclick="sendChatMessage()"><i class="fas fa-paper-plane"></i></button>
+  </div>
+</div>
+
+<script>
+  // ====== CHATBOT ======
+  function toggleChatbot() {
+    const panel = document.getElementById('chatbot-panel');
+    panel.classList.toggle('open');
+    if (panel.classList.contains('open')) {
+      document.getElementById('chatbot-input').focus();
+    }
+  }
+
+  async function sendChatMessage(prefilled) {
+    const input = document.getElementById('chatbot-input');
+    const msg = (prefilled || input.value).trim();
+    if (!msg) return;
+    if (!prefilled) input.value = '';
+
+    const container = document.getElementById('chatbot-messages');
+    container.insertAdjacentHTML('beforeend',
+      `<div class="chat-msg user">${escapeHtml(msg)}</div>`);
+    container.insertAdjacentHTML('beforeend',
+      `<div class="chat-msg bot" id="chat-typing"><span class="chat-typing-dots"><span></span><span></span><span></span></span></div>`);
+    container.scrollTop = container.scrollHeight;
+
+    try {
+      const r = await fetch('/api/chatbot', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question: msg })
+      });
+      const data = await r.json();
+      const typing = document.getElementById('chat-typing');
+      if (typing) typing.remove();
+
+      const html = renderBotResponse(data);
+      container.insertAdjacentHTML('beforeend', `<div class="chat-msg bot">${html}</div>`);
+      container.scrollTop = container.scrollHeight;
+    } catch(e) {
+      const typing = document.getElementById('chat-typing');
+      if (typing) typing.remove();
+      container.insertAdjacentHTML('beforeend',
+        `<div class="chat-msg bot" style="color:var(--color-danger);">⚠️ Xatolik: ${escapeHtml(String(e))}</div>`);
+    }
+  }
+
+  function renderBotResponse(data) {
+    let html = '';
+    // Asosiy matn (markdown)
+    const text = data.text || data.answer || 'Javob yo\'q';
+    html += renderMarkdown(text);
+
+    // Cards
+    if (Array.isArray(data.cards) && data.cards.length) {
+      html += '<div class="chat-cards">';
+      for (const c of data.cards) {
+        const icon = c.icon || 'circle-info';
+        const color = c.color || 'var(--brand-primary)';
+        const link = c.link || '#';
+        html += `<a class="chat-card" href="${escapeAttr(link)}" style="border-left-color:${escapeAttr(color)};">
+          <div class="chat-card-icon" style="background:${escapeAttr(color)};"><i class="fas fa-${escapeAttr(icon)}"></i></div>
+          <div class="chat-card-body">
+            <div class="chat-card-title">${escapeHtml(c.title || '')}</div>
+            <div class="chat-card-sub">${escapeHtml(c.subtitle || '')}</div>
+          </div>
+        </a>`;
+      }
+      html += '</div>';
+    }
+
+    // Quick replies
+    if (Array.isArray(data.quick_replies) && data.quick_replies.length) {
+      html += '<div class="chat-quick">';
+      for (const q of data.quick_replies) {
+        html += `<button class="chat-chip" onclick="sendChatMessage('${escapeAttr(q).replace(/'/g, "\\'")}')">${escapeHtml(q)}</button>`;
+      }
+      html += '</div>';
+    }
+    return html;
+  }
+
+  function renderMarkdown(s) {
+    let h = escapeHtml(s);
+    h = h.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    h = h.replace(/\*(.+?)\*/g, '<em>$1</em>');
+    h = h.replace(/`(.+?)`/g, '<code style="background:var(--bg-subtle);padding:1px 4px;border-radius:4px;font-size:0.78rem;">$1</code>');
+    h = h.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" style="color:var(--brand-primary);">$1</a>');
+    h = h.replace(/\n/g, '<br>');
+    return h;
+  }
+
+  function escapeAttr(str) {
+    return String(str).replace(/"/g, '&quot;').replace(/</g, '&lt;');
+  }
+
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  // ====== PWA SERVICE WORKER ======
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/static/sw.js', { scope: '/' })
+        .then(reg => console.log('SW registered:', reg.scope))
+        .catch(err => console.log('SW error:', err));
+    });
+  }
+
+  // ====== WEBSOCKET LIVE STREAM ======
+  (function() {
+    try {
+      const script = document.createElement('script');
+      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js';
+      script.onload = function() {
+        try {
+          const socket = io();
+          socket.on('connect', () => {
+            console.log('WebSocket connected');
+            socket.emit('request_stats');
+          });
+          socket.on('live_stats', (data) => {
+            // Update stats elements if they exist
+            const el = (id) => document.getElementById(id);
+            if (el('total-sensors')) el('total-sensors').textContent = data.total || '--';
+            if (el('safe-sensors')) el('safe-sensors').textContent = data.safe || '--';
+            if (el('warn-sensors')) el('warn-sensors').textContent = data.warn || '--';
+            if (el('fault-sensors')) el('fault-sensors').textContent = data.danger || '--';
+
+            // Notification count
+            const count = (data.warn || 0) + (data.danger || 0);
+            const notifEl = el('nav-notif-count');
+            if (notifEl && count > 0) {
+              notifEl.textContent = count > 99 ? '99+' : count;
+              notifEl.style.display = 'flex';
+            }
+          });
+        } catch(e) { console.log('WS init error:', e); }
+      };
+      document.head.appendChild(script);
+    } catch(e) {}
+  })();
+
+  // ====== NOTIFICATION COUNT ======
   (async function() {
     try {
       const r = await fetch('/api/stats');

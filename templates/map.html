@@ -15,6 +15,17 @@
   <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js" crossorigin=""></script>
   <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js" crossorigin=""></script>
   <style>
+    /* Avariya marker miltillashi */
+    @keyframes incident-pulse {
+      0%   { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.85); transform: scale(1); }
+      70%  { box-shadow: 0 0 0 22px rgba(239, 68, 68, 0); transform: scale(1.15); }
+      100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); transform: scale(1); }
+    }
+    .incident-pulse-icon {
+      width: 22px; height: 22px; border-radius: 50%;
+      background: #EF4444; border: 3px solid #fff;
+      animation: incident-pulse 1.4s infinite;
+    }
     .map-avg-row {
       display: flex;
       align-items: center;
@@ -105,6 +116,13 @@
           <button id="heatmap-toggle" type="button" class="map-toolbar-btn" onclick="toggleHeatmap()" title="Issiqlik xaritasi">
             <i class="fas fa-fire"></i> <span id="heatmap-label">Heatmap: OFF</span>
           </button>
+
+          <!-- Heatmap mode -->
+          <div id="heatmap-modes" style="display:none;gap:3px;align-items:center;">
+            <button id="hm-fault" class="map-toolbar-btn heatmap-mode-btn active" onclick="setHeatmapMode('fault')" style="padding:0.25rem 0.55rem;font-size:0.72rem;">Xavf</button>
+            <button id="hm-kuchlanish" class="map-toolbar-btn heatmap-mode-btn" onclick="setHeatmapMode('kuchlanish')" style="padding:0.25rem 0.55rem;font-size:0.72rem;">Kuchlanish</button>
+            <button id="hm-harorat" class="map-toolbar-btn heatmap-mode-btn" onclick="setHeatmapMode('harorat')" style="padding:0.25rem 0.55rem;font-size:0.72rem;">Harorat</button>
+          </div>
 
           <!-- Klaster -->
           <button id="cluster-toggle" type="button" class="map-toolbar-btn active" onclick="toggleClustering()" title="Klasterlashni yoq/o'chir">
@@ -279,6 +297,8 @@
     let faultsOnly = false;
     let lastData = [];
     let sensorMarkerIndex = {}; // SensorID -> {marker, latlng}
+    let incidentLayer = null;
+    let isAdminUser = "{{ session.get('role') }}" === "admin";
 
     // Realistik (multi-vertex) tuman polygonlari — Toshkent shaharlari uchun
     // approximated GeoJSON-style polygons (LatLng pairs).
@@ -363,6 +383,7 @@
       heatmapEnabled = !heatmapEnabled;
       document.getElementById('heatmap-label').textContent = 'Heatmap: ' + (heatmapEnabled ? 'ON' : 'OFF');
       _setBtnActive('heatmap-toggle', heatmapEnabled);
+      document.getElementById('heatmap-modes').style.display = heatmapEnabled ? 'flex' : 'none';
       renderHeatmap();
     }
 
@@ -387,18 +408,49 @@
     function drawDistrictPolygons(selectedDistrict) {
       districtPolygons.forEach(p => leafletMap.removeLayer(p));
       districtPolygons = [];
-      const entries = selectedDistrict
-        ? Object.entries(DISTRICT_BOUNDS).filter(([k]) => k === selectedDistrict)
-        : Object.entries(DISTRICT_BOUNDS);
-      entries.forEach(([name, coords]) => {
-        const color = DISTRICT_COLORS[name] || '#64748B';
-        const poly = L.polygon(coords, {
-          color: color, weight: 1.5, opacity: 0.6,
-          fillColor: color, fillOpacity: 0.06, dashArray: '6,4',
-          smoothFactor: 1.2
-        }).addTo(leafletMap);
-        poly.bindTooltip('<b>' + name + '</b>', {permanent: false, direction: 'center'});
-        districtPolygons.push(poly);
+
+      // Zone analytics ma'lumotini yuklash (rang va tooltip uchun)
+      fetch('/api/zones').then(r => r.json()).then(zd => {
+        const zoneMap = {};
+        (zd.zones || []).forEach(z => { zoneMap[z.district] = z; });
+
+        const entries = selectedDistrict
+          ? Object.entries(DISTRICT_BOUNDS).filter(([k]) => k === selectedDistrict)
+          : Object.entries(DISTRICT_BOUNDS);
+        entries.forEach(([name, coords]) => {
+          const zone = zoneMap[name];
+          // Risk darajasi bo'yicha rang
+          const color = zone ? zone.color : (DISTRICT_COLORS[name] || '#64748B');
+          const fillOpacity = zone ? Math.min(0.35, 0.08 + (zone.risk_pct / 100) * 0.4) : 0.06;
+          const poly = L.polygon(coords, {
+            color: color, weight: 2, opacity: 0.7,
+            fillColor: color, fillOpacity: fillOpacity, dashArray: zone ? null : '6,4',
+            smoothFactor: 1.2
+          }).addTo(leafletMap);
+          let tooltip = '<b>' + name + '</b>';
+          if (zone) {
+            tooltip += '<br>📊 ' + zone.total + ' sensor'
+                    + '<br>✅ ' + zone.safe + ' | ⚠️ ' + zone.warning + ' | 🔴 ' + zone.danger
+                    + '<br>⚡ Yuklama: ' + zone.load_pct + '%'
+                    + '<br>🎯 Risk: ' + zone.risk_pct + '%';
+          }
+          poly.bindTooltip(tooltip, {permanent: false, direction: 'center', sticky: true});
+          districtPolygons.push(poly);
+        });
+      }).catch(() => {
+        // Fallback: oddiy polygons
+        const entries = selectedDistrict
+          ? Object.entries(DISTRICT_BOUNDS).filter(([k]) => k === selectedDistrict)
+          : Object.entries(DISTRICT_BOUNDS);
+        entries.forEach(([name, coords]) => {
+          const color = DISTRICT_COLORS[name] || '#64748B';
+          const poly = L.polygon(coords, {
+            color: color, weight: 1.5, opacity: 0.6,
+            fillColor: color, fillOpacity: 0.06, dashArray: '6,4'
+          }).addTo(leafletMap);
+          poly.bindTooltip('<b>' + name + '</b>', {permanent: false, direction: 'center'});
+          districtPolygons.push(poly);
+        });
       });
     }
 
@@ -412,6 +464,7 @@
       return '<div style="min-width:215px;font-family:Inter,sans-serif;line-height:1.55;">'
         + '<div style="font-weight:800;font-size:0.93rem;color:#0F172A;margin-bottom:2px;">' + d.SensorID + '</div>'
         + '<div style="font-size:0.77rem;color:#64748B;margin-bottom:8px;">' + d.District + '</div>'
+        + '<div id="ticket-status-' + d.SensorID + '" style="font-size:0.75rem;"></div>'
         + '<div style="font-size:0.8rem;border-top:1px solid #f1f5f9;padding-top:6px;">'
         + '<div>&#x1F321;&#xFE0F; <b>' + d.Harorat + ' °C</b> &nbsp;&#x1F4A7; <b>' + d.Humidity + '%</b></div>'
         + '<div>&#x26A1; <b>' + d.Kuchlanish + ' V</b> &nbsp;&#x3030;&#xFE0F; <b>' + d.Chastota + ' Hz</b></div>'
@@ -423,6 +476,19 @@
         + '</div>'
         + '<div style="margin-top:6px;">' + slabel + '</div>'
         + '<a href="/sensor/' + d.SensorID + '" style="display:inline-block;margin-top:6px;font-size:0.78rem;color:#2563EB;font-weight:600;text-decoration:none;">Batafsil →</a></div>';
+    }
+
+    // Popup ochilganda ta'mirlash holatini yuklash
+    function loadTicketStatus(sensorId) {
+      const el = document.getElementById('ticket-status-' + sensorId);
+      if (!el) return;
+      fetch('/api/sensor-status/' + encodeURIComponent(sensorId)).then(r => r.json()).then(d => {
+        if (d.in_maintenance) {
+          el.innerHTML = '<div style="background:#fef3c7;color:#92400e;padding:6px 8px;border-radius:6px;margin-bottom:6px;border-left:3px solid #f59e0b;">'
+            + '<i class="fas fa-tools"></i> <b>Ta\'mirlashda</b><br>'
+            + '<span style="font-size:0.7rem;">' + (d.message || '') + '</span></div>';
+        }
+      }).catch(() => {});
     }
 
     async function loadSparklineInto(container, sensorId) {
@@ -438,21 +504,40 @@
         const min = Math.min(...vals), max = Math.max(...vals);
         const range = (max - min) || 1;
         const stepX = (w - pad*2) / Math.max(1, vals.length - 1);
-        const ptsArr = vals.map((v,i) => {
-          const x = pad + i * stepX;
-          const y = pad + (h - pad*2) * (1 - (v - min) / range);
-          return x.toFixed(1) + ',' + y.toFixed(1);
-        });
-        const pts = ptsArr.join(' ');
+        const pointsXY = vals.map((v,i) => ({
+          x: pad + i * stepX,
+          y: pad + (h - pad*2) * (1 - (v - min) / range)
+        }));
+        // Monotone-style smooth path (Catmull-Rom -> cubic Bezier)
+        function smoothPath(pts) {
+          if (pts.length < 2) return '';
+          let d = 'M' + pts[0].x.toFixed(1) + ',' + pts[0].y.toFixed(1);
+          for (let i = 0; i < pts.length - 1; i++) {
+            const p0 = pts[i - 1] || pts[i];
+            const p1 = pts[i];
+            const p2 = pts[i + 1];
+            const p3 = pts[i + 2] || p2;
+            const cp1x = p1.x + (p2.x - p0.x) / 6;
+            const cp1y = p1.y + (p2.y - p0.y) / 6;
+            const cp2x = p2.x - (p3.x - p1.x) / 6;
+            const cp2y = p2.y - (p3.y - p1.y) / 6;
+            d += ' C' + cp1x.toFixed(1) + ',' + cp1y.toFixed(1)
+              + ' ' + cp2x.toFixed(1) + ',' + cp2y.toFixed(1)
+              + ' ' + p2.x.toFixed(1) + ',' + p2.y.toFixed(1);
+          }
+          return d;
+        }
+        const linePath = smoothPath(pointsXY);
         const last = vals[vals.length - 1];
         const lastFault = (data.faults && data.faults[data.faults.length - 1]) || 0;
         const lineColor = lastFault === 2 ? '#EF4444' : (lastFault === 1 ? '#F59E0B' : '#2563EB');
         const fillColor = lastFault === 2 ? 'rgba(239,68,68,0.15)' : (lastFault === 1 ? 'rgba(245,158,11,0.15)' : 'rgba(37,99,235,0.15)');
-        const areaPath = 'M' + pad + ',' + (h - pad) + ' L' + ptsArr.join(' L') + ' L' + (w - pad) + ',' + (h - pad) + ' Z';
+        const areaPath = linePath + ' L' + (w - pad) + ',' + (h - pad)
+                                  + ' L' + pad + ',' + (h - pad) + ' Z';
         container.innerHTML =
           '<svg class="spark-svg" viewBox="0 0 ' + w + ' ' + h + '" preserveAspectRatio="none">'
           + '<path d="' + areaPath + '" fill="' + fillColor + '" stroke="none"/>'
-          + '<polyline points="' + pts + '" fill="none" stroke="' + lineColor + '" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>'
+          + '<path d="' + linePath + '" fill="none" stroke="' + lineColor + '" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/>'
           + '</svg>'
           + '<div style="display:flex;justify-content:space-between;font-size:0.7rem;color:#64748B;margin-top:2px;">'
           +   '<span>min ' + min.toFixed(1) + 'V</span>'
@@ -473,6 +558,7 @@
           node.dataset.loaded = '1';
           loadSparklineInto(node, d.SensorID);
         }
+        loadTicketStatus(d.SensorID);
       });
     }
 
@@ -487,6 +573,71 @@
       const m = L.circleMarker([d.Latitude, d.Longitude], opts).bindPopup(buildPopupHtml(d));
       bindSparklinePopup(m, d);
       return m;
+    }
+
+    // ===== Faol avariyalar — miltillab turuvchi qizil markerlar =====
+    async function renderIncidents() {
+      if (!leafletMap) return;
+      if (incidentLayer) { leafletMap.removeLayer(incidentLayer); incidentLayer = null; }
+      try {
+        const r = await fetch('/api/incidents');
+        const json = await r.json();
+        const items = json.items || [];
+        if (!items.length) return;
+        incidentLayer = L.layerGroup();
+        items.forEach(inc => {
+          const icon = L.divIcon({
+            className: 'incident-pulse-wrap',
+            html: '<div class="incident-pulse-icon"></div>',
+            iconSize: [22, 22], iconAnchor: [11, 11]
+          });
+          const m = L.marker([inc.lat, inc.lon], { icon, zIndexOffset: 1000 });
+          const gUrl = `https://www.google.com/maps?q=${inc.lat},${inc.lon}`;
+          const yUrl = `https://yandex.com/maps/?pt=${inc.lon},${inc.lat}&z=16&l=map`;
+          const resolveBtn = isAdminUser
+            ? `<button class="btn btn-sm btn-success w-100 mt-2" onclick="resolveIncident('${inc.id}')"><i class="fas fa-check"></i> Hal qilindi</button>`
+            : '';
+          m.bindPopup(`
+            <div style="min-width:230px;font-family:Inter,sans-serif">
+              <div style="font-weight:700;color:#EF4444;margin-bottom:6px">
+                <i class="fas fa-exclamation-triangle"></i> AVARIYA
+              </div>
+              <div style="font-size:12px;line-height:1.5">
+                <b>Sensor:</b> <code>${inc.sensor_id}</code><br>
+                <b>Tuman:</b> ${inc.district || '?'}<br>
+                <b>Holat:</b> ${inc.fault_type}<br>
+                <b>Kuchlanish:</b> ${Number(inc.voltage).toFixed(0)}V<br>
+                <b>Vaqt:</b> ${new Date(inc.created_at).toLocaleString('uz-UZ')}
+              </div>
+              <div class="d-flex gap-1 mt-2">
+                <a href="${gUrl}" target="_blank" class="btn btn-sm btn-primary flex-fill"><i class="fas fa-map-marked-alt"></i> Google</a>
+                <a href="${yUrl}" target="_blank" class="btn btn-sm btn-warning flex-fill"><i class="fas fa-map"></i> Yandex</a>
+              </div>
+              ${resolveBtn}
+            </div>
+          `);
+          m.addTo(incidentLayer);
+        });
+        incidentLayer.addTo(leafletMap);
+      } catch (e) {
+        console.warn('incidents fetch failed', e);
+      }
+    }
+
+    async function resolveIncident(incId) {
+      if (!confirm('Avariyani hal qilingan deb belgilaysizmi?')) return;
+      try {
+        const r = await fetch(`/api/incidents/${incId}/resolve`, { method: 'POST' });
+        const j = await r.json();
+        if (j.ok) {
+          alert('✅ Hal qilindi.');
+          renderIncidents();
+        } else {
+          alert('❌ ' + (j.error || 'Xato'));
+        }
+      } catch (e) {
+        alert('❌ Tarmoq xatosi');
+      }
     }
 
     function renderMarkers() {
@@ -533,20 +684,47 @@
       else plainLayer.addTo(leafletMap);
     }
 
+    // Heatmap rejimi: fault | kuchlanish | harorat
+    let heatmapMode = 'fault';
+
     function renderHeatmap() {
       if (!leafletMap) return;
       if (heatLayer) { leafletMap.removeLayer(heatLayer); heatLayer = null; }
       if (!heatmapEnabled) return;
       const src = faultsOnly ? lastData.filter(d => d.Fault === 2) : lastData;
-      // Heatmap intensity: muammo > ogohlantirish > havfsiz
-      const points = src.map(d => {
-        const intensity = d.Fault === 2 ? 1.0 : (d.Fault === 1 ? 0.55 : 0.18);
-        return [d.Latitude, d.Longitude, intensity];
-      });
+
+      let points;
+      if (heatmapMode === 'kuchlanish') {
+        // Kuchlanish past bo'lsa — intensivlik yuqori (qizil)
+        points = src.map(d => {
+          const deviation = Math.abs(d.Kuchlanish - 220) / 40; // 220V ideal, 40V max deviation
+          return [d.Latitude, d.Longitude, Math.min(1.0, deviation)];
+        });
+      } else if (heatmapMode === 'harorat') {
+        points = src.map(d => {
+          const intensity = Math.min(1.0, d.Harorat / 50); // 50°C max
+          return [d.Latitude, d.Longitude, intensity];
+        });
+      } else {
+        // Default: fault-based
+        points = src.map(d => {
+          const intensity = d.Fault === 2 ? 1.0 : (d.Fault === 1 ? 0.55 : 0.18);
+          return [d.Latitude, d.Longitude, intensity];
+        });
+      }
+
       heatLayer = L.heatLayer(points, {
-        radius: 28, blur: 22, maxZoom: 15, minOpacity: 0.35,
-        gradient: { 0.2: '#10B981', 0.4: '#84CC16', 0.6: '#F59E0B', 0.8: '#F97316', 1.0: '#EF4444' }
+        radius: 30, blur: 24, maxZoom: 15, minOpacity: 0.35,
+        gradient: { 0.15: '#10B981', 0.35: '#84CC16', 0.55: '#F59E0B', 0.75: '#F97316', 1.0: '#EF4444' }
       }).addTo(leafletMap);
+    }
+
+    function setHeatmapMode(mode) {
+      heatmapMode = mode;
+      document.querySelectorAll('.heatmap-mode-btn').forEach(b => b.classList.remove('active'));
+      const btn = document.getElementById('hm-' + mode);
+      if (btn) btn.classList.add('active');
+      if (heatmapEnabled) renderHeatmap();
     }
 
     // ===== Sensor qidiruv =====
@@ -613,6 +791,7 @@
         renderMarkers();
         renderHeatmap();
         drawDistrictPolygons(district);
+        renderIncidents();
         updateExportLink();
 
         if (district && DISTRICT_BOUNDS[district]) {
@@ -629,6 +808,7 @@
 
     loadMap();
     setInterval(loadMap, 30000);
+    setInterval(renderIncidents, 20000);  // Avariyalarni tezroq yangilash
     document.getElementById('district-select').addEventListener('change', () => { loadMap(); });
     document.getElementById('sensor-search-btn').addEventListener('click', searchSensor);
     document.getElementById('sensor-search').addEventListener('keydown', (e) => {

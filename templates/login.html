@@ -8,6 +8,8 @@
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='enhance.css') }}">
+  <script defer src="{{ url_for('static', filename='enhance.js') }}"></script>
   <style>
     /* --- Background --- */
     .login-bg {
@@ -453,11 +455,11 @@
       <form method="POST" action="/login" id="login-form">
         <!-- Username -->
         <div class="field-group">
-          <label for="username">Foydalanuvchi nomi</label>
+          <label for="username">Login (admin yoki telefon raqam)</label>
           <div class="field-wrap">
             <i class="fas fa-user field-icon"></i>
             <input type="text" name="username" id="username" class="form-control"
-                   placeholder="admin yoki operator" required autofocus autocomplete="username">
+                   placeholder="admin yoki +998XXXXXXXXX" required autofocus autocomplete="username">
           </div>
         </div>
 

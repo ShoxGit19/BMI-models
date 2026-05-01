@@ -1,0 +1,367 @@
+[
+  {
+    "timestamp": "2026-05-02T00:28:11.894949",
+    "user": "operator",
+    "action": "login",
+    "ip": "127.0.0.1",
+    "details": {
+      "username": "operator"
+    }
+  },
+  {
+    "timestamp": "2026-05-02T00:37:26.034810",
+    "user": "operator",
+    "action": "logout",
+    "ip": "127.0.0.1",
+    "details": {
+      "username": "operator"
+    }
+  },
+  {
+    "timestamp": "2026-05-02T00:37:28.548206",
+    "user": "operator",
+    "action": "login",
+    "ip": "127.0.0.1",
+    "details": {
+      "username": "operator"
+    }
+  },
+  {
+    "timestamp": "2026-05-02T00:37:35.254075",
+    "user": "operator",
+    "action": "logout",
+    "ip": "127.0.0.1",
+    "details": {
+      "username": "operator"
+    }
+  },
+  {
+    "timestamp": "2026-05-02T00:37:44.331016",
+    "user": "operator",
+    "action": "login",
+    "ip": "127.0.0.1",
+    "details": {
+      "username": "operator"
+    }
+  },
+  {
+    "timestamp": "2026-05-02T00:39:13.561252",
+    "user": "operator",
+    "action": "logout",
+    "ip": "127.0.0.1",
+    "details": {
+      "username": "operator"
+    }
+  },
+  {
+    "timestamp": "2026-05-02T00:39:16.213230",
+    "user": "operator",
+    "action": "login",
+    "ip": "127.0.0.1",
+    "details": {
+      "username": "operator"
+    }
+  },
+  {
+    "timestamp": "2026-05-02T00:40:54.490906",
+    "user": "admin",
+    "action": "login",
+    "ip": "127.0.0.1",
+    "details": {
+      "username": "admin"
+    }
+  },
+  {
+    "timestamp": "2026-05-02T00:41:12.173140",
+    "user": "admin",
+    "action": "login",
+    "ip": "127.0.0.1",
+    "details": {
+      "username": "admin"
+    }
+  },
+  {
+    "timestamp": "2026-05-02T00:41:29.274447",
+    "user": "admin",
+    "action": "login",
+    "ip": "127.0.0.1",
+    "details": {
+      "username": "admin"
+    }
+  },
+  {
+    "timestamp": "2026-05-02T00:42:04.350959",
+    "user": "admin",
+    "action": "login",
+    "ip": "127.0.0.1",
+    "details": {
+      "username": "admin"
+    }
+  },
+  {
+    "timestamp": "2026-05-02T00:42:45.210376",
+    "user": "admin",
+    "action": "login",
+    "ip": "127.0.0.1",
+    "details": {
+      "username": "admin"
+    }
+  },
+  {
+    "timestamp": "2026-05-02T00:42:53.504905",
+    "user": "admin",
+    "action": "login",
+    "ip": "127.0.0.1",
+    "details": {
+      "username": "admin"
+    }
+  },
+  {
+    "timestamp": "2026-05-02T00:43:15.875274",
+    "user": "admin",
+    "action": "login",
+    "ip": "127.0.0.1",
+    "details": {
+      "username": "admin"
+    }
+  },
+  {
+    "timestamp": "2026-05-02T00:43:30.512945",
+    "user": "admin",
+    "action": "login",
+    "ip": "127.0.0.1",
+    "details": {
+      "username": "admin"
+    }
+  },
+  {
+    "timestamp": "2026-05-02T00:44:58.827057",
+    "user": "admin",
+    "action": "login",
+    "ip": "127.0.0.1",
+    "details": {
+      "username": "admin"
+    }
+  },
+  {
+    "timestamp": "2026-05-02T00:47:02.864620",
+    "user": "admin",
+    "action": "login",
+    "ip": "127.0.0.1",
+    "details": {
+      "username": "admin",
+      "role": "admin"
+    }
+  },
+  {
+    "timestamp": "2026-05-02T00:47:13.084135",
+    "user": "admin",
+    "action": "login",
+    "ip": "127.0.0.1",
+    "details": {
+      "username": "admin",
+      "role": "admin"
+    }
+  },
+  {
+    "timestamp": "2026-05-02T00:49:31.987136",
+    "user": "6954909676",
+    "action": "user_registered",
+    "ip": null,
+    "details": {
+      "phone": "+998946541922",
+      "district": "Yunusobod"
+    }
+  },
+  {
+    "timestamp": "2026-05-02T00:50:05.052241",
+    "user": "operator",
+    "action": "logout",
+    "ip": "127.0.0.1",
+    "details": {
+      "username": "operator"
+    }
+  },
+  {
+    "timestamp": "2026-05-02T00:50:07.450038",
+    "user": "operator",
+    "action": "login",
+    "ip": "127.0.0.1",
+    "details": {
+      "username": "operator",
+      "role": "admin"
+    }
+  },
+  {
+    "timestamp": "2026-05-02T00:58:15.537585",
+    "user": "admin",
+    "action": "login",
+    "ip": "127.0.0.1",
+    "details": {
+      "username": "admin",
+      "role": "admin"
+    }
+  },
+  {
+    "timestamp": "2026-05-02T01:03:03.400365",
+    "user": "6954909676",
+    "action": "user_registered",
+    "ip": null,
+    "details": {
+      "phone": "+998946541922",
+      "district": "Yunusobod"
+    }
+  },
+  {
+    "timestamp": "2026-05-02T01:03:31.849779",
+    "user": "6954909676",
+    "action": "realtime_alert",
+    "ip": null,
+    "details": {
+      "count": 4
+    }
+  },
+  {
+    "timestamp": "2026-05-02T01:04:10.933843",
+    "user": "operator",
+    "action": "logout",
+    "ip": "127.0.0.1",
+    "details": {
+      "username": "operator"
+    }
+  },
+  {
+    "timestamp": "2026-05-02T01:04:12.787725",
+    "user": "operator",
+    "action": "login",
+    "ip": "127.0.0.1",
+    "details": {
+      "username": "operator",
+      "role": "admin"
+    }
+  },
+  {
+    "timestamp": "2026-05-02T01:12:22.447177",
+    "user": "admin",
+    "action": "login",
+    "ip": "127.0.0.1",
+    "details": {
+      "username": "admin",
+      "role": "admin"
+    }
+  },
+  {
+    "timestamp": "2026-05-02T01:12:53.309007",
+    "user": "operator",
+    "action": "logout",
+    "ip": "127.0.0.1",
+    "details": {
+      "username": "operator"
+    }
+  },
+  {
+    "timestamp": "2026-05-02T01:12:54.778388",
+    "user": "operator",
+    "action": "login",
+    "ip": "127.0.0.1",
+    "details": {
+      "username": "operator",
+      "role": "admin"
+    }
+  },
+  {
+    "timestamp": "2026-05-02T01:13:18.291210",
+    "user": "operator",
+    "action": "logout",
+    "ip": "127.0.0.1",
+    "details": {
+      "username": "operator"
+    }
+  },
+  {
+    "timestamp": "2026-05-02T01:13:26.803700",
+    "user": "admin",
+    "action": "login",
+    "ip": "127.0.0.1",
+    "details": {
+      "username": "admin",
+      "role": "admin"
+    }
+  },
+  {
+    "timestamp": "2026-05-02T02:17:12.065876",
+    "user": "admin",
+    "action": "ticket_create",
+    "ip": "127.0.0.1",
+    "details": {
+      "ticket": {
+        "id": "T-20260502021712",
+        "sensor_id": "S0011",
+        "issue": "Juda yomon axvolda",
+        "status": "in_progress",
+        "eta": "2026-05-07T00:00",
+        "created_at": "2026-05-02T02:17:12.064828",
+        "created_by": "admin",
+        "closed_at": null
+      }
+    }
+  },
+  {
+    "timestamp": "2026-05-02T02:18:56.491359",
+    "user": "admin",
+    "action": "logout",
+    "ip": "127.0.0.1",
+    "details": {
+      "username": "admin"
+    }
+  },
+  {
+    "timestamp": "2026-05-02T02:19:13.031257",
+    "user": "admin",
+    "action": "login",
+    "ip": "127.0.0.1",
+    "details": {
+      "username": "admin",
+      "role": "admin"
+    }
+  },
+  {
+    "timestamp": "2026-05-02T02:20:18.516889",
+    "user": "admin",
+    "action": "logout",
+    "ip": "127.0.0.1",
+    "details": {
+      "username": "admin"
+    }
+  },
+  {
+    "timestamp": "2026-05-02T02:20:27.087167",
+    "user": "admin",
+    "action": "login",
+    "ip": "127.0.0.1",
+    "details": {
+      "username": "admin",
+      "role": "admin"
+    }
+  },
+  {
+    "timestamp": "2026-05-02T02:27:24.863188",
+    "user": "6073844631",
+    "action": "user_registered",
+    "ip": null,
+    "details": {
+      "phone": "+998900122924",
+      "district": "Yakkasaroy"
+    }
+  },
+  {
+    "timestamp": "2026-05-02T02:28:55.035164",
+    "user": "5926881434",
+    "action": "user_registered",
+    "ip": null,
+    "details": {
+      "phone": "+998901234567",
+      "district": "Mirobod"
+    }
+  }
+]

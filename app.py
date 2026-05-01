@@ -11,6 +11,14 @@ import numpy as np
 import requests as http_requests
 from flask import Flask, render_template, jsonify, request, session, redirect, url_for, send_file, flash
 
+# --- utils modulini import ---
+from utils import (
+    load_users as _load_users, get_user_by_phone, get_web_users_dict,
+    verify_web_login, get_user_role, get_user_district, get_user_location,
+    hash_password, haversine, find_nearest_sensors, generate_sensor_coords,
+    audit_log, read_bot_token, DISTRICTS, FEATURE_COLS
+)
+
 # --- .env yuklanishi ---
 try:
     from dotenv import load_dotenv
@@ -21,6 +29,66 @@ except ImportError:
 # --- Flask va logger ---
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "monitoring-secret-2026-toshkent")
+
+# --- Static fayllar uchun cache (1 kun) ---
+app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 86400  # 24h browser cache
+
+# --- Flask-Caching (API javoblarini keshlash) ---
+try:
+    from flask_caching import Cache
+    cache = Cache(app, config={"CACHE_TYPE": "SimpleCache", "CACHE_DEFAULT_TIMEOUT": 30})
+except ImportError:
+    class _DummyCache:
+        def cached(self, *a, **k):
+            def deco(fn): return fn
+            return deco
+        def memoize(self, *a, **k):
+            def deco(fn): return fn
+            return deco
+    cache = _DummyCache()
+
+# --- Rate limiter (DDoS / brute-force himoyasi) ---
+try:
+    from flask_limiter import Limiter
+    from flask_limiter.util import get_remote_address
+    limiter = Limiter(
+        app=app,
+        key_func=get_remote_address,
+        default_limits=["200 per minute", "2000 per hour"],
+        storage_uri="memory://",
+    )
+except ImportError:
+    class _DummyLimiter:
+        def limit(self, *a, **k):
+            def deco(fn): return fn
+            return deco
+        def exempt(self, fn): return fn
+    limiter = _DummyLimiter()
+
+# --- Response headers (gzip + cache) ---
+@app.after_request
+def _add_headers(resp):
+    # Statik fayllarga uzoq muddatli kesh
+    if request.path.startswith("/static/"):
+        resp.headers["Cache-Control"] = "public, max-age=86400, immutable"
+    # API javoblariga qisqa muddatli kesh (xavfsizlik uchun)
+    elif request.path.startswith("/api/"):
+        resp.headers.setdefault("Cache-Control", "private, max-age=10")
+    # Xavfsizlik headerlari
+    resp.headers.setdefault("X-Content-Type-Options", "nosniff")
+    resp.headers.setdefault("X-Frame-Options", "SAMEORIGIN")
+    resp.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+    return resp
+
+# --- SocketIO (WebSocket live stream) ---
+try:
+    from flask_socketio import SocketIO, emit
+    socketio = SocketIO(app, cors_allowed_origins="*", async_mode="threading")
+    HAS_SOCKETIO = True
+except ImportError:
+    socketio = None
+    HAS_SOCKETIO = False
+
 logger = logging.getLogger("bmi-app")
 logger.setLevel(logging.INFO)
 handler = logging.StreamHandler()
@@ -29,14 +97,15 @@ handler.setFormatter(formatter)
 if not logger.hasHandlers():
     logger.addHandler(handler)
 
-# --- Foydalanuvchilar (oddiy demo uchun) ---
-USERS = {
-    "admin": hashlib.sha256("admin123".encode()).hexdigest(),
-    "operator": hashlib.sha256("operator123".encode()).hexdigest(),
+# --- Foydalanuvchilar (dinamik: admin + operator + bot orqali ro'yxatdan o'tganlar) ---
+from utils import hash_password_secure
+STATIC_USERS = {
+    "admin": hash_password_secure("admin123"),       # bcrypt — har ishga tushganda yangi salt
+    "operator": hash_password_secure("operator123"),
 }
 
 # --- Telegram sozlamalari ---
-TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
+TELEGRAM_BOT_TOKEN = read_bot_token() or os.environ.get("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "")
 
 
@@ -49,22 +118,52 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated
 
+def admin_required(f):
+    """Faqat admin roli uchun dekorator."""
+    @functools.wraps(f)
+    def decorated(*args, **kwargs):
+        if "user" not in session:
+            return redirect(url_for("login"))
+        if session.get("role") != "admin":
+            return render_template("error.html", error_code=403, message="Faqat admin uchun ruxsat!"), 403
+        return f(*args, **kwargs)
+    return decorated
+
 # --- Login ---
 @app.route("/login", methods=["GET", "POST"])
+@limiter.limit("10 per minute", methods=["POST"])
 def login():
     if request.method == "POST":
         username = request.form.get("username", "").strip()
         password = request.form.get("password", "")
-        pw_hash = hashlib.sha256(password.encode()).hexdigest()
-        if USERS.get(username) == pw_hash:
+
+        # 1) Statik adminlar tekshiruvi (verify_password — bcrypt + SHA256 mos)
+        from utils import verify_password
+        stored = STATIC_USERS.get(username)
+        if stored and verify_password(password, stored):
             session["user"] = username
+            session["role"] = "admin"
+            session["district"] = ""
+            _audit_log("login", {"username": username, "role": "admin"})
             return redirect(url_for("home"))
+
+        # 2) Bot orqali ro'yxatdan o'tgan foydalanuvchilar (login = telefon)
+        user_data = verify_web_login(username, password)
+        if user_data:
+            session["user"] = username
+            session["role"] = user_data.get("role", "user")
+            session["district"] = user_data.get("district", "")
+            session["user_name"] = f"{user_data.get('first_name', '')} {user_data.get('last_name', '')}"
+            _audit_log("login", {"username": username, "role": session["role"]})
+            return redirect(url_for("home"))
+
         return render_template("login.html", error="Noto'g'ri login yoki parol!")
     return render_template("login.html")
 
 # --- Logout ---
 @app.route("/logout")
 def logout():
+    _audit_log("logout", {"username": session.get("user")})
     session.clear()
     return redirect(url_for("login"))
 
@@ -102,6 +201,7 @@ def get_current_weather():
 
 # --- Ob-havo API (JS uchun real-time) ---
 @app.route("/api/weather")
+@cache.cached(timeout=600)  # 10 daqiqa ob-havo keshi
 def weather_api():
     weather = get_current_weather()
     if weather:
@@ -112,7 +212,11 @@ def weather_api():
 @app.route("/")
 @login_required
 def home():
-    return render_template("index.html")
+    role = session.get("role", "user")
+    if role == "admin":
+        return render_template("index.html")
+    else:
+        return render_template("user_home.html")
 
 # --- Xarita ---
 @app.route("/map")
@@ -326,15 +430,27 @@ def _fix_sklearn_compatibility(model):
 # --- Ma'lumot va modelni yuklash funksiyasi ---
 def load_data_and_model():
     df, hybrid_model = None, None
-    # CSV: data/ papkadan yuklash
-    if os.path.exists("data/sensor_data_part1.csv") and os.path.exists("data/sensor_data_part2.csv"):
+    # 1) Parquet (eng tez — 10× CSV'dan tez, ~20MB)
+    if os.path.exists("data/sensor_data.parquet"):
+        try:
+            df = pd.read_parquet("data/sensor_data.parquet", engine="pyarrow")
+            # category → str (groupby/filter mosligi uchun)
+            for col in ("District", "SensorID"):
+                if col in df.columns and str(df[col].dtype) == "category":
+                    df[col] = df[col].astype(str)
+            logger.info(f"📦 Parquet yuklandi: {len(df):,} satr")
+        except Exception as e:
+            logger.warning(f"Parquet xato, CSV'ga o'tamiz: {e}")
+            df = None
+    # 2) CSV: data/ papkadan
+    if df is None and os.path.exists("data/sensor_data_part1.csv") and os.path.exists("data/sensor_data_part2.csv"):
         df = pd.concat([
             pd.read_csv("data/sensor_data_part1.csv"),
             pd.read_csv("data/sensor_data_part2.csv")
         ], ignore_index=True)
         if "Timestamp" in df.columns:
             df["Timestamp"] = pd.to_datetime(df["Timestamp"], errors='coerce')
-    elif os.path.exists("sensor_data_part1.csv") and os.path.exists("sensor_data_part2.csv"):
+    elif df is None and os.path.exists("sensor_data_part1.csv") and os.path.exists("sensor_data_part2.csv"):
         df = pd.concat([
             pd.read_csv("sensor_data_part1.csv"),
             pd.read_csv("sensor_data_part2.csv")
@@ -365,6 +481,32 @@ def load_data_and_model():
         except Exception as _e:
             logger.warning(f"Fault qayta taqsimlash xatosi: {_e}")
 
+    # ===== Sensor GPS koordinatalarini MD5 seeding bilan yaratish =====
+    if df is not None and "SensorID" in df.columns and "District" in df.columns:
+        needs_coords = (
+            "Latitude" not in df.columns
+            or "Longitude" not in df.columns
+            or df["Latitude"].isna().any()
+            or df["Longitude"].isna().any()
+            or (df["Latitude"] == 0).any()
+        )
+        if needs_coords:
+            logger.info("Sensor GPS koordinatalarini MD5 seeding bilan yaratilmoqda...")
+            coords_cache = {}
+            lats, lons = [], []
+            for _, row in df.iterrows():
+                sid = str(row["SensorID"])
+                dist = str(row.get("District", ""))
+                key = f"{sid}:{dist}"
+                if key not in coords_cache:
+                    coords_cache[key] = generate_sensor_coords(sid, dist)
+                lat, lon = coords_cache[key]
+                lats.append(lat)
+                lons.append(lon)
+            df["Latitude"] = lats
+            df["Longitude"] = lons
+            logger.info(f"GPS koordinatalar yaratildi: {len(coords_cache)} ta noyob sensor")
+
     # Model: models/ papkadan yuklash
     if os.path.exists("models/hybrid_model_part1.pkl") and os.path.exists("models/hybrid_model_part2.pkl"):
         merged = b""
@@ -381,17 +523,45 @@ def load_data_and_model():
 
 # --- Ma'lumot va modelni global yuklash ---
 df, hybrid_model = None, None
+
+# ===== LATEST CACHE: 60 soniya · 200ms+ ni 1ms ga aylantiradi =====
+import time as _time
+_latest_cache = {"df": None, "ts": 0.0}
+_LATEST_TTL = 60  # soniya
+
+def get_latest():
+    """Har sensor uchun eng oxirgi qiymat. 60s kesh."""
+    global _latest_cache
+    if df is None or df.empty:
+        return df
+    now = _time.time()
+    if _latest_cache["df"] is not None and (now - _latest_cache["ts"]) < _LATEST_TTL:
+        return _latest_cache["df"]
+    if "Timestamp" in df.columns:
+        latest = df.sort_values("Timestamp").groupby("SensorID").last().reset_index()
+    else:
+        latest = df.groupby("SensorID").last().reset_index()
+    _latest_cache = {"df": latest, "ts": now}
+    return latest
+
+def invalidate_latest_cache():
+    """Ma'lumot yangilanganda chaqiriladi."""
+    global _latest_cache
+    _latest_cache = {"df": None, "ts": 0.0}
+
 def reload_data_and_model():
     global df, hybrid_model
     df, hybrid_model = load_data_and_model()
+    invalidate_latest_cache()
 
 reload_data_and_model()
 
 @app.route("/api/reload-model")
-@login_required
+@admin_required
 def reload_model_api():
     """Modelni qayta yuklash (admin uchun)"""
     reload_data_and_model()
+    _audit_log("reload_model", {"model_loaded": hybrid_model is not None, "data_rows": len(df) if df is not None else 0})
     return jsonify({
         "ok": True,
         "model_loaded": hybrid_model is not None,
@@ -675,6 +845,7 @@ def future_forecast():
 
 
 @app.route("/api/stats")
+@cache.cached(timeout=30, query_string=True)
 def get_stats():
     """Statistics — 1200 sensor, har birining oxirgi holatini ko'rsatish"""
     try:
@@ -682,7 +853,7 @@ def get_stats():
             return jsonify({"error": "Ma'lumot yo'q"}), 404
 
         # Har bir sensorning OXIRGI o'lchovini olish
-        latest = df.sort_values("Timestamp").groupby("SensorID").last().reset_index()
+        latest = get_latest()
         # NaN Fault qiymatlarini 0 (xavfsiz) deb hisoblash
         latest["Fault"] = latest["Fault"].fillna(0).round().astype(int).clip(0, 2)
         safe_count   = int((latest["Fault"] == 0).sum())
@@ -738,6 +909,7 @@ def get_stats():
         return jsonify({"error": str(e)}), 500
 
 @app.route("/api/map-data")
+@cache.cached(timeout=30)
 def map_data():
     """Map data — har bir sensorning oxirgi o'lchovi (1200 ta nuqta)"""
     try:
@@ -745,7 +917,7 @@ def map_data():
             return jsonify([]), 404
 
         district = request.args.get('district', None)
-        latest = df.sort_values("Timestamp").groupby("SensorID").last().reset_index()
+        latest = get_latest()
         if district:
             latest = latest[latest["District"] == district]
 
@@ -953,7 +1125,7 @@ def export_map_csv():
         district = request.args.get("district", None)
         only_faults = request.args.get("only_faults", "0") == "1"
 
-        latest = df.sort_values("Timestamp").groupby("SensorID").last().reset_index()
+        latest = get_latest()
         if district:
             latest = latest[latest["District"] == district]
         if only_faults:
@@ -1005,6 +1177,584 @@ def sensor_sparkline(sensor_id):
         logger.error(f"Sparkline error: {e}")
         return jsonify({"values": []})
 
+
+# ========================
+# AI CHATBOT API (smart engine)
+# ========================
+@app.route("/api/chatbot", methods=["POST"])
+@login_required
+@limiter.limit("30 per minute")
+def chatbot_api():
+    """Smart NLU chatbot — intent detection + entity extraction + rich cards."""
+    try:
+        from chatbot_engine import answer as _chat_answer
+        question = (request.json or {}).get("question", "").strip()
+        if not question:
+            return jsonify({
+                "text": "💬 Savolingizni yozing. Yordam uchun \"yordam\" deb yuboring.",
+                "quick_replies": ["Statistika", "Xavfli sensorlar", "Yordam"],
+            })
+        latest = get_latest()
+        if latest is not None and "Fault" in latest.columns:
+            latest = latest.copy()
+            latest["Fault"] = latest["Fault"].fillna(0).astype(int)
+        result = _chat_answer(question, df=latest)
+        # Eski mosligi uchun "answer" maydoni
+        result["answer"] = result.get("text", "")
+        return jsonify(result)
+    except Exception as e:
+        logger.error(f"Chatbot error: {e}")
+        return jsonify({
+            "text": f"⚠️ Xatolik yuz berdi.",
+            "answer": f"⚠️ Xatolik: {str(e)[:100]}",
+        }), 500
+
+
+# ========================
+# COMPARISON API
+# ========================
+@app.route("/compare")
+@login_required
+def compare_page():
+    return render_template("compare.html")
+
+@app.route("/api/compare")
+def compare_api():
+    """Ikki tuman yoki ikki sensorni taqqoslash"""
+    try:
+        if df is None or df.empty:
+            return jsonify({"error": "Ma'lumot yo'q"}), 404
+
+        type_ = request.args.get("type", "district")  # district | sensor
+        a = request.args.get("a", "")
+        b = request.args.get("b", "")
+
+        if not a or not b:
+            return jsonify({"error": "Ikki parametr kerak (a va b)"}), 400
+
+        latest = get_latest()
+        latest["Fault"] = latest["Fault"].fillna(0).astype(int)
+
+        PARAM_COLS = {
+            "Kuchlanish": "Kuchlanish (V)",
+            "Chastota": "Chastota (Hz)",
+            "Harorat": "Muhit_harorat (C)",
+            "Shamol": "Shamol_tezligi (km/h)",
+            "Vibratsiya": "Vibratsiya",
+            "Sim holati": "Sim_mexanik_holati (%)",
+            "Namlik": "Atrof_muhit_humidity (%)",
+            "Quvvat": "Quvvati (kW)"
+        }
+
+        def get_stats(subset, name):
+            total = len(subset)
+            return {
+                "name": name,
+                "total": total,
+                "safe": int((subset["Fault"] == 0).sum()),
+                "warn": int((subset["Fault"] == 1).sum()),
+                "danger": int((subset["Fault"] == 2).sum()),
+                "params": {
+                    pname: round(float(subset[col].mean()), 2) if col in subset.columns else 0
+                    for pname, col in PARAM_COLS.items()
+                }
+            }
+
+        if type_ == "district":
+            da = latest[latest["District"] == a]
+            db = latest[latest["District"] == b]
+            if da.empty:
+                return jsonify({"error": f"'{a}' tumani topilmadi"}), 404
+            if db.empty:
+                return jsonify({"error": f"'{b}' tumani topilmadi"}), 404
+            return jsonify({"a": get_stats(da, a), "b": get_stats(db, b), "type": "district"})
+
+        else:  # sensor
+            sa = latest[latest["SensorID"] == a]
+            sb = latest[latest["SensorID"] == b]
+            if sa.empty:
+                return jsonify({"error": f"Sensor '{a}' topilmadi"}), 404
+            if sb.empty:
+                return jsonify({"error": f"Sensor '{b}' topilmadi"}), 404
+
+            def sensor_detail(row, sid):
+                r = row.iloc[0]
+                return {
+                    "name": sid,
+                    "district": str(r.get("District", "")),
+                    "total": 1,
+                    "safe": 1 if r["Fault"] == 0 else 0,
+                    "warn": 1 if r["Fault"] == 1 else 0,
+                    "danger": 1 if r["Fault"] == 2 else 0,
+                    "params": {
+                        pname: round(float(r.get(col, 0)), 2)
+                        for pname, col in PARAM_COLS.items()
+                    }
+                }
+            return jsonify({"a": sensor_detail(sa, a), "b": sensor_detail(sb, b), "type": "sensor"})
+
+    except Exception as e:
+        logger.error(f"Compare error: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+# ========================
+# MAINTENANCE CALENDAR API
+# ========================
+@app.route("/calendar")
+@login_required
+def calendar_page():
+    return render_template("calendar.html")
+
+@app.route("/api/maintenance", methods=["GET", "POST"])
+@login_required
+def maintenance_api():
+    """Rejali ta'mirlash ishlari CRUD"""
+    import json
+    MAINT_FILE = "data/maintenance.json"
+
+    if request.method == "GET":
+        if os.path.exists(MAINT_FILE):
+            with open(MAINT_FILE, "r", encoding="utf-8") as f:
+                events = json.load(f)
+        else:
+            events = []
+
+        # Tarixiy avariyalarni avtomatik qo'shish
+        if df is not None and not df.empty:
+            last30 = df[df["Timestamp"] >= (datetime.datetime.now() - datetime.timedelta(days=30))]
+            danger_days = last30[last30["Fault"] == 2].copy()
+            if not danger_days.empty:
+                danger_days["date"] = danger_days["Timestamp"].dt.date.astype(str)
+                for dt_str, grp in danger_days.groupby("date"):
+                    districts = grp["District"].unique().tolist()[:3]
+                    events.append({
+                        "id": f"auto-{dt_str}",
+                        "title": f"🔴 Avariya: {', '.join(districts)}",
+                        "date": dt_str,
+                        "type": "incident",
+                        "auto": True,
+                        "sensors_count": len(grp["SensorID"].unique())
+                    })
+        return jsonify(events)
+
+    else:  # POST — yangi rejali ish qo'shish
+        data = request.json or {}
+        title = data.get("title", "").strip()
+        date = data.get("date", "").strip()
+        district = data.get("district", "").strip()
+        mtype = data.get("type", "maintenance")
+
+        if not title or not date:
+            return jsonify({"error": "Sarlavha va sana kerak"}), 400
+
+        events = []
+        if os.path.exists(MAINT_FILE):
+            with open(MAINT_FILE, "r", encoding="utf-8") as f:
+                events = json.load(f)
+
+        new_event = {
+            "id": f"m-{datetime.datetime.now().timestamp():.0f}",
+            "title": title,
+            "date": date,
+            "district": district,
+            "type": mtype,
+            "created_by": session.get("user", "unknown"),
+            "created_at": datetime.datetime.now().isoformat()
+        }
+        events.append(new_event)
+        with open(MAINT_FILE, "w", encoding="utf-8") as f:
+            json.dump(events, f, ensure_ascii=False, indent=2)
+
+        # Audit log
+        _audit_log("maintenance_create", {"event": new_event})
+        return jsonify({"ok": True, "event": new_event})
+
+@app.route("/api/maintenance/<event_id>", methods=["DELETE"])
+@login_required
+def delete_maintenance(event_id):
+    import json
+    MAINT_FILE = "data/maintenance.json"
+    if not os.path.exists(MAINT_FILE):
+        return jsonify({"error": "Fayl topilmadi"}), 404
+    with open(MAINT_FILE, "r", encoding="utf-8") as f:
+        events = json.load(f)
+    events = [e for e in events if e.get("id") != event_id]
+    with open(MAINT_FILE, "w", encoding="utf-8") as f:
+        json.dump(events, f, ensure_ascii=False, indent=2)
+    _audit_log("maintenance_delete", {"event_id": event_id})
+    return jsonify({"ok": True})
+
+
+# ========================
+# AUDIT LOGS (utils.py ga delegatsiya)
+# ========================
+def _audit_log(action, details=None):
+    """Flask request kontekstida audit log yozish."""
+    audit_log(
+        action,
+        user=session.get("user", "system"),
+        ip=request.remote_addr if request else None,
+        details=details
+    )
+
+@app.route("/api/audit-logs")
+@admin_required
+def get_audit_logs():
+    """Audit loglarni ko'rish (faqat admin)"""
+    import json
+    from utils import AUDIT_LOG_FILE
+    page = request.args.get("page", 1, type=int)
+    per_page = 50
+    if os.path.exists(AUDIT_LOG_FILE):
+        with open(AUDIT_LOG_FILE, "r", encoding="utf-8") as f:
+            logs = json.load(f)
+    else:
+        logs = []
+    logs.reverse()
+    total = len(logs)
+    start = (page - 1) * per_page
+    return jsonify({
+        "logs": logs[start:start + per_page],
+        "total": total,
+        "page": page,
+        "total_pages": max(1, (total + per_page - 1) // per_page)
+    })
+
+
+# ========================
+# NEAREST SENSORS API (Haversine)
+# ========================
+@app.route("/api/nearest-sensors")
+@login_required
+def nearest_sensors_api():
+    """Foydalanuvchi GPS ga eng yaqin sensorlarni topish."""
+    try:
+        lat = request.args.get("lat", type=float)
+        lon = request.args.get("lon", type=float)
+        n = request.args.get("n", 5, type=int)
+
+        if lat is None or lon is None:
+            # Session dagi foydalanuvchi joylashuvini ishlatish
+            user_login = session.get("user", "")
+            u_lat, u_lon = get_user_location(user_login)
+            if u_lat and u_lon:
+                lat, lon = u_lat, u_lon
+            else:
+                return jsonify({"error": "GPS koordinata kerak (lat, lon parametrlari)"}), 400
+
+        if df is None or df.empty:
+            return jsonify({"error": "Ma'lumot yo'q"}), 404
+
+        latest = get_latest()
+        sensor_list = []
+        for _, row in latest.iterrows():
+            sensor_list.append({
+                "SensorID": str(row.get("SensorID", "")),
+                "District": str(row.get("District", "")),
+                "Latitude": float(row.get("Latitude", 0)),
+                "Longitude": float(row.get("Longitude", 0)),
+                "Kuchlanish": round(float(row.get("Kuchlanish (V)", 220)), 1),
+                "Chastota": round(float(row.get("Chastota (Hz)", 50)), 2),
+                "Fault": int(row.get("Fault", 0)),
+            })
+
+        nearest = find_nearest_sensors(lat, lon, sensor_list, n=min(n, 20))
+        return jsonify({
+            "user_location": {"lat": lat, "lon": lon},
+            "sensors": nearest
+        })
+    except Exception as e:
+        logger.error(f"Nearest sensors error: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+# ========================
+# USER INFO API
+# ========================
+@app.route("/api/user-info")
+@login_required
+def user_info_api():
+    """Joriy foydalanuvchi ma'lumotlari."""
+    user_login = session.get("user", "")
+    role = session.get("role", "user")
+    district = session.get("district", "")
+    lat, lon = get_user_location(user_login)
+    return jsonify({
+        "login": user_login,
+        "role": role,
+        "district": district,
+        "name": session.get("user_name", user_login),
+        "latitude": lat,
+        "longitude": lon
+    })
+
+
+# ========================
+# TICKETS / MAINTENANCE SYSTEM
+# ========================
+@app.route("/tickets")
+@login_required
+def tickets_page():
+    return render_template("tickets.html")
+
+
+@app.route("/api/tickets", methods=["GET", "POST"])
+@login_required
+def tickets_api():
+    from utils import load_tickets, save_tickets, create_ticket
+    if request.method == "GET":
+        tickets = load_tickets()
+        # User uchun faqat o'z tumanidagi
+        if session.get("role") != "admin":
+            user_district = session.get("district", "")
+            if user_district and df is not None:
+                district_sensors = set(df[df["District"] == user_district]["SensorID"].astype(str).unique())
+                tickets = [t for t in tickets if str(t.get("sensor_id")) in district_sensors]
+        return jsonify({"tickets": tickets})
+
+    # POST — admin only
+    if session.get("role") != "admin":
+        return jsonify({"error": "Admin huquqi yo'q"}), 403
+    data = request.json or {}
+    sensor_id = data.get("sensor_id", "").strip()
+    issue = data.get("issue", "").strip()
+    eta = data.get("eta")
+    if not sensor_id or not issue:
+        return jsonify({"error": "sensor_id va issue kerak"}), 400
+    ticket = create_ticket(sensor_id, issue, eta=eta, created_by=session.get("user", "admin"))
+    _audit_log("ticket_create", {"ticket": ticket})
+    return jsonify({"ok": True, "ticket": ticket})
+
+
+@app.route("/api/tickets/<ticket_id>/close", methods=["POST"])
+@admin_required
+def close_ticket_api(ticket_id):
+    from utils import close_ticket
+    t = close_ticket(ticket_id)
+    if not t:
+        return jsonify({"error": "Topilmadi"}), 404
+    _audit_log("ticket_close", {"ticket_id": ticket_id})
+    return jsonify({"ok": True, "ticket": t})
+
+
+@app.route("/api/sensor-status/<sensor_id>")
+@login_required
+def sensor_status_api(sensor_id):
+    """Sensor uchun ta'mirlash holatini tekshirish."""
+    from utils import get_active_ticket
+    ticket = get_active_ticket(sensor_id)
+    if ticket:
+        return jsonify({
+            "in_maintenance": True,
+            "ticket": ticket,
+            "message": f"Hozirda ta'mirlash ishlari ketmoqda. ETA: {ticket.get('eta', 'N/A')}"
+        })
+    return jsonify({"in_maintenance": False})
+
+
+# ========================
+# PREDICTIVE MAINTENANCE
+# ========================
+@app.route("/api/predict-failure")
+@login_required
+def predict_failure_api():
+    """Har bir sensor uchun 24 soat ichida buzilish ehtimoli."""
+    from utils import predict_failure_probability
+    if df is None or df.empty:
+        return jsonify({"error": "Ma'lumot yo'q"}), 404
+
+    # Ob-havo
+    weather = None
+    try:
+        resp = http_requests.get(
+            "https://api.open-meteo.com/v1/forecast",
+            params={"latitude": 41.3, "longitude": 69.27, "current_weather": True},
+            timeout=3
+        )
+        if resp.ok:
+            weather = resp.json().get("current_weather", {})
+    except Exception:
+        pass
+
+    latest = get_latest()
+
+    # Filter by user's district if not admin
+    if session.get("role") != "admin":
+        d = session.get("district", "")
+        if d:
+            latest = latest[latest["District"] == d]
+
+    results = []
+    for _, row in latest.iterrows():
+        prob = predict_failure_probability(row.to_dict(), weather=weather)
+        results.append({
+            "sensor_id": str(row["SensorID"]),
+            "district": str(row.get("District", "")),
+            "probability": prob,
+            "voltage": round(float(row.get("Kuchlanish (V)", 0)), 1),
+            "fault": int(row.get("Fault", 0)),
+            "risk_level": "high" if prob >= 60 else "medium" if prob >= 30 else "low"
+        })
+
+    results.sort(key=lambda x: -x["probability"])
+    return jsonify({
+        "weather": weather,
+        "predictions": results[:100],  # Top 100
+        "total": len(results),
+        "high_risk_count": sum(1 for r in results if r["risk_level"] == "high")
+    })
+
+
+# ========================
+# ACTIVE INCIDENTS (Dispatcher / Web Dashboard)
+# ========================
+@app.route("/api/incidents")
+@login_required
+def incidents_api():
+    """Faol avariyalar — xarita uchun miltillab turuvchi qizil markerlar."""
+    from utils import get_active_incidents
+    items = get_active_incidents()
+    role = session.get("role", "user")
+    user_district = session.get("district")
+    if role != "admin" and user_district:
+        items = [i for i in items if i.get("district") == user_district]
+    return jsonify({"count": len(items), "items": items})
+
+
+@app.route("/api/incidents/<inc_id>/resolve", methods=["POST"])
+@admin_required
+def incidents_resolve_api(inc_id):
+    from utils import resolve_incident, get_incident
+    inc = get_incident(inc_id)
+    if not inc:
+        return jsonify({"ok": False, "error": "Topilmadi"}), 404
+    if inc.get("status") == "resolved":
+        return jsonify({"ok": False, "error": "Allaqachon hal qilingan"}), 400
+    resolve_incident(inc_id)
+    audit_log("incident_resolved_web", user=session.get("username"),
+              details={"incident": inc_id})
+    return jsonify({"ok": True, "incident": get_incident(inc_id)})
+
+
+# ========================
+# ZONE ANALYTICS (xarita ranglari)
+# ========================
+@app.route("/api/zones")
+@cache.cached(timeout=60)
+@login_required
+def zones_api():
+    """Tumanlar bo'yicha umumiy holat va rang tavsiyasi."""
+    if df is None or df.empty:
+        return jsonify({"zones": []})
+
+    latest = get_latest()
+    zones = []
+    for district, group in latest.groupby("District"):
+        total = len(group)
+        danger = int((group["Fault"] == 2).sum())
+        warning = int((group["Fault"] == 1).sum())
+        safe = total - danger - warning
+        avg_v = float(group["Kuchlanish (V)"].mean()) if "Kuchlanish (V)" in group.columns else 0
+        avg_load = float(group["Quvvati (kW)"].mean()) if "Quvvati (kW)" in group.columns else 0
+
+        # Yuklama foizi (taxminiy 100kW max)
+        load_pct = min(100, (avg_load / 100) * 100) if avg_load else 0
+        risk_pct = (danger * 100 + warning * 50) / max(total, 1)
+
+        # Rang aniqlash
+        if risk_pct >= 30 or danger > 5:
+            color = "#ef4444"  # qizil
+            status = "danger"
+        elif risk_pct >= 15:
+            color = "#f59e0b"  # sariq
+            status = "warning"
+        else:
+            color = "#22c55e"  # yashil
+            status = "safe"
+
+        zones.append({
+            "district": str(district),
+            "total": total,
+            "safe": safe,
+            "warning": warning,
+            "danger": danger,
+            "avg_voltage": round(avg_v, 1),
+            "avg_load_kw": round(avg_load, 1),
+            "load_pct": round(load_pct, 1),
+            "risk_pct": round(risk_pct, 1),
+            "color": color,
+            "status": status,
+        })
+
+    zones.sort(key=lambda x: -x["risk_pct"])
+    return jsonify({"zones": zones})
+
+
+# ========================
+# AUDIT PAGE (admin)
+# ========================
+@app.route("/admin/audit")
+@admin_required
+def audit_page():
+    return render_template("audit.html")
+
+
+# ========================
+# LANGUAGE PREFERENCE
+# ========================
+@app.route("/api/set-language", methods=["POST"])
+@login_required
+def set_language_api():
+    data = request.json or {}
+    lang = data.get("lang", "uz")
+    if lang not in ("uz", "uz_cyr"):
+        return jsonify({"error": "Noma'lum til"}), 400
+    session["lang"] = lang
+    return jsonify({"ok": True, "lang": lang})
+
+
+@app.route("/api/translations/<lang>")
+def translations_api(lang):
+    from utils import TRANSLATIONS
+    return jsonify(TRANSLATIONS.get(lang, TRANSLATIONS["uz"]))
+
+
+# ========================
+# EXPORT EXCEL
+# ========================
+@app.route("/api/export/excel")
+@login_required
+def export_excel():
+    """Sensor ma'lumotlarini Excel formatida eksport"""
+    try:
+        if df is None or df.empty:
+            return "Ma'lumot yo'q", 404
+        latest = get_latest()
+        output = io.BytesIO()
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            latest.to_excel(writer, sheet_name='Sensorlar', index=False)
+            # Tuman statistikasi
+            district_stats = latest.groupby("District").agg(
+                Jami=("SensorID", "count"),
+                Havfsiz=("Fault", lambda x: int((x == 0).sum())),
+                Ogohlantirish=("Fault", lambda x: int((x == 1).sum())),
+                Muammo=("Fault", lambda x: int((x == 2).sum())),
+                Ort_Kuchlanish=("Kuchlanish (V)", "mean"),
+                Ort_Harorat=("Muhit_harorat (C)", "mean"),
+            ).round(2)
+            district_stats.to_excel(writer, sheet_name='Tumanlar')
+        output.seek(0)
+        _audit_log("export_excel")
+        return send_file(
+            output,
+            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            as_attachment=True,
+            download_name=f'monitoring_{datetime.datetime.now().strftime("%Y%m%d_%H%M")}.xlsx'
+        )
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 # --- PDF hisobot ---
 @app.route("/api/export/pdf")
 @login_required
@@ -1012,7 +1762,7 @@ def export_pdf():
     try:
         if df is None or df.empty:
             return "Ma'lumot yo'q", 404
-        latest = df.sort_values("Timestamp").groupby("SensorID").last().reset_index()
+        latest = get_latest()
         total = len(latest)
         safe = int((latest["Fault"] == 0).sum())
         warn = int((latest["Fault"] == 1).sum())
@@ -1097,7 +1847,7 @@ def telegram_test():
         # Joriy holat haqida xabar
         now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
         if df is not None and not df.empty:
-            latest = df.sort_values("Timestamp").groupby("SensorID").last().reset_index()
+            latest = get_latest()
             total = len(latest)
             safe = int((latest["Fault"] == 0).sum())
             warn = int((latest["Fault"] == 1).sum())
@@ -1129,6 +1879,56 @@ def telegram_test():
         return jsonify({"error": str(e)}), 500
 
 # ========================
+# WEBSOCKET LIVE STREAM
+# ========================
+def _emit_live_stats():
+    """Har 30 soniyada barcha ulangan clientlarga yangi statistika yuborish"""
+    if not HAS_SOCKETIO or socketio is None:
+        return
+    import time
+    while True:
+        time.sleep(30)
+        try:
+            if df is not None and not df.empty:
+                latest = get_latest()
+                latest["Fault"] = latest["Fault"].fillna(0).astype(int)
+                total = len(latest)
+                safe = int((latest["Fault"] == 0).sum())
+                warn = int((latest["Fault"] == 1).sum())
+                danger = int((latest["Fault"] == 2).sum())
+                socketio.emit("live_stats", {
+                    "total": total, "safe": safe, "warn": warn, "danger": danger,
+                    "avg_kuchlanish": round(float(latest["Kuchlanish (V)"].mean()), 1),
+                    "avg_harorat": round(float(latest["Muhit_harorat (C)"].mean()), 1),
+                    "avg_chastota": round(float(latest["Chastota (Hz)"].mean()), 2),
+                    "timestamp": datetime.datetime.now().isoformat()
+                })
+        except Exception as e:
+            logger.warning(f"Live emit error: {e}")
+
+if HAS_SOCKETIO and socketio is not None:
+    @socketio.on("connect")
+    def ws_connect():
+        logger.info(f"WebSocket client connected")
+
+    @socketio.on("request_stats")
+    def ws_request_stats():
+        if df is not None and not df.empty:
+            latest = get_latest()
+            latest["Fault"] = latest["Fault"].fillna(0).astype(int)
+            emit("live_stats", {
+                "total": len(latest),
+                "safe": int((latest["Fault"] == 0).sum()),
+                "warn": int((latest["Fault"] == 1).sum()),
+                "danger": int((latest["Fault"] == 2).sum()),
+                "avg_kuchlanish": round(float(latest["Kuchlanish (V)"].mean()), 1),
+                "avg_harorat": round(float(latest["Muhit_harorat (C)"].mean()), 1),
+                "avg_chastota": round(float(latest["Chastota (Hz)"].mean()), 2),
+                "timestamp": datetime.datetime.now().isoformat()
+            })
+
+
+# ========================
 # ERROR HANDLERS
 # ========================
 @app.errorhandler(404)
@@ -1139,6 +1939,59 @@ def not_found(error):
 def server_error(error):
     logger.error(f"Server error: {error}")
     return render_template("error.html", error_code=500, message="Serverda xatolik!"), 500
+
+# ========================
+# HEALTH CHECK & METRICS (uptime monitoring uchun)
+# ========================
+_app_start_ts = _time.time()
+_request_counter = {"total": 0, "errors": 0}
+
+@app.before_request
+def _count_request():
+    _request_counter["total"] += 1
+
+@app.errorhandler(500)
+def _count_error(e):
+    _request_counter["errors"] += 1
+    return jsonify({"error": "Server xatosi"}), 500
+
+@app.route("/healthz")
+@limiter.exempt
+def healthz():
+    """Liveness probe — server ishlamoqda."""
+    return jsonify({
+        "status": "ok",
+        "uptime_sec": int(_time.time() - _app_start_ts),
+        "data_loaded": df is not None,
+        "model_loaded": hybrid_model is not None,
+        "rows": int(len(df)) if df is not None else 0,
+    })
+
+@app.route("/metrics")
+@limiter.exempt
+def metrics():
+    """Prometheus-uslubidagi oddiy metrikalar."""
+    uptime = int(_time.time() - _app_start_ts)
+    cache_age = int(_time.time() - _latest_cache["ts"]) if _latest_cache["ts"] else -1
+    lines = [
+        "# HELP app_uptime_seconds Server uptime",
+        "# TYPE app_uptime_seconds counter",
+        f"app_uptime_seconds {uptime}",
+        "# HELP app_requests_total Total HTTP requests",
+        "# TYPE app_requests_total counter",
+        f"app_requests_total {_request_counter['total']}",
+        "# HELP app_errors_total Total 5xx errors",
+        "# TYPE app_errors_total counter",
+        f"app_errors_total {_request_counter['errors']}",
+        "# HELP app_data_rows Loaded sensor rows",
+        "# TYPE app_data_rows gauge",
+        f"app_data_rows {len(df) if df is not None else 0}",
+        "# HELP app_latest_cache_age_seconds Age of latest cache",
+        "# TYPE app_latest_cache_age_seconds gauge",
+        f"app_latest_cache_age_seconds {cache_age}",
+    ]
+    return ("\n".join(lines) + "\n", 200, {"Content-Type": "text/plain; charset=utf-8"})
+
 
 # ========================
 # MAIN
@@ -1171,9 +2024,9 @@ if __name__ == "__main__":
         if not os.path.exists(BOT_FILE):
             logger.warning(f"⚠️ telegram_bot.py topilmadi: {BOT_FILE}")
             return
-        token = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
+        token = read_bot_token() or os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
         if not token:
-            logger.warning("⚠️ TELEGRAM_BOT_TOKEN .env faylida yo'q — bot ishga tushirilmadi.")
+            logger.warning("⚠️ Bot token topilmadi (bot_token.txt yoki .env) — bot ishga tushirilmadi.")
             return
         try:
             python_exe = sys.executable
@@ -1206,5 +2059,12 @@ if __name__ == "__main__":
                 pass
     atexit.register(_cleanup_bot)
 
+    # Start live stats emitter thread
+    if HAS_SOCKETIO:
+        threading.Thread(target=_emit_live_stats, daemon=True).start()
+
     logger.info("🚀 Server 0.0.0.0:5000 ishga tushmoqda")
-    app.run(host="0.0.0.0", port=5000, debug=True, use_reloader=False)
+    if HAS_SOCKETIO and socketio is not None:
+        socketio.run(app, host="0.0.0.0", port=5000, debug=True, use_reloader=False, allow_unsafe_werkzeug=True)
+    else:
+        app.run(host="0.0.0.0", port=5000, debug=True, use_reloader=False)

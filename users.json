@@ -6,7 +6,11 @@
     "last_name": "G'aybullayev",
     "username": "@gaybullayeev19",
     "district": "Yunusobod",
-    "joined": "2026-04-15 21:07:45"
+    "joined": "2026-04-15 21:07:45",
+    "web_password_hash": "343092888b06aa264aba0217b082f7b2e4e196010fa687f146ab8cbf373a7773",
+    "role": "user",
+    "latitude": 41.2995,
+    "longitude": 69.2641
   },
   {
     "id": 6073844631,
@@ -15,7 +19,12 @@
     "last_name": "Aliyev",
     "username": "@jahonshoh19",
     "district": "Yakkasaroy",
-    "joined": "2026-04-15 21:40:09"
+    "joined": "2026-04-15 21:40:09",
+    "latitude": 41.374044,
+    "longitude": 69.296025,
+    "web_password_hash": "7ca38d40e04a6e3241aeacce1f950f9535e404d8b143cb398bbe875e9b040ab1",
+    "role": "user",
+    "silent_mode": true
   },
   {
     "id": 5274028223,
@@ -33,6 +42,10 @@
     "last_name": "Haloyev",
     "username": "",
     "district": "Mirobod",
-    "joined": "2026-04-23 22:59:03"
+    "joined": "2026-04-23 22:59:03",
+    "latitude": 41.374036,
+    "longitude": 69.295997,
+    "web_password_hash": "75f24c96ae6a1b00bf62da7a017784363d0ea64632488c324999299495c07153",
+    "role": "user"
   }
 ]

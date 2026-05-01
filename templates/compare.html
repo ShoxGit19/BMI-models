@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Taqqoslash · ElectroGrid Monitoring</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{url_for('static', filename='style.css')}}">
+  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+  <style>
+    .compare-card {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 1.5rem;
+      box-shadow: var(--shadow-xs);
+    }
+    .compare-card h3 {
+      font-size: 1.3rem;
+      font-weight: 800;
+      margin-bottom: 1rem;
+    }
+    .compare-card .stat-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.6rem 0;
+      border-bottom: 1px solid var(--border-subtle);
+      font-size: 0.88rem;
+    }
+    .compare-card .stat-row:last-child { border-bottom: none; }
+    .compare-card .stat-row .label { color: var(--text-secondary); font-weight: 500; }
+    .compare-card .stat-row .val { font-weight: 700; color: var(--text-primary); }
+    .compare-bar {
+      height: 8px;
+      border-radius: 4px;
+      background: var(--bg-subtle);
+      margin-top: 4px;
+      overflow: hidden;
+    }
+    .compare-bar .fill-a { background: var(--brand-primary); height: 100%; float: left; border-radius: 4px; }
+    .compare-bar .fill-b { background: var(--accent-cyan); height: 100%; float: right; border-radius: 4px; }
+    .selector-group {
+      display: flex;
+      gap: 0.75rem;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .vs-badge {
+      display: flex; align-items: center; justify-content: center;
+      width: 48px; height: 48px;
+      background: var(--gradient-primary);
+      color: white;
+      font-weight: 900;
+      font-size: 1rem;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+  </style>
+</head>
+<body>
+  {% include 'navbar.html' %}
+
+  <section class="page-hero">
+    <div class="container-fluid px-4">
+      <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+        <div>
+          <h1><i class="fas fa-code-compare me-2"></i>Taqqoslash Dashboardi</h1>
+          <p class="mb-0">Ikki tuman yoki ikki sensorni yonma-yon solishtiring</p>
+        </div>
+        <a href="/" class="btn-back"><i class="fas fa-arrow-left"></i> Orqaga</a>
+      </div>
+    </div>
+  </section>
+
+  <main class="py-4">
+    <div class="container-fluid px-4">
+      <!-- Controls -->
+      <div class="compare-card mb-4">
+        <div class="d-flex flex-wrap align-items-center gap-3">
+          <div>
+            <label class="form-label fw-bold mb-1" style="font-size:0.8rem;color:var(--text-muted);">Taqqoslash turi</label>
+            <select id="compare-type" class="form-select form-select-sm" style="width:160px;" onchange="updateSelectors()">
+              <option value="district">Tuman vs Tuman</option>
+              <option value="sensor">Sensor vs Sensor</option>
+            </select>
+          </div>
+
+          <div class="selector-group">
+            <div>
+              <label class="form-label fw-bold mb-1" style="font-size:0.8rem;color:var(--text-muted);">Birinchi (A)</label>
+              <select id="select-a" class="form-select form-select-sm" style="width:170px;"></select>
+            </div>
+
+            <div class="vs-badge align-self-end mb-1">VS</div>
+
+            <div>
+              <label class="form-label fw-bold mb-1" style="font-size:0.8rem;color:var(--text-muted);">Ikkinchi (B)</label>
+              <select id="select-b" class="form-select form-select-sm" style="width:170px;"></select>
+            </div>
+
+            <button class="btn btn-primary align-self-end" onclick="runCompare()">
+              <i class="fas fa-scale-balanced me-1"></i> Taqqoslash
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Results -->
+      <div id="compare-loading" style="display:none;" class="text-center py-5">
+        <div class="spinner-border text-primary"></div>
+        <p class="mt-2 text-muted">Taqqoslanmoqda...</p>
+      </div>
+
+      <div id="compare-results" style="display:none;">
+        <div class="row g-3">
+          <!-- Side A -->
+          <div class="col-md-5">
+            <div class="compare-card" id="card-a">
+              <div class="d-flex align-items-center gap-2 mb-3">
+                <div style="width:12px;height:12px;border-radius:50%;background:var(--brand-primary);"></div>
+                <h3 class="mb-0" id="name-a">--</h3>
+              </div>
+              <div id="stats-a"></div>
+            </div>
+          </div>
+
+          <!-- Comparison chart -->
+          <div class="col-md-2 d-flex align-items-center justify-content-center">
+            <div id="status-summary" class="text-center"></div>
+          </div>
+
+          <!-- Side B -->
+          <div class="col-md-5">
+            <div class="compare-card" id="card-b">
+              <div class="d-flex align-items-center gap-2 mb-3">
+                <div style="width:12px;height:12px;border-radius:50%;background:var(--accent-cyan);"></div>
+                <h3 class="mb-0" id="name-b">--</h3>
+              </div>
+              <div id="stats-b"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Radar Chart -->
+        <div class="compare-card mt-3">
+          <div style="font-weight:700;font-size:0.95rem;margin-bottom:0.5rem;">
+            <i class="fas fa-chart-radar me-1" style="color:var(--brand-primary);"></i>
+            Parametrlar taqqoslash diagrammasi
+          </div>
+          <div id="radar-chart" style="height:400px;"></div>
+        </div>
+
+        <!-- Bar comparison -->
+        <div class="compare-card mt-3">
+          <div style="font-weight:700;font-size:0.95rem;margin-bottom:0.5rem;">
+            <i class="fas fa-chart-bar me-1" style="color:var(--accent-cyan);"></i>
+            Parametrlar — bar diagramma
+          </div>
+          <div id="bar-chart" style="height:350px;"></div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer class="text-center mt-4">
+    <div class="container-fluid px-4">
+      <div>© 2026 Toshkent Elektr Monitoring · Yaratuvchi: G'aybullayev Shohjahon</div>
+    </div>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    const DISTRICTS = ["Bektemir","Chilonzor","Mirabad","Mirobod","Mirzo Ulug'bek","Olmazor",
+                       "Sergeli","Shayxontohur","Uchtepa","Yakkasaroy","Yashnobod","Yunusobod"];
+
+    let allSensors = [];
+
+    async function loadSensors() {
+      try {
+        const r = await fetch('/api/map-data');
+        const data = await r.json();
+        allSensors = data.map(d => d.SensorID).sort();
+      } catch(e) {}
+    }
+    loadSensors();
+
+    function updateSelectors() {
+      const type = document.getElementById('compare-type').value;
+      const sa = document.getElementById('select-a');
+      const sb = document.getElementById('select-b');
+      sa.innerHTML = '';
+      sb.innerHTML = '';
+
+      if (type === 'district') {
+        DISTRICTS.forEach(d => {
+          sa.innerHTML += `<option value="${d}">${d}</option>`;
+          sb.innerHTML += `<option value="${d}">${d}</option>`;
+        });
+        sb.selectedIndex = 1;
+      } else {
+        allSensors.slice(0, 200).forEach(s => {
+          sa.innerHTML += `<option value="${s}">${s}</option>`;
+          sb.innerHTML += `<option value="${s}">${s}</option>`;
+        });
+        if (sb.options.length > 1) sb.selectedIndex = 1;
+      }
+    }
+    updateSelectors();
+
+    function renderStats(container, data) {
+      const statusColors = { safe: 'var(--color-success)', warn: 'var(--color-warning)', danger: 'var(--color-danger)' };
+      let html = `
+        <div class="stat-row">
+          <span class="label">Jami sensorlar</span>
+          <span class="val">${data.total}</span>
+        </div>
+        <div class="stat-row">
+          <span class="label">🟢 Havfsiz</span>
+          <span class="val" style="color:${statusColors.safe}">${data.safe}</span>
+        </div>
+        <div class="stat-row">
+          <span class="label">🟡 Ogohlantirish</span>
+          <span class="val" style="color:${statusColors.warn}">${data.warn}</span>
+        </div>
+        <div class="stat-row">
+          <span class="label">🔴 Muammo</span>
+          <span class="val" style="color:${statusColors.danger}">${data.danger}</span>
+        </div>
+        <hr style="margin:0.5rem 0;">
+      `;
+      if (data.params) {
+        for (const [name, val] of Object.entries(data.params)) {
+          html += `<div class="stat-row">
+            <span class="label">${name}</span>
+            <span class="val">${val}</span>
+          </div>`;
+        }
+      }
+      container.innerHTML = html;
+    }
+
+    async function runCompare() {
+      const type = document.getElementById('compare-type').value;
+      const a = document.getElementById('select-a').value;
+      const b = document.getElementById('select-b').value;
+
+      if (!a || !b || a === b) {
+        alert('Ikki xil element tanlang!');
+        return;
+      }
+
+      document.getElementById('compare-loading').style.display = 'block';
+      document.getElementById('compare-results').style.display = 'none';
+
+      try {
+        const r = await fetch(`/api/compare?type=${type}&a=${encodeURIComponent(a)}&b=${encodeURIComponent(b)}`);
+        const data = await r.json();
+
+        if (data.error) {
+          alert(data.error);
+          document.getElementById('compare-loading').style.display = 'none';
+          return;
+        }
+
+        document.getElementById('name-a').textContent = data.a.name;
+        document.getElementById('name-b').textContent = data.b.name;
+        renderStats(document.getElementById('stats-a'), data.a);
+        renderStats(document.getElementById('stats-b'), data.b);
+
+        // Summary
+        const totalA = data.a.danger;
+        const totalB = data.b.danger;
+        let summaryHtml = '';
+        if (totalA > totalB) {
+          summaryHtml = `<div style="color:var(--color-danger);font-weight:700;font-size:0.85rem;">${data.a.name} ko'proq muammoli</div>`;
+        } else if (totalB > totalA) {
+          summaryHtml = `<div style="color:var(--color-danger);font-weight:700;font-size:0.85rem;">${data.b.name} ko'proq muammoli</div>`;
+        } else {
+          summaryHtml = `<div style="color:var(--color-success);font-weight:700;font-size:0.85rem;">Teng holat</div>`;
+        }
+        document.getElementById('status-summary').innerHTML = summaryHtml;
+
+        // Radar Chart
+        const params = data.a.params;
+        const labels = Object.keys(params);
+        const valA = Object.values(data.a.params);
+        const valB = Object.values(data.b.params);
+
+        Plotly.newPlot('radar-chart', [
+          { type: 'scatterpolar', r: valA.concat([valA[0]]), theta: labels.concat([labels[0]]),
+            fill: 'toself', name: data.a.name, line: { color: '#2563EB' }, fillcolor: 'rgba(37,99,235,0.15)' },
+          { type: 'scatterpolar', r: valB.concat([valB[0]]), theta: labels.concat([labels[0]]),
+            fill: 'toself', name: data.b.name, line: { color: '#06B6D4' }, fillcolor: 'rgba(6,182,212,0.15)' }
+        ], {
+          polar: { radialaxis: { visible: true } },
+          margin: { t: 30, b: 30, l: 60, r: 60 },
+          paper_bgcolor: 'transparent', plot_bgcolor: 'transparent',
+          font: { family: 'Inter', color: getComputedStyle(document.documentElement).getPropertyValue('--text-primary') },
+          legend: { orientation: 'h', y: -0.1 }
+        }, { responsive: true });
+
+        // Bar Chart
+        Plotly.newPlot('bar-chart', [
+          { x: labels, y: valA, type: 'bar', name: data.a.name, marker: { color: '#2563EB', borderRadius: 6 } },
+          { x: labels, y: valB, type: 'bar', name: data.b.name, marker: { color: '#06B6D4', borderRadius: 6 } }
+        ], {
+          barmode: 'group',
+          margin: { t: 20, b: 40, l: 50, r: 20 },
+          paper_bgcolor: 'transparent', plot_bgcolor: 'transparent',
+          font: { family: 'Inter', color: getComputedStyle(document.documentElement).getPropertyValue('--text-primary') },
+          legend: { orientation: 'h', y: -0.15 }
+        }, { responsive: true });
+
+        document.getElementById('compare-loading').style.display = 'none';
+        document.getElementById('compare-results').style.display = 'block';
+      } catch(e) {
+        console.error(e);
+        document.getElementById('compare-loading').style.display = 'none';
+        alert('Xatolik yuz berdi');
+      }
+    }
+  </script>
+</body>
+</html>

@@ -276,7 +276,7 @@
       y: gData.map(d => parseFloat(d[c.field]) || 0),
       type:'scatter', mode:'lines',
       fill:'tozeroy', fillcolor: c.color + '14',
-      line:{ color:c.color, width:2.2, shape:'spline' },
+      line:{ color:c.color, width:2.5, shape:'spline', smoothing:1.0 },
       name: c.label
     }], {
       margin:{t:10,r:14,b:40,l:52},

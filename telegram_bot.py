@@ -9,6 +9,7 @@ import logging
 import datetime
 import pickle
 import requests
+import re
 import time as _time
 
 import pandas as pd
@@ -26,6 +27,19 @@ from telegram.ext import (
     CallbackQueryHandler, ConversationHandler, ContextTypes
 )
 
+# ======================== UTILS IMPORT ========================
+from utils import (
+    load_users, save_users, get_user_by_id, get_user_by_phone, update_user,
+    is_registration_complete, create_user_credentials, generate_sensor_coords,
+    find_nearest_sensors, haversine, load_subscribers, save_subscribers,
+    read_bot_token, audit_log,
+    DISTRICTS, DISTRICT_COORDS, FEATURE_COLS,
+    load_alert_state, save_alert_state, predict_failure_probability,
+    load_tickets, get_active_ticket,
+    detect_fault_type, create_incident, get_incident, resolve_incident,
+    get_active_incidents
+)
+
 # ======================== CONFIG ========================
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("telegram_bot")
@@ -35,7 +49,6 @@ try:
     from dotenv import load_dotenv
     load_dotenv()
 except ImportError:
-    # dotenv yo'q bo'lsa, .env ni qo'lda o'qiymiz
     _env_path = os.path.join(os.path.dirname(__file__), ".env")
     if os.path.exists(_env_path):
         with open(_env_path, encoding="utf-8") as _f:
@@ -45,39 +58,12 @@ except ImportError:
                     _k, _v = _line.split("=", 1)
                     os.environ.setdefault(_k.strip(), _v.strip())
 
-BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
+BOT_TOKEN = read_bot_token() or os.environ.get("TELEGRAM_BOT_TOKEN", "")
 SITE_BASE = os.environ.get("SITE_BASE", "http://localhost:5000")
 
-USERS_FILE = "users.json"
-SUBSCRIBERS_FILE = "subscribers.json"
 ADMIN_USERNAME = "gaybullayeev19"
 
 REG_PHONE, REG_FIRSTNAME, REG_LASTNAME, REG_DISTRICT, REG_LOCATION = range(5)
-
-DISTRICTS = [
-    "Bektemir", "Chilonzor", "Mirabad", "Mirobod", "Mirzo Ulug'bek", "Olmazor",
-    "Sergeli", "Shayxontohur", "Uchtepa", "Yakkasaroy", "Yashnobod", "Yunusobod"
-]
-
-DISTRICT_COORDS = {
-    "Bektemir":        (41.2092, 69.3347),
-    "Chilonzor":       (41.2557, 69.2044),
-    "Mirabad":         (41.2855, 69.2641),
-    "Mirobod":         (41.2855, 69.2641),
-    "Mirzo Ulug'bek":  (41.3385, 69.3347),
-    "Olmazor":         (41.3543, 69.2121),
-    "Sergeli":         (41.2321, 69.2121),
-    "Shayxontohur":    (41.3275, 69.2285),
-    "Uchtepa":         (41.2995, 69.1842),
-    "Yakkasaroy":      (41.2995, 69.2641),
-    "Yashnobod":       (41.3385, 69.3347),
-    "Yunusobod":       (41.3543, 69.3347),
-}
-
-FEATURE_COLS = [
-    "Muhit_harorat (C)", "Shamol_tezligi (km/h)", "Chastota (Hz)", "Kuchlanish (V)",
-    "Vibratsiya", "Sim_mexanik_holati (%)", "Atrof_muhit_humidity (%)", "Quvvati (kW)"
-]
 
 # ======================== GLOBALS ========================
 df = None
@@ -89,9 +75,16 @@ _last_err = {"msg": None, "ts": 0}
 def load_data():
     global df
     try:
-        df1 = pd.read_csv("data/sensor_data_part1.csv")
-        df2 = pd.read_csv("data/sensor_data_part2.csv")
-        df = pd.concat([df1, df2], ignore_index=True)
+        # 1) Parquet (10× tezroq)
+        if os.path.exists("data/sensor_data.parquet"):
+            df = pd.read_parquet("data/sensor_data.parquet", engine="pyarrow")
+            for col in ("District", "SensorID"):
+                if col in df.columns and str(df[col].dtype) == "category":
+                    df[col] = df[col].astype(str)
+        else:
+            df1 = pd.read_csv("data/sensor_data_part1.csv")
+            df2 = pd.read_csv("data/sensor_data_part2.csv")
+            df = pd.concat([df1, df2], ignore_index=True)
         if "Fault" in df.columns:
             try:
                 import numpy as _np
@@ -130,63 +123,11 @@ def load_model():
         print(f"Modelni yuklashda xatolik: {e}")
         hybrid_model = None
 
-# ======================== USER MANAGEMENT ========================
-def load_users():
-    if os.path.exists(USERS_FILE):
-        with open(USERS_FILE, "r", encoding="utf-8") as f:
-            try:
-                return json.load(f)
-            except Exception:
-                return []
-    return []
-
-def save_users(users_list):
-    with open(USERS_FILE, "w", encoding="utf-8") as f:
-        json.dump(users_list, f, ensure_ascii=False, indent=2)
-
-def get_user_by_id(user_id):
-    for u in load_users():
-        if u.get("id") == user_id:
-            return u
-    return None
-
-def update_user(user_id, **kwargs):
-    users = load_users()
-    for u in users:
-        if u.get("id") == user_id:
-            u.update(kwargs)
-            save_users(users)
-            return True
-    return False
-
-def load_subscribers():
-    if os.path.exists(SUBSCRIBERS_FILE):
-        with open(SUBSCRIBERS_FILE, "r", encoding="utf-8") as f:
-            try:
-                return set(json.load(f))
-            except Exception:
-                return set()
-    return set()
-
-def save_subscribers(subs):
-    with open(SUBSCRIBERS_FILE, "w", encoding="utf-8") as f:
-        json.dump(list(subs), f, ensure_ascii=False, indent=2)
-
 def is_admin(update: Update) -> bool:
     user = update.effective_user
     if user is None:
         return False
     return (user.username or "").lower() == ADMIN_USERNAME.lower()
-
-# ======================== UTILS ========================
-def haversine(lat1, lon1, lat2, lon2):
-    """Ikki koordinata orasidagi masofani km da qaytaradi."""
-    R = 6371
-    d_lat = math.radians(lat2 - lat1)
-    d_lon = math.radians(lon2 - lon1)
-    a = (math.sin(d_lat / 2) ** 2
-         + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(d_lon / 2) ** 2)
-    return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
 
 async def error_handler(update, context):
     msg = str(context.error)
@@ -424,6 +365,23 @@ async def reg_location(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
     user_data = get_user_by_id(user.id)
+
+    # ===== AUTO-PAROL: Web login uchun parol yaratish =====
+    login_name, raw_password = create_user_credentials(user.id)
+    if login_name and raw_password:
+        await update.message.reply_text(
+            f"🔐 *Web tizimga kirish maʼlumotlaringiz:*\n\n"
+            f"👤 Login: `{login_name}`\n"
+            f"🔑 Parol: `{raw_password}`\n\n"
+            f"🌐 Sayt: {SITE_BASE}\n\n"
+            f"⚠️ Parolni xavfsiz joyda saqlang!",
+            parse_mode="Markdown"
+        )
+        audit_log("user_registered", user=str(user.id), details={
+            "phone": login_name,
+            "district": user_data.get("district", "")
+        })
+
     await update.message.reply_text(
         f"🎉 Ro'yxatdan o'tish yakunlandi!\n\n"
         f"👤 {user_data.get('first_name','')} {user_data.get('last_name','')}\n"
@@ -434,9 +392,76 @@ async def reg_location(update: Update, context: ContextTypes.DEFAULT_TYPE):
     return ConversationHandler.END
 
 # ======================== COMMANDS ========================
+async def ask_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """🤖 AI chatbot — tabiiy tilda savol berib, sensor ma'lumotlari haqida javob olish."""
+    try:
+        from chatbot_engine import answer as _ai_answer
+    except Exception as e:
+        await update.message.reply_text(f"⚠️ AI engine yuklanmadi: {e}")
+        return
+
+    if not context.args:
+        await update.message.reply_text(
+            "🤖 *AI yordamchi*\n\n"
+            "Savolingizni yozing:\n"
+            "`/ask Chilonzorda muammo bormi?`\n"
+            "`/ask S0123 holati`\n"
+            "`/ask eng past kuchlanish`\n"
+            "`/ask 200V dan past sensorlar`",
+            parse_mode="Markdown",
+        )
+        return
+
+    question = " ".join(context.args)
+    latest = df.sort_values("Timestamp").groupby("SensorID").last().reset_index() if df is not None else None
+    if latest is not None and "Fault" in latest.columns:
+        latest = latest.copy()
+        latest["Fault"] = latest["Fault"].fillna(0).astype(int)
+
+    try:
+        result = _ai_answer(question, df=latest)
+    except Exception as e:
+        await update.message.reply_text(f"⚠️ Xatolik: {e}")
+        return
+
+    text = result.get("text", "Javob yo'q")
+    # Telegram Markdown sanitization (`_` va `*` ga ehtiyot)
+    text_md = text.replace("_", "\\_")
+
+    # Cards'larni inline buttons sifatida qo'shamiz
+    keyboard_rows = []
+    for c in (result.get("cards") or [])[:6]:
+        title = c.get("title", "")
+        link = c.get("link", "")
+        if link.startswith("/"):
+            # Sensor sahifasi → bot komandasiga aylantirish
+            sensor_match = re.search(r"/sensor/(S\d+)", link)
+            if sensor_match:
+                keyboard_rows.append([InlineKeyboardButton(
+                    f"🔍 {title}",
+                    callback_data=f"sensor_{sensor_match.group(1)}"
+                )])
+                continue
+        keyboard_rows.append([InlineKeyboardButton(f"➡️ {title}", callback_data="noop")])
+
+    # Quick replies — instructions sifatida
+    if result.get("quick_replies"):
+        text_md += "\n\n💡 _Tezkor savollar:_\n"
+        for q in result["quick_replies"][:4]:
+            text_md += f"`/ask {q}`\n"
+
+    reply_markup = InlineKeyboardMarkup(keyboard_rows) if keyboard_rows else None
+    try:
+        await update.message.reply_text(text_md, parse_mode="Markdown", reply_markup=reply_markup, disable_web_page_preview=True)
+    except Exception:
+        # Markdown xatosi bo'lsa, plain text yuborish
+        await update.message.reply_text(text, reply_markup=reply_markup)
+
+
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = (
         "⚡ *Bot buyruqlari:*\n\n"
+        "🤖 /ask <savol> — AI yordamchi (tabiiy til)\n"
         "📊 /stats — Umumiy statistika\n"
         "🔮 /forecast — 7 kunlik prognoz\n"
         "🏘️ /districts — Tumanlar bo'yicha\n"
@@ -452,14 +477,19 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "🕐 /history S001 7 — Sensor tarixi\n"
         "🔎 /search Chilonzor — Tuman qidiruv\n"
         "🔎 /filter danger — Holat filtri\n"
-        "📥 /report — CSV + PDF hisobot\n"
-        "📥 /csv S001 — Sensor CSV\n"
+        "� /report — PDF hisobot\n"
+        "� /report — PDF hisobot\n"
         "🗺️ /map Chilonzor — Tuman xaritasi\n"
         "📊 /dashboard — Vizual panel\n"
         "📍 /near\\_sensors — Eng yaqin sensorlar\n"
+        "� /risk — 24h buzilish ehtimoli (yaqin)\n"
+        "🗺 /zones — Tumanlar xavf darajasi\n"
+        "🛠 /tickets — Faol ta'mirlash buyurtmalari\n"
+        "📍 /mylocation — GPS-ni yangilash\n"
         "🔔 /subscribe — Auto-alert obuna\n"
         "🔕 /unsubscribe — Obunani bekor\n"
         "🌙 /silent — Sokin rejim on/off\n"
+        "🧪 /alert\\_test — (admin) alert testi\n"
         "👤 /admin — Admin panel\n\n"
         "_Yaratuvchi: G'aybullayev Shohjahon (@gaybullayeev19)_"
     )
@@ -636,8 +666,29 @@ async def sensor_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"⚙️ Quvvat: {latest.get('Quvvati (kW)',3):.2f}kW\n\n"
         f"📉 ✅{fc.get(0,0)} | ⚠️{fc.get(1,0)} | 🔴{fc.get(2,0)}"
     )
-    keyboard = [[InlineKeyboardButton("🔙 Bosh menyu", callback_data="menu")]]
-    await update.message.reply_text(text, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
+
+    # Sensor koordinatasi — navigatsiya tugmalari
+    s_lat = float(latest.get("Latitude", 0))
+    s_lon = float(latest.get("Longitude", 0))
+    nav_kb = []
+    if s_lat and s_lon:
+        text += f"\n📌 *Koordinata:* `{s_lat:.5f}, {s_lon:.5f}`"
+        nav_kb.append([
+            InlineKeyboardButton("🗺 Google Maps",
+                                  url=f"https://www.google.com/maps?q={s_lat},{s_lon}"),
+            InlineKeyboardButton("🧭 Yandex Maps",
+                                  url=f"https://yandex.com/maps/?pt={s_lon},{s_lat}&z=17&l=map"),
+        ])
+    nav_kb.append([InlineKeyboardButton("🔙 Bosh menyu", callback_data="menu")])
+    await update.message.reply_text(text, parse_mode="Markdown",
+                                     reply_markup=InlineKeyboardMarkup(nav_kb))
+
+    # Telegram-ning native location pin'ini ham yuboramiz
+    if s_lat and s_lon:
+        try:
+            await update.message.reply_location(latitude=s_lat, longitude=s_lon)
+        except Exception as e:
+            logger.warning(f"Sensor location yuborilmadi: {e}")
 
 
 async def model_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -1049,7 +1100,7 @@ async def filter_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def report_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """CSV + PDF hisobot."""
+    """PDF hisobot (CSV bot orqali berilmaydi)."""
     if df is None or df.empty:
         await update.message.reply_text("❌ Ma'lumot yuklanmagan!")
         return
@@ -1062,17 +1113,7 @@ async def report_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     now_str = datetime.datetime.now().strftime("%Y%m%d_%H%M")
     keyboard = [[InlineKeyboardButton("🔙 Bosh menyu", callback_data="menu")]]
 
-    # CSV
-    csv_buf = io.BytesIO()
-    report_df.to_csv(csv_buf, index=False, encoding="utf-8-sig")
-    csv_buf.seek(0)
-    await update.message.reply_document(
-        document=csv_buf, filename=f"hisobot_{now_str}.csv",
-        caption=f"📥 CSV Hisobot — {len(report_df)} sensor",
-        reply_markup=InlineKeyboardMarkup(keyboard)
-    )
-
-    # PDF
+    # PDF (CSV bot orqali berilmaydi — ma'lumot xavfsizligi uchun)
     try:
         from fpdf import FPDF
         total = len(report_df)
@@ -1127,63 +1168,119 @@ async def report_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def csv_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not context.args:
-        await update.message.reply_text("⚠️ Masalan: /csv S001")
-        return
-    sensor_id = context.args[0].upper()
-    if df is None or df.empty:
-        await update.message.reply_text("❌ Ma'lumot yuklanmagan!")
-        return
-    sensor_df = df[df["SensorID"] == sensor_id].sort_values("Timestamp")
-    if sensor_df.empty:
-        await update.message.reply_text(f"❌ *{sensor_id}* topilmadi!", parse_mode="Markdown")
-        return
-    buf = io.BytesIO()
-    sensor_df.to_csv(buf, index=False, encoding="utf-8-sig"); buf.seek(0)
-    keyboard = [[InlineKeyboardButton("🔙 Bosh menyu", callback_data="menu")]]
-    await update.message.reply_document(document=buf, filename=f"{sensor_id}_data.csv",
-                                        caption=f"📥 *{sensor_id}* — {len(sensor_df)} yozuv",
-                                        parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
+    """CSV eksport — BOT ORQALI O'CHIRILGAN (ma'lumot xavfsizligi).
+    Foydalanuvchilar veb dashboarddan PDF/Excel oladi."""
+    keyboard = [[InlineKeyboardButton("📊 Dashboard", callback_data="dashboard"),
+                 InlineKeyboardButton("🔙 Bosh menyu", callback_data="menu")]]
+    await update.message.reply_text(
+        "🚫 *CSV eksport bot orqali yopilgan*\n\n"
+        "Ma'lumot xavfsizligi uchun bot orqali xom CSV fayllar berilmaydi.\n"
+        "Buning o'rniga:\n"
+        "📋 /report — PDF hisobot\n"
+        "📊 /dashboard — vizual dashboard\n"
+        "🌐 Veb saytda — to'liq Excel/CSV eksport",
+        parse_mode="Markdown",
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )
 
 
 # ==================== 🗺️ MAP (Matplotlib) ====================
 
-def _generate_map_image(district):
-    """Matplotlib bilan tuman sensorlari vizual xaritasi (Selenium talab etmaydi)."""
+def _generate_map_image(district, user_lat=None, user_lon=None, highlight_ids=None):
+    """Matplotlib bilan tuman sensorlari vizual xaritasi (REAL koordinatalar bilan).
+    Agar user_lat/lon berilsa — foydalanuvchi nuqtasi ham chiziladi."""
     if df is None or df.empty:
         return None
     latest = df.sort_values("Timestamp").groupby("SensorID").last().reset_index()
-    dd = latest[latest["District"] == district]
+    dd = latest[latest["District"] == district].copy()
     if dd.empty:
         return None
 
-    center = DISTRICT_COORDS.get(district, (41.3111, 69.2797))
-    import numpy as np
-    rng = np.random.default_rng(hash(district) % 2**32)
-    lats = center[0] + rng.uniform(-0.018, 0.018, len(dd))
-    lons = center[1] + rng.uniform(-0.018, 0.018, len(dd))
-    colors = dd["Fault"].map({0: "#2ecc71", 1: "#f39c12", 2: "#e74c3c"}).fillna("#95a5a6").values
+    # REAL koordinatalardan foydalanish
+    lats = dd["Latitude"].astype(float).values
+    lons = dd["Longitude"].astype(float).values
+    faults = dd["Fault"].astype(int).values
+    sids = dd["SensorID"].astype(str).values
+    color_map = {0: "#10B981", 1: "#F59E0B", 2: "#EF4444"}
 
-    fig, ax = plt.subplots(figsize=(8, 6))
-    ax.scatter(lons, lats, c=colors, s=55, alpha=0.85, edgecolors="white", linewidth=0.5)
-    ax.scatter([center[1]], [center[0]], marker="*", c="blue", s=200, zorder=5)
-    ax.set_title(f"🗺️ {district} — Sensorlar xaritasi", fontsize=12, fontweight="bold")
+    fig, ax = plt.subplots(figsize=(9, 8), dpi=120)
+    # Sensor markerlar
+    for lat, lon, f, sid in zip(lats, lons, faults, sids):
+        size = 220 if f == 2 else (150 if f == 1 else 90)
+        ax.scatter([lon], [lat], c=color_map.get(f, "#94A3B8"), s=size,
+                   alpha=0.88, edgecolors="white", linewidths=1.3, zorder=3)
+        # Faqat eng yaqin/muammoli sensorlarning nomini chizish (chig'anoq bo'lmasligi uchun)
+        if highlight_ids and sid in highlight_ids:
+            ax.annotate(sid, (lon, lat),
+                        textcoords="offset points", xytext=(7, 7),
+                        fontsize=8, fontweight="bold", color="#1F2937")
+        elif f == 2:
+            ax.annotate(sid, (lon, lat),
+                        textcoords="offset points", xytext=(6, 6),
+                        fontsize=7, color="#7F1D1D", alpha=0.9)
+
+    # Foydalanuvchi joylashuvi
+    if user_lat is not None and user_lon is not None:
+        ax.scatter([user_lon], [user_lat], marker="*", c="#0EA5E9", s=420,
+                   edgecolors="white", linewidths=2.5, zorder=6, label="Siz")
+        # 1, 2, 5 km radius doiralari
+        for r_km in [1, 2, 5]:
+            r_deg = r_km / 111.0
+            circle = plt.Circle((user_lon, user_lat), r_deg,
+                                fill=False, color="#0EA5E9",
+                                linestyle=":", linewidth=1.0, alpha=0.55)
+            ax.add_patch(circle)
+            ax.annotate(f"{r_km}km",
+                        (user_lon + r_deg * 0.7, user_lat + r_deg * 0.7),
+                        fontsize=7, color="#0EA5E9", alpha=0.75)
+
+    ax.set_title(f"🗺 {district} — Sensorlar xaritasi ({len(dd)} ta)",
+                 fontsize=13, fontweight="bold", pad=12)
     ax.set_xlabel("Longitude"); ax.set_ylabel("Latitude")
-    ax.grid(True, alpha=0.3)
-    patches = [
-        mpatches.Patch(color="#2ecc71", label=f"Havfsiz ({int((dd['Fault']==0).sum())})"),
-        mpatches.Patch(color="#f39c12", label=f"Ogohlantirish ({int((dd['Fault']==1).sum())})"),
-        mpatches.Patch(color="#e74c3c", label=f"Muammo ({int((dd['Fault']==2).sum())})"),
+    ax.grid(True, alpha=0.25, linestyle="--")
+    ax.set_facecolor("#F8FAFC")
+    ax.set_aspect("equal")
+    legend_handles = [
+        mpatches.Patch(color="#10B981",
+                        label=f"Havfsiz ({int((faults==0).sum())})"),
+        mpatches.Patch(color="#F59E0B",
+                        label=f"Ogohlantirish ({int((faults==1).sum())})"),
+        mpatches.Patch(color="#EF4444",
+                        label=f"Muammo ({int((faults==2).sum())})"),
     ]
-    ax.legend(handles=patches, loc="lower right", fontsize=9)
+    if user_lat is not None:
+        legend_handles.insert(0, mpatches.Patch(color="#0EA5E9", label="Siz (★)"))
+    ax.legend(handles=legend_handles, loc="lower right",
+              fontsize=9, framealpha=0.95)
     plt.tight_layout()
     buf = io.BytesIO()
-    fig.savefig(buf, format="png", dpi=130); buf.seek(0); plt.close(fig)
+    fig.savefig(buf, format="png", dpi=120, bbox_inches="tight",
+                facecolor="white", edgecolor="none")
+    buf.seek(0)
+    plt.close(fig)
     return buf
 
 
 async def map_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not context.args:
+    """Foydalanuvchi tumanini avtomatik aniqlaydi va shu tuman xaritasini yuboradi."""
+    user_data = get_user_by_id(update.effective_user.id) or {}
+    user_district = user_data.get("district")
+    user_lat = user_data.get("latitude")
+    user_lon = user_data.get("longitude")
+
+    # 1) Argument bilan: /map Chilonzor
+    if context.args:
+        district_q = " ".join(context.args)
+        matched = [d for d in DISTRICTS if district_q.lower() in d.lower()]
+        if not matched:
+            await update.message.reply_text(f"❌ '{district_q}' tuman topilmadi!")
+            return
+        district = matched[0]
+    # 2) Foydalanuvchi tumani avtomatik
+    elif user_district and user_district in DISTRICTS:
+        district = user_district
+    # 3) Tuman tanlash menyusi
+    else:
         keyboard = []
         row = []
         for d in DISTRICTS:
@@ -1193,23 +1290,91 @@ async def map_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if row:
             keyboard.append(row)
         keyboard.append([InlineKeyboardButton("🔙 Bosh menyu", callback_data="menu")])
-        await update.message.reply_text("🗺️ *Tuman tanlang:*", parse_mode="Markdown",
-                                        reply_markup=InlineKeyboardMarkup(keyboard))
+        await update.message.reply_text(
+            "🗺 *Qaysi tuman xaritasini ko'rsatay?*\n"
+            "_(Profilingizda tuman ko'rsatilmagan)_",
+            parse_mode="Markdown",
+            reply_markup=InlineKeyboardMarkup(keyboard))
         return
 
-    district_q = " ".join(context.args)
-    matched = [d for d in DISTRICTS if district_q.lower() in d.lower()]
-    if not matched:
-        await update.message.reply_text(f"❌ '{district_q}' topilmadi!")
-        return
-    district = matched[0]
+    # Eng yaqin sensorlarni ajratib ko'rsatish (agar foydalanuvchi GPS bersa)
+    highlight = None
+    nearest_info = ""
+    if user_lat and user_lon and df is not None:
+        latest = df.sort_values("Timestamp").groupby("SensorID").last().reset_index()
+        dd = latest[latest["District"] == district].copy()
+        if not dd.empty:
+            dists = []
+            for _, r in dd.iterrows():
+                try:
+                    d_km = haversine(float(user_lat), float(user_lon),
+                                      float(r["Latitude"]), float(r["Longitude"]))
+                    dists.append((d_km, str(r["SensorID"])))
+                except Exception:
+                    pass
+            dists.sort(key=lambda x: x[0])
+            top = dists[:5]
+            highlight = {sid for _, sid in top}
+            nearest_info = "\n\n📏 *Sizga eng yaqin 5 ta:*\n" + "\n".join(
+                [f"  {i+1}. `{sid}` — {dk:.2f} km" for i, (dk, sid) in enumerate(top)]
+            )
+
     coords = DISTRICT_COORDS.get(district, (41.3111, 69.2797))
-    buf = _generate_map_image(district)
-    keyboard = [[InlineKeyboardButton("🔙 Bosh menyu", callback_data="menu")]]
+    buf = _generate_map_image(district,
+                               user_lat=float(user_lat) if user_lat else None,
+                               user_lon=float(user_lon) if user_lon else None,
+                               highlight_ids=highlight)
+    caption = f"🗺 *{district}* tuman xaritasi{nearest_info}"
+    keyboard = [[InlineKeyboardButton("📍 Yaqin sensorlar", callback_data="near_sensors"),
+                 InlineKeyboardButton("🔙 Menyu", callback_data="menu")]]
     if buf:
-        await update.message.reply_photo(photo=buf, caption=f"🗺️ *{district}*",
-                                         parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
-    await update.message.reply_location(latitude=coords[0], longitude=coords[1])
+        await update.message.reply_photo(photo=buf, caption=caption,
+                                         parse_mode="Markdown",
+                                         reply_markup=InlineKeyboardMarkup(keyboard))
+    else:
+        await update.message.reply_text(caption, parse_mode="Markdown",
+                                         reply_markup=InlineKeyboardMarkup(keyboard))
+
+    # === KETMA-KET koordinata pin'lari (har bir yaqin sensor uchun) ===
+    if user_lat and user_lon and df is not None:
+        latest2 = df.sort_values("Timestamp").groupby("SensorID").last().reset_index()
+        dd2 = latest2[latest2["District"] == district].copy()
+        seq = []
+        for _, r in dd2.iterrows():
+            try:
+                d_km = haversine(float(user_lat), float(user_lon),
+                                  float(r["Latitude"]), float(r["Longitude"]))
+                seq.append((d_km, r))
+            except Exception:
+                pass
+        seq.sort(key=lambda x: x[0])
+        ft_emoji = {0: "🟢", 1: "🟡", 2: "🔴"}
+        # Avval foydalanuvchi joylashuvini, keyin har bir yaqin sensorni yuboramiz
+        try:
+            await update.message.reply_location(latitude=float(user_lat), longitude=float(user_lon))
+        except Exception:
+            pass
+        for i, (d_km, r) in enumerate(seq[:5], 1):
+            try:
+                s_lat = float(r["Latitude"]); s_lon = float(r["Longitude"])
+                sid = str(r["SensorID"])
+                fault = int(r.get("Fault", 0))
+                emoji = ft_emoji.get(fault, "⚪")
+                cap = (
+                    f"{i}. {emoji} *{sid}*\n"
+                    f"📏 {d_km:.2f} km · 📍 `{s_lat:.5f}, {s_lon:.5f}`\n"
+                    f"🔌 {r.get('Kuchlanish (V)',0):.1f}V · 🔄 {r.get('Chastota (Hz)',50):.2f}Hz"
+                )
+                kb = InlineKeyboardMarkup([[
+                    InlineKeyboardButton("🗺 Google", url=f"https://www.google.com/maps?q={s_lat},{s_lon}"),
+                    InlineKeyboardButton("🧭 Yandex", url=f"https://yandex.com/maps/?pt={s_lon},{s_lat}&z=17&l=map"),
+                ]])
+                await update.message.reply_location(latitude=s_lat, longitude=s_lon)
+                await update.message.reply_text(cap, parse_mode="Markdown", reply_markup=kb)
+            except Exception as e:
+                logger.warning(f"map seq pin xato {sid}: {e}")
+    else:
+        await update.message.reply_location(latitude=coords[0], longitude=coords[1])
 
 
 # ==================== 📊 DASHBOARD ====================
@@ -1299,36 +1464,84 @@ async def near_sensors_command(update: Update, context: ContextTypes.DEFAULT_TYP
         await update.message.reply_text("❌ Ma'lumot yuklanmagan!")
         return
 
-    user_lat = user_data["latitude"]
-    user_lon = user_data["longitude"]
+    user_lat = float(user_data["latitude"])
+    user_lon = float(user_data["longitude"])
+    user_district = user_data.get("district")
     latest = df.sort_values("Timestamp").groupby("SensorID").last().reset_index()
 
-    import numpy as np
+    # Foydalanuvchi tumani bo'lsa — faqat shu tuman ichidan
+    if user_district and user_district in DISTRICTS:
+        scope = latest[latest["District"] == user_district].copy()
+        scope_label = f"📍 *{user_district}* tumani ichidan"
+    else:
+        scope = latest
+        scope_label = "📍 Barcha tumanlardan"
+
+    # Real koordinatalar bilan masofa hisoblash
     rows = []
-    for _, row in latest.iterrows():
-        district = row.get("District", "")
-        coord = DISTRICT_COORDS.get(district, (41.3111, 69.2797))
-        rng = np.random.default_rng(hash(row["SensorID"]) % 2**32)
-        s_lat = coord[0] + rng.uniform(-0.015, 0.015)
-        s_lon = coord[1] + rng.uniform(-0.015, 0.015)
-        dist_km = haversine(user_lat, user_lon, s_lat, s_lon)
-        rows.append((dist_km, row))
+    for _, row in scope.iterrows():
+        try:
+            s_lat = float(row.get("Latitude", 0))
+            s_lon = float(row.get("Longitude", 0))
+            if not s_lat or not s_lon:
+                continue
+            dist_km = haversine(user_lat, user_lon, s_lat, s_lon)
+            rows.append((dist_km, row, s_lat, s_lon))
+        except Exception:
+            continue
 
     rows.sort(key=lambda x: x[0])
-    top3 = rows[:3]
+    top5 = rows[:5]
+
+    if not top5:
+        await update.message.reply_text("❌ Atrofda sensor topilmadi.")
+        return
 
     ft = {0: "🟢 Havfsiz", 1: "🟡 Ogohlantirish", 2: "🔴 Muammo"}
-    text = "📍 *Sizga eng yaqin 3 ta sensor:*\n━━━━━━━━━━━━━━━━━━━━\n\n"
-    for i, (dist_km, row) in enumerate(top3, 1):
+    text = f"{scope_label}\n*Eng yaqin 5 ta sensor:*\n━━━━━━━━━━━━━━━━━━━━\n\n"
+    for i, (dist_km, row, s_lat, s_lon) in enumerate(top5, 1):
         text += (
             f"{i}. *{row['SensorID']}* — {row.get('District','N/A')}\n"
-            f"   📏 {dist_km:.2f} km\n"
-            f"   📡 {ft.get(int(row.get('Fault',0)),'?')}\n"
-            f"   🔌{row.get('Kuchlanish (V)',0):.1f}V | 🔄{row.get('Chastota (Hz)',50):.2f}Hz\n\n"
+            f"   📏 {dist_km:.2f} km · 📡 {ft.get(int(row.get('Fault',0)),'?')}\n"
+            f"   🔌{row.get('Kuchlanish (V)',0):.1f}V · 🔄{row.get('Chastota (Hz)',50):.2f}Hz\n\n"
         )
 
-    keyboard = [[InlineKeyboardButton("🔙 Bosh menyu", callback_data="menu")]]
-    await update.message.reply_text(text, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
+    # === Static xarita rasmi (REAL koordinatalar) ===
+    try:
+        # Foydalanuvchi tumani ichidagi BARCHA sensorlarni rasmda ko'rsatamiz
+        if user_district and user_district in DISTRICTS:
+            highlight = {str(r[1]["SensorID"]) for r in top5}
+            buf = _generate_map_image(user_district,
+                                       user_lat=user_lat, user_lon=user_lon,
+                                       highlight_ids=highlight)
+        else:
+            # Tuman yo'q — top5 ni ko'rsatamiz
+            buf = None
+        nearest = top5[0]
+        keyboard = [
+            [InlineKeyboardButton(f"🗺 {nearest[1]['SensorID']} — Google Maps",
+                                   url=f"https://www.google.com/maps?q={nearest[2]},{nearest[3]}")],
+            [InlineKeyboardButton("🔙 Bosh menyu", callback_data="menu")]
+        ]
+        if buf:
+            await update.message.reply_photo(
+                photo=buf, caption=text, parse_mode="Markdown",
+                reply_markup=InlineKeyboardMarkup(keyboard)
+            )
+        else:
+            await update.message.reply_text(text, parse_mode="Markdown",
+                                             reply_markup=InlineKeyboardMarkup(keyboard))
+    except Exception as e:
+        logger.warning(f"near_sensors map rendering xato: {e}")
+        keyboard = [[InlineKeyboardButton("🔙 Bosh menyu", callback_data="menu")]]
+        await update.message.reply_text(text, parse_mode="Markdown",
+                                         reply_markup=InlineKeyboardMarkup(keyboard))
+
+    # Eng yaqin sensorning native location pin'i
+    try:
+        await update.message.reply_location(latitude=top5[0][2], longitude=top5[0][3])
+    except Exception:
+        pass
 
 
 async def location_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -1423,7 +1636,327 @@ async def alert_check(context: ContextTypes.DEFAULT_TYPE):
             save_subscribers(subscribers)
 
 
-# ==================== 👤 ADMIN ====================
+# ==================== 🛰 SMART GEOFENCING ALERT ====================
+ALERT_RADIUS_KM = 2.0          # Foydalanuvchini ogohlantirish radiusi (1-2 km)
+ADMIN_DEDUP_SEC = 1800          # 30 daqiqa — bir xil sensor qayta xabar bermasin
+USER_DEDUP_SEC = 3600           # 1 soat — foydalanuvchi qayta xabar bermasin
+
+
+def _maps_keyboard(lat, lon, sensor_id, inc_id=None, include_resolve=False):
+    """Google Maps + Yandex Maps + (ixtiyoriy) Resolve tugmalari."""
+    g_url = f"https://www.google.com/maps?q={lat},{lon}"
+    y_url = f"https://yandex.com/maps/?pt={lon},{lat}&z=16&l=map"
+    rows = [[
+        InlineKeyboardButton("🗺 Google Maps", url=g_url),
+        InlineKeyboardButton("🧭 Yandex Maps", url=y_url),
+    ]]
+    if include_resolve and inc_id:
+        rows.append([InlineKeyboardButton("✅ Muammo hal qilindi", callback_data=f"resolve:{inc_id}")])
+    return InlineKeyboardMarkup(rows)
+
+
+async def realtime_alert_check(context: ContextTypes.DEFAULT_TYPE):
+    """Geofencing: avariya sensoridan 1-2 km radiusdagi foydalanuvchilarni ogohlantirish.
+    + Admin uchun batafsil dispatcher xabari (Google/Yandex Maps tugmalari bilan)."""
+    global df
+    if df is None or df.empty:
+        return
+
+    latest = df.sort_values("Timestamp").groupby("SensorID").last().reset_index()
+    state = load_alert_state()
+    now = datetime.datetime.now()
+    now_iso = now.isoformat()
+
+    users_list = load_users()
+    admins = [u for u in users_list if u.get("role") == "admin"
+              or (u.get("username") or "").lower() == ADMIN_USERNAME.lower()]
+
+    critical_rows = []
+    for _, row in latest.iterrows():
+        try:
+            v = float(row.get("Kuchlanish (V)", 220))
+            fault = int(row.get("Fault", 0))
+            if fault == 2 or v < 170 or v > 250:
+                critical_rows.append(row)
+        except Exception:
+            continue
+
+    if not critical_rows:
+        return
+
+    for row in critical_rows:
+        sid = str(row["SensorID"])
+        sensor_lat = float(row.get("Latitude", 0))
+        sensor_lon = float(row.get("Longitude", 0))
+        district = row.get("District", "?")
+        v = float(row.get("Kuchlanish (V)", 220))
+        fault_type = detect_fault_type(row.to_dict())
+
+        admin_key = f"admin:sensor:{sid}"
+        last_admin = state.get(admin_key)
+        admin_should_send = True
+        if last_admin:
+            try:
+                if (now - datetime.datetime.fromisoformat(last_admin)).total_seconds() < ADMIN_DEDUP_SEC:
+                    admin_should_send = False
+            except Exception:
+                pass
+
+        nearby_users = []
+        for u in users_list:
+            if u.get("role") == "admin":
+                continue
+            lat = u.get("latitude")
+            lon = u.get("longitude")
+            chat_id = u.get("id")
+            if not chat_id or lat is None or lon is None:
+                continue
+            try:
+                d = haversine(float(lat), float(lon), sensor_lat, sensor_lon)
+            except Exception:
+                continue
+            if d > ALERT_RADIUS_KM:
+                continue
+            user_key = f"{chat_id}:{sid}"
+            last = state.get(user_key)
+            if last:
+                try:
+                    if (now - datetime.datetime.fromisoformat(last)).total_seconds() < USER_DEDUP_SEC:
+                        continue
+                except Exception:
+                    pass
+            nearby_users.append((chat_id, d))
+
+        if not nearby_users and not admin_should_send:
+            continue
+
+        notified_ids = [cid for cid, _ in nearby_users]
+        incident = create_incident(
+            sensor_id=sid, district=district, fault_type=fault_type,
+            lat=sensor_lat, lon=sensor_lon, voltage=v,
+            notified_users=notified_ids
+        )
+        inc_id = incident["id"]
+
+        for chat_id, dist in nearby_users:
+            user_text = (
+                f"⚠️ *Diqqat! Hududingizdagi {sid} sensori muammo aniqladi.*\n"
+                f"━━━━━━━━━━━━━━━━━━━━\n"
+                f"📍 Tuman: {district}\n"
+                f"📏 Sizdan masofa: *{dist:.2f} km*\n"
+                f"⚡ Kuchlanish: *{v:.0f}V*\n"
+                f"🔧 Holat: {fault_type}\n\n"
+                f"_Tez orada bartaraf etiladi. Iltimos, xavfsizlik qoidalariga rioya qiling._"
+            )
+            try:
+                await context.bot.send_message(
+                    chat_id=chat_id, text=user_text, parse_mode="Markdown",
+                    reply_markup=_maps_keyboard(sensor_lat, sensor_lon, sid)
+                )
+                state[f"{chat_id}:{sid}"] = now_iso
+                audit_log("geofence_alert", user=str(chat_id),
+                          details={"sensor": sid, "dist_km": round(dist, 2), "incident": inc_id})
+            except Exception as e:
+                logger.warning(f"Geofence alert {chat_id} ga yuborilmadi: {e}")
+
+        if admin_should_send and admins:
+            admin_text = (
+                f"🚨 *AVARIYA — DISPATCHER XABARI*\n"
+                f"━━━━━━━━━━━━━━━━━━━━\n"
+                f"🆔 Incident: `{inc_id}`\n"
+                f"📡 Sensor: `{sid}`\n"
+                f"🏘 Tuman: *{district}*\n"
+                f"📍 Koordinata: `{sensor_lat:.5f}, {sensor_lon:.5f}`\n\n"
+                f"🔴 *Avariya turi:*\n{fault_type}\n\n"
+                f"⚡ Kuchlanish: *{v:.0f}V*\n"
+                f"👥 Ogohlantirilgan foydalanuvchilar: *{len(nearby_users)}*\n"
+                f"📅 Vaqt: {now.strftime('%Y-%m-%d %H:%M:%S')}\n\n"
+                f"_Joyiga borib bartaraf etgach, \"✅ Muammo hal qilindi\" tugmasini bosing._"
+            )
+            for adm in admins:
+                try:
+                    await context.bot.send_message(
+                        chat_id=adm["id"], text=admin_text, parse_mode="Markdown",
+                        reply_markup=_maps_keyboard(sensor_lat, sensor_lon, sid,
+                                                     inc_id=inc_id, include_resolve=True)
+                    )
+                except Exception as e:
+                    logger.warning(f"Admin dispatcher xabari yuborilmadi {adm.get('id')}: {e}")
+            state[admin_key] = now_iso
+            audit_log("dispatcher_alert", user="system",
+                      details={"sensor": sid, "incident": inc_id, "admins": len(admins)})
+
+    save_alert_state(state)
+
+
+# ==================== 👮 ADMIN GROUP ALERT ====================
+async def admin_district_alert(context: ContextTypes.DEFAULT_TYPE):
+    """Agar butun bir tuman fault holatga tushsa — admin uchun xabar."""
+    global df
+    if df is None or df.empty:
+        return
+
+    latest = df.sort_values("Timestamp").groupby("SensorID").last().reset_index()
+    state = load_alert_state()
+    now_iso = datetime.datetime.now().isoformat()
+    alerts = []
+
+    for district, group in latest.groupby("District"):
+        total = len(group)
+        danger = int((group["Fault"] == 2).sum())
+        if total >= 5 and danger / total >= 0.5:
+            key = f"admin:district:{district}"
+            last = state.get(key)
+            if last:
+                try:
+                    if (datetime.datetime.now() - datetime.datetime.fromisoformat(last)).total_seconds() < 7200:
+                        continue
+                except Exception:
+                    pass
+            alerts.append((district, danger, total))
+            state[key] = now_iso
+
+    if not alerts:
+        return
+
+    save_alert_state(state)
+    text = "🚨 *ADMIN OGOHLANTIRISH — YIRIK AVARIYA*\n━━━━━━━━━━━━━━━━━━━━\n\n"
+    for d, dn, t in alerts:
+        text += f"🏘️ *{d}*: {dn}/{t} sensor avariya holatda ({dn*100//t}%)\n"
+    text += f"\n📅 {datetime.datetime.now().strftime('%Y-%m-%d %H:%M')}"
+
+    # Adminlarga yuborish
+    for u in load_users():
+        if u.get("role") == "admin" or (u.get("username") or "").lower() == ADMIN_USERNAME.lower():
+            try:
+                await context.bot.send_message(chat_id=u["id"], text=text, parse_mode="Markdown")
+            except Exception:
+                pass
+
+
+# ==================== 🆕 RISK / ZONES / TICKETS / LOCATION ====================
+
+async def risk_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """24 soat ichida buzilish ehtimoli yuqori bo'lgan eng yaqin sensorlar."""
+    user = update.effective_user
+    user_data = get_user_by_id(user.id)
+    if not user_data or not user_data.get("latitude"):
+        await update.message.reply_text(
+            "📍 Avval joylashuvingizni yuboring: /near_sensors yoki /mylocation"
+        )
+        return
+    lat = float(user_data["latitude"])
+    lon = float(user_data["longitude"])
+    df = data_loader.df
+    if df is None or df.empty:
+        await update.message.reply_text("❌ Maʼlumot yo'q.")
+        return
+    latest = df.sort_values("Timestamp").groupby("SensorID", as_index=False).tail(1)
+    rows = []
+    for _, r in latest.iterrows():
+        try:
+            d_km = haversine(lat, lon, float(r.get("Latitude", 0)), float(r.get("Longitude", 0)))
+            if d_km > 5:
+                continue
+            prob = predict_failure_probability(r.to_dict())
+            rows.append((prob, d_km, r))
+        except Exception:
+            continue
+    rows.sort(key=lambda x: -x[0])
+    rows = rows[:10]
+    if not rows:
+        await update.message.reply_text("✅ 5 km radiusda xavfli sensor topilmadi.")
+        return
+    lines = ["🔮 *24 soat ichida buzilish ehtimoli (Top 10)*\n"]
+    for prob, d_km, r in rows:
+        emoji = "🔴" if prob >= 60 else ("🟡" if prob >= 30 else "🟢")
+        lines.append(f"{emoji} `{r['SensorID']}` — *{prob}%* · {d_km:.2f} km · {r.get('District','?')}")
+    await update.message.reply_text("\n".join(lines), parse_mode="Markdown")
+
+
+async def zones_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Barcha tumanlar bo'yicha xavf darajasi."""
+    df = data_loader.df
+    if df is None or df.empty:
+        await update.message.reply_text("❌ Maʼlumot yo'q.")
+        return
+    latest = df.sort_values("Timestamp").groupby("SensorID", as_index=False).tail(1)
+    lines = ["🗺 *Tumanlar bo'yicha xavf darajasi*\n"]
+    rows = []
+    for district, g in latest.groupby("District"):
+        total = len(g)
+        if total == 0:
+            continue
+        danger = int((g["Fault"] == 2).sum())
+        warn = int((g["Fault"] == 1).sum())
+        risk_pct = round((danger / total) * 100, 1)
+        rows.append((risk_pct, district, total, danger, warn))
+    rows.sort(key=lambda x: -x[0])
+    for risk_pct, district, total, danger, warn in rows:
+        if risk_pct >= 30:
+            emoji = "🔴"
+        elif risk_pct >= 15:
+            emoji = "🟡"
+        else:
+            emoji = "🟢"
+        lines.append(f"{emoji} *{district}* — {risk_pct}% xavf · {danger}🔴 {warn}🟡 / {total}")
+    await update.message.reply_text("\n".join(lines), parse_mode="Markdown")
+
+
+async def tickets_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Faol ta'mirlash buyurtmalari."""
+    tickets = load_tickets()
+    active = [t for t in tickets if t.get("status") != "closed"]
+    if not active:
+        await update.message.reply_text("✅ Hozirda faol ta'mirlash buyurtmasi yo'q.")
+        return
+    lines = [f"🛠 *Faol buyurtmalar: {len(active)}*\n"]
+    for t in active[:20]:
+        status_emoji = "🟡" if t.get("status") == "in_progress" else "🔴"
+        eta = t.get("eta") or "—"
+        lines.append(
+            f"{status_emoji} `#{t['id']}` · `{t.get('sensor_id','?')}`\n"
+            f"   📝 {t.get('issue','—')[:80]}\n"
+            f"   ⏱ ETA: {eta}"
+        )
+    await update.message.reply_text("\n".join(lines), parse_mode="Markdown")
+
+
+async def mylocation_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Foydalanuvchi GPS-ini yangilash."""
+    loc_btn = KeyboardButton("📍 Joylashuvimni yuborish", request_location=True)
+    markup = ReplyKeyboardMarkup([[loc_btn]], resize_keyboard=True, one_time_keyboard=True)
+    await update.message.reply_text(
+        "📍 Joriy joylashuvingizni yuboring (real-time alertlar shu bo'yicha keladi):",
+        reply_markup=markup
+    )
+
+
+async def alert_test_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Admin: real-time alert tizimini sinash (dedup tozalash)."""
+    if not is_admin(update):
+        await update.message.reply_text("🔒 Faqat admin uchun.")
+        return
+    user_data = get_user_by_id(update.effective_user.id)
+    if not user_data or not user_data.get("latitude"):
+        await update.message.reply_text("📍 Avval joylashuvingizni yuboring: /mylocation")
+        return
+    state = load_alert_state()
+    chat_key = str(update.effective_chat.id)
+    cleared = len([k for k in state if chat_key in k])
+    state = {k: v for k, v in state.items() if chat_key not in k}
+    save_alert_state(state)
+    await update.message.reply_text(
+        f"🧪 *Alert testi*\n\n"
+        f"• Tozalandi: *{cleared}* ta dedup yozuv\n"
+        f"• Keyingi tekshiruv: ≤5 daqiqa ichida\n"
+        f"• Radius: 3 km\n"
+        f"• Sizning GPS: `{user_data['latitude']:.4f}, {user_data['longitude']:.4f}`",
+        parse_mode="Markdown"
+    )
+
+
+# ==================== �👤 ADMIN ====================
 
 async def admin_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_admin(update):
@@ -1535,6 +2068,49 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.answer()
     data = query.data
 
+    # ---- Resolve incident (admin tugmasi) ----
+    if data.startswith("resolve:"):
+        inc_id = data.split(":", 1)[1]
+        if not is_admin(update):
+            await query.answer("🔒 Faqat admin", show_alert=True)
+            return
+        inc = get_incident(inc_id)
+        if not inc:
+            await query.edit_message_text("❌ Incident topilmadi.")
+            return
+        if inc.get("status") == "resolved":
+            await query.answer("Bu avariya allaqachon hal qilingan.", show_alert=True)
+            return
+        resolve_incident(inc_id)
+        # Yaqin atrofdagi foydalanuvchilarga "tiklandi" xabari
+        sent_ok = 0
+        for chat_id in inc.get("notified_users", []):
+            try:
+                await context.bot.send_message(
+                    chat_id=chat_id,
+                    text=(
+                        f"✅ *Sizning hududingizda elektr ta'minoti tiklandi.*\n"
+                        f"━━━━━━━━━━━━━━━━━━━━\n"
+                        f"📡 Sensor: `{inc['sensor_id']}`\n"
+                        f"🏘 Tuman: {inc.get('district','')}\n\n"
+                        f"_Xizmatimizdan foydalanganingiz uchun rahmat!_"
+                    ),
+                    parse_mode="Markdown"
+                )
+                sent_ok += 1
+            except Exception:
+                pass
+        audit_log("incident_resolved", user=str(update.effective_user.id),
+                  details={"incident": inc_id, "notified_back": sent_ok})
+        try:
+            await query.edit_message_text(
+                query.message.text + f"\n\n✅ *HAL QILINDI* ({sent_ok} ta foydalanuvchiga xabar yuborildi)",
+                parse_mode="Markdown"
+            )
+        except Exception:
+            await query.message.reply_text(f"✅ Hal qilindi. {sent_ok} ta foydalanuvchiga xabar yuborildi.")
+        return
+
     if data == "menu":
         await query.edit_message_text(
             "⚡ *Elektr Monitoring Bot*\n━━━━━━━━━━━━━━━━━━━━\nQuyidagi tugmalardan birini tanlang:",
@@ -1600,7 +2176,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.edit_message_text("🗺️ *Tuman tanlang:*", parse_mode="Markdown",
                                       reply_markup=InlineKeyboardMarkup(keyboard))
     elif data == "report_check":
-        await query.edit_message_text("📥 *Export:*\n\n🔹 /report — CSV + PDF\n🔹 `/csv S001` — Sensor CSV",
+        await query.edit_message_text("📥 *Export:*\n\n🔹 /report — PDF hisobot\n🔹 /dashboard — vizual dashboard",
                                       parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(_BACK))
     elif data == "subscribe_check":
         await query.edit_message_text("🔔 /subscribe — Obuna\n🔕 /unsubscribe — Bekor",
@@ -1646,6 +2222,109 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await context.bot.send_message(chat_id=update.effective_chat.id, text="❌ Xarita yaratilmadi.")
 
 
+# ==================== MORNING REPORT ====================
+async def morning_report(context: ContextTypes.DEFAULT_TYPE):
+    """Har kuni ertalab 06:00 da barcha subscriberlarga hisobot yuborish."""
+    global df, subscribers
+    if df is None or df.empty:
+        return
+
+    try:
+        total = df["SensorID"].nunique()
+        latest = df.sort_values("Timestamp").groupby("SensorID").last().reset_index()
+
+        danger_count = int((latest["Fault"] == 2).sum()) if "Fault" in latest.columns else 0
+        warning_count = int((latest["Fault"] == 1).sum()) if "Fault" in latest.columns else 0
+        safe_count = total - danger_count - warning_count
+
+        avg_v = latest["Kuchlanish (V)"].mean() if "Kuchlanish (V)" in latest.columns else 0
+        avg_hz = latest["Chastota (Hz)"].mean() if "Chastota (Hz)" in latest.columns else 0
+        avg_t = latest["Muhit_harorat (C)"].mean() if "Muhit_harorat (C)" in latest.columns else 0
+
+        # Ob-havo
+        weather_text = ""
+        try:
+            resp = requests.get(
+                "https://api.open-meteo.com/v1/forecast",
+                params={"latitude": 41.3, "longitude": 69.27, "current_weather": True},
+                timeout=5
+            )
+            if resp.ok:
+                cw = resp.json().get("current_weather", {})
+                weather_text = (
+                    f"\n🌤️ *Ob-havo (Toshkent):*\n"
+                    f"🌡️ {cw.get('temperature', '?')}°C | 💨 {cw.get('windspeed', '?')} km/h\n"
+                )
+        except Exception:
+            pass
+
+        text = (
+            f"☀️ *Ertalabki hisobot — {datetime.datetime.now().strftime('%d.%m.%Y')}*\n\n"
+            f"📊 *Jami sensorlar:* {total}\n"
+            f"✅ Xavfsiz: {safe_count}\n"
+            f"⚠️ Ogohlantirish: {warning_count}\n"
+            f"🔴 Xavfli: {danger_count}\n\n"
+            f"⚡ O'rtacha kuchlanish: {avg_v:.1f} V\n"
+            f"📡 O'rtacha chastota: {avg_hz:.2f} Hz\n"
+            f"🌡️ O'rtacha harorat: {avg_t:.1f}°C\n"
+            f"{weather_text}\n"
+            f"🌐 Dashboard: {SITE_BASE}"
+        )
+
+        sent = 0
+        for chat_id in subscribers:
+            try:
+                # Foydalanuvchi tumani bo'yicha shaxsiy ogohlantirish
+                u = get_user_by_id(chat_id) or {}
+                u_district = u.get("district")
+                personal = ""
+                danger_rows = []
+                if u_district and u_district in DISTRICTS:
+                    dd = latest[(latest["District"] == u_district) & (latest["Fault"] == 2)]
+                    if not dd.empty:
+                        personal = (
+                            f"\n\n⚠️ *Sizning tumaningizda ({u_district}) "
+                            f"{len(dd)} ta xavfli sensor!*\n"
+                        )
+                        danger_rows = dd.head(5).to_dict("records")
+
+                await context.bot.send_message(
+                    chat_id=chat_id,
+                    text=text + personal,
+                    parse_mode="Markdown"
+                )
+
+                # Har bir xavfli sensor uchun KOORDINATA pin'i + tafsilot
+                for r in danger_rows:
+                    try:
+                        s_lat = float(r.get("Latitude", 0))
+                        s_lon = float(r.get("Longitude", 0))
+                        if not s_lat or not s_lon:
+                            continue
+                        sid = str(r.get("SensorID", "?"))
+                        cap = (
+                            f"🔴 *{sid}* — xavfli holat\n"
+                            f"📍 `{s_lat:.5f}, {s_lon:.5f}`\n"
+                            f"🔌 {float(r.get('Kuchlanish (V)',0)):.1f}V · "
+                            f"🔄 {float(r.get('Chastota (Hz)',50)):.2f}Hz"
+                        )
+                        kb = InlineKeyboardMarkup([[
+                            InlineKeyboardButton("🗺 Google", url=f"https://www.google.com/maps?q={s_lat},{s_lon}"),
+                            InlineKeyboardButton("🧭 Yandex", url=f"https://yandex.com/maps/?pt={s_lon},{s_lat}&z=17&l=map"),
+                        ]])
+                        await context.bot.send_location(chat_id=chat_id, latitude=s_lat, longitude=s_lon)
+                        await context.bot.send_message(chat_id=chat_id, text=cap, parse_mode="Markdown", reply_markup=kb)
+                    except Exception as e:
+                        logger.warning(f"morning pin xato: {e}")
+                sent += 1
+            except Exception:
+                pass
+        logger.info(f"Morning report yuborildi: {sent}/{len(subscribers)} subscriber")
+
+    except Exception as e:
+        logger.error(f"Morning report xatosi: {e}")
+
+
 # ==================== MAIN ====================
 
 def main():
@@ -1685,6 +2364,7 @@ def main():
 
     for cmd, fn in [
         ("help",             help_command),
+        ("ask",              ask_command),
         ("stats",            stats_command),
         ("forecast",         forecast_command),
         ("districts",        districts_command),
@@ -1702,10 +2382,14 @@ def main():
         ("search",           search_command),
         ("filter",           filter_command),
         ("report",           report_command),
-        ("csv",              csv_command),
         ("map",              map_command),
         ("dashboard",        dashboard_command),
         ("near_sensors",     near_sensors_command),
+        ("risk",             risk_command),
+        ("zones",            zones_command),
+        ("tickets",          tickets_command),
+        ("mylocation",       mylocation_command),
+        ("alert_test",       alert_test_command),
         ("silent",           silent_command),
         ("subscribe",        subscribe_command),
         ("unsubscribe",      unsubscribe_command),
@@ -1718,8 +2402,15 @@ def main():
     app.add_handler(CallbackQueryHandler(button_callback))
 
     if app.job_queue is not None:
-        app.job_queue.run_repeating(alert_check, interval=3600, first=60)
-        logger.info("✅ JobQueue: har soatda alert_check ishlaydi")
+        # Faqat ertalabki hisobot — har kuni 06:00 Toshkent vaqti (UTC+5)
+        try:
+            import zoneinfo
+            tz_tashkent = zoneinfo.ZoneInfo("Asia/Tashkent")
+        except Exception:
+            tz_tashkent = datetime.timezone(datetime.timedelta(hours=5))
+        morning_time = datetime.time(hour=6, minute=0, tzinfo=tz_tashkent)
+        app.job_queue.run_daily(morning_report, time=morning_time, name="morning_report")
+        logger.info("✅ JobQueue: morning_report (06:00 Asia/Tashkent)")
     else:
         logger.warning("⚠️ JobQueue yo'q. Auto-alert uchun: pip install 'python-telegram-bot[job-queue]'")
 

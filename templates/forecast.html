@@ -372,7 +372,7 @@
         {
           x: future.map(x => x.timestamp), y: future.map(x => x.xavf),
           showlegend: false, type: 'scatter', mode: 'lines',
-          line: { color: '#adb5bd', width: 1.5, dash: 'dot' },
+          line: { color: '#adb5bd', width: 1.5, dash: 'dot', shape: 'spline', smoothing: 1.0 },
           hoverinfo: 'skip'
         }
       ];
@@ -411,7 +411,7 @@
         x: timestamps, y: values,
         name: paramLabels[param] || param,
         type: 'scatter', mode: 'lines+markers',
-        line: { color: '#5e72e4', width: 3, shape: 'spline' },
+        line: { color: '#5e72e4', width: 3, shape: 'spline', smoothing: 1.0 },
         marker: { size: 8, color: colors, line: { color: '#fff', width: 1.5 } },
         fill: 'tozeroy',
         fillcolor: 'rgba(94,114,228,0.08)',
@@ -515,7 +515,7 @@
           x: paramData.timestamp, y: paramData[param + '_trend'],
           name: 'Trend',
           type: 'scatter', mode: 'lines',
-          line: { color: '#5e72e4', width: 3, shape: 'spline' },
+          line: { color: '#5e72e4', width: 3, shape: 'spline', smoothing: 1.0 },
           fill: 'tozeroy', fillcolor: 'rgba(94,114,228,0.1)'
         });
       }

@@ -1,0 +1,12 @@
+[
+  {
+    "id": "T-20260502021712",
+    "sensor_id": "S0011",
+    "issue": "Juda yomon axvolda",
+    "status": "in_progress",
+    "eta": "2026-05-07T00:00",
+    "created_at": "2026-05-02T02:17:12.064828",
+    "created_by": "admin",
+    "closed_at": null
+  }
+]

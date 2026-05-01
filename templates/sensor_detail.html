@@ -130,20 +130,20 @@
 
         // Electrical chart
         Plotly.newPlot('chart-electrical', [
-          {x:ts, y:H.kuchlanish, name:'Kuchlanish (V)', type:'scatter', mode:'lines', line:{color:'#3b82f6',width:2}, yaxis:'y'},
-          {x:ts, y:H.chastota, name:'Chastota (Hz)', type:'scatter', mode:'lines', line:{color:'#f59e0b',width:2}, yaxis:'y2'}
+          {x:ts, y:H.kuchlanish, name:'Kuchlanish (V)', type:'scatter', mode:'lines', line:{color:'#3b82f6',width:2.5,shape:'spline',smoothing:1.0}, yaxis:'y'},
+          {x:ts, y:H.chastota, name:'Chastota (Hz)', type:'scatter', mode:'lines', line:{color:'#f59e0b',width:2.5,shape:'spline',smoothing:1.0}, yaxis:'y2'}
         ], {...layoutBase, yaxis:{title:'Kuchlanish (V)',side:'left',gridcolor:'#e9ecef'}, yaxis2:{title:'Chastota (Hz)',overlaying:'y',side:'right',gridcolor:'#e9ecef'}, legend:{orientation:'h',y:1.12}}, cfg);
 
         // Weather chart
         Plotly.newPlot('chart-weather', [
-          {x:ts, y:H.harorat, name:'Harorat (°C)', type:'scatter', mode:'lines', line:{color:'#ef4444',width:2}, fill:'tozeroy', fillcolor:'rgba(239,68,68,0.1)'},
-          {x:ts, y:H.shamol, name:'Shamol (km/h)', type:'scatter', mode:'lines', line:{color:'#8b5cf6',width:2}, yaxis:'y2'}
+          {x:ts, y:H.harorat, name:'Harorat (°C)', type:'scatter', mode:'lines', line:{color:'#ef4444',width:2.5,shape:'spline',smoothing:1.0}, fill:'tozeroy', fillcolor:'rgba(239,68,68,0.1)'},
+          {x:ts, y:H.shamol, name:'Shamol (km/h)', type:'scatter', mode:'lines', line:{color:'#8b5cf6',width:2.5,shape:'spline',smoothing:1.0}, yaxis:'y2'}
         ], {...layoutBase, yaxis:{title:'Harorat (°C)',gridcolor:'#e9ecef'}, yaxis2:{title:'Shamol (km/h)',overlaying:'y',side:'right'}, legend:{orientation:'h',y:1.12}}, cfg);
 
         // Mechanical chart
         Plotly.newPlot('chart-mechanical', [
-          {x:ts, y:H.sim_holati, name:'Sim holati (%)', type:'scatter', mode:'lines', line:{color:'#10b981',width:2}, fill:'tozeroy', fillcolor:'rgba(16,185,129,0.1)'},
-          {x:ts, y:H.vibratsiya, name:'Vibratsiya', type:'scatter', mode:'lines', line:{color:'#ec4899',width:2}, yaxis:'y2'}
+          {x:ts, y:H.sim_holati, name:'Sim holati (%)', type:'scatter', mode:'lines', line:{color:'#10b981',width:2.5,shape:'spline',smoothing:1.0}, fill:'tozeroy', fillcolor:'rgba(16,185,129,0.1)'},
+          {x:ts, y:H.vibratsiya, name:'Vibratsiya', type:'scatter', mode:'lines', line:{color:'#ec4899',width:2.5,shape:'spline',smoothing:1.0}, yaxis:'y2'}
         ], {...layoutBase, yaxis:{title:'Sim holati (%)',gridcolor:'#e9ecef'}, yaxis2:{title:'Vibratsiya',overlaying:'y',side:'right'}, legend:{orientation:'h',y:1.12}}, cfg);
 
         // Pie chart

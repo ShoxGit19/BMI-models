@@ -1,361 +1,196 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" preserveAspectRatio="xMidYMid slice">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Toshkent elektr tarmog'i — professional fon">
   <!--
-    Toshkent shahri xaritasi + elektr uzatish tarmog'i
-    Stilizatsiya qilingan (top-down view) Toshkent va 12 tuman, asosiy yo'llar,
-    Anhor/Bo'zsuv kanallari, elektr substansiyalari va yuqori voltli liniyalar.
+    BMI Monitoring — Premium Background
+    Toshkent elektr uzatish tarmog'i: gradient + circuit grid + energy flow + glow nodes
+    Light/dark mavzular uchun universal (opacity orqali boshqariladi)
   -->
-  <defs>
-    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%"  stop-color="#0B1426"/>
-      <stop offset="50%" stop-color="#0F1E3D"/>
-      <stop offset="100%" stop-color="#1E3A8A"/>
-    </linearGradient>
 
-    <radialGradient id="cityGlow" cx="50%" cy="50%" r="50%">
-      <stop offset="0%"  stop-color="#3B82F6" stop-opacity="0.35"/>
-      <stop offset="60%" stop-color="#1E40AF" stop-opacity="0.10"/>
-      <stop offset="100%" stop-color="#0F172A" stop-opacity="0"/>
+  <defs>
+    <!-- Asosiy chuqur gradient (radial mesh) -->
+    <radialGradient id="bgRadial" cx="20%" cy="15%" r="90%">
+      <stop offset="0%" stop-color="#1E3A8A" stop-opacity="1"/>
+      <stop offset="45%" stop-color="#0F172A" stop-opacity="1"/>
+      <stop offset="100%" stop-color="#020617" stop-opacity="1"/>
     </radialGradient>
 
-    <radialGradient id="subGlow" cx="50%" cy="50%" r="50%">
-      <stop offset="0%"  stop-color="#FBBF24" stop-opacity="0.95"/>
-      <stop offset="60%" stop-color="#F59E0B" stop-opacity="0.4"/>
+    <radialGradient id="bgAccent" cx="80%" cy="85%" r="70%">
+      <stop offset="0%" stop-color="#06B6D4" stop-opacity="0.35"/>
+      <stop offset="60%" stop-color="#0891B2" stop-opacity="0.05"/>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Energiya oqimi gradientlari -->
+    <linearGradient id="energyFlow1" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#3B82F6" stop-opacity="0"/>
+      <stop offset="50%" stop-color="#06B6D4" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="#3B82F6" stop-opacity="0"/>
+    </linearGradient>
+
+    <linearGradient id="energyFlow2" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#8B5CF6" stop-opacity="0"/>
+      <stop offset="50%" stop-color="#A78BFA" stop-opacity="0.7"/>
+      <stop offset="100%" stop-color="#8B5CF6" stop-opacity="0"/>
+    </linearGradient>
+
+    <linearGradient id="energyFlow3" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#10B981" stop-opacity="0"/>
+      <stop offset="50%" stop-color="#34D399" stop-opacity="0.6"/>
+      <stop offset="100%" stop-color="#10B981" stop-opacity="0"/>
+    </linearGradient>
+
+    <!-- Substation node glow -->
+    <radialGradient id="nodeGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="1"/>
+      <stop offset="20%" stop-color="#06B6D4" stop-opacity="0.9"/>
+      <stop offset="60%" stop-color="#06B6D4" stop-opacity="0.2"/>
+      <stop offset="100%" stop-color="#06B6D4" stop-opacity="0"/>
+    </radialGradient>
+
+    <radialGradient id="nodeGlowAmber" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="1"/>
+      <stop offset="20%" stop-color="#F59E0B" stop-opacity="0.9"/>
+      <stop offset="60%" stop-color="#F59E0B" stop-opacity="0.2"/>
       <stop offset="100%" stop-color="#F59E0B" stop-opacity="0"/>
     </radialGradient>
 
-    <radialGradient id="dangerGlow" cx="50%" cy="50%" r="50%">
-      <stop offset="0%"  stop-color="#EF4444" stop-opacity="0.95"/>
-      <stop offset="60%" stop-color="#DC2626" stop-opacity="0.45"/>
-      <stop offset="100%" stop-color="#EF4444" stop-opacity="0"/>
-    </radialGradient>
-
-    <radialGradient id="safeGlow" cx="50%" cy="50%" r="50%">
-      <stop offset="0%"  stop-color="#10B981" stop-opacity="0.95"/>
-      <stop offset="60%" stop-color="#059669" stop-opacity="0.4"/>
-      <stop offset="100%" stop-color="#10B981" stop-opacity="0"/>
-    </radialGradient>
-
-    <!-- Yuqori voltli liniya gradient -->
-    <linearGradient id="hvLine" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%"  stop-color="#06B6D4" stop-opacity="0.9"/>
-      <stop offset="100%" stop-color="#3B82F6" stop-opacity="0.9"/>
-    </linearGradient>
-
-    <pattern id="grid" x="0" y="0" width="60" height="60" patternUnits="userSpaceOnUse">
-      <path d="M 60 0 L 0 0 0 60" fill="none" stroke="#3B82F6" stroke-width="0.4" stroke-opacity="0.10"/>
+    <!-- Hexagonal circuit pattern -->
+    <pattern id="circuitGrid" x="0" y="0" width="80" height="138.56" patternUnits="userSpaceOnUse">
+      <path d="M40,0 L80,23.09 L80,69.28 L40,92.38 L0,69.28 L0,23.09 Z"
+            fill="none" stroke="#3B82F6" stroke-width="0.5" opacity="0.18"/>
+      <circle cx="40" cy="46.19" r="1.5" fill="#06B6D4" opacity="0.4"/>
     </pattern>
 
-    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
-      <feGaussianBlur stdDeviation="4"/>
+    <!-- Fine dot grid -->
+    <pattern id="dotGrid" x="0" y="0" width="40" height="40" patternUnits="userSpaceOnUse">
+      <circle cx="20" cy="20" r="0.8" fill="#60A5FA" opacity="0.25"/>
+    </pattern>
+
+    <!-- Glow filter -->
+    <filter id="glowSoft" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
     </filter>
-    <filter id="bigGlow" x="-50%" y="-50%" width="200%" height="200%">
-      <feGaussianBlur stdDeviation="10"/>
+
+    <filter id="glowStrong" x="-100%" y="-100%" width="300%" height="300%">
+      <feGaussianBlur stdDeviation="8" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
     </filter>
+
+    <!-- Energiya pulsatsiyasi animatsiyasi -->
+    <linearGradient id="pulseLine" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#06B6D4" stop-opacity="0">
+        <animate attributeName="offset" values="-0.3;1.3" dur="6s" repeatCount="indefinite"/>
+      </stop>
+      <stop offset="50%" stop-color="#06B6D4" stop-opacity="1">
+        <animate attributeName="offset" values="-0.15;1.15" dur="6s" repeatCount="indefinite"/>
+      </stop>
+      <stop offset="100%" stop-color="#06B6D4" stop-opacity="0">
+        <animate attributeName="offset" values="0;1.6" dur="6s" repeatCount="indefinite"/>
+      </stop>
+    </linearGradient>
   </defs>
 
-  <!-- Asosiy fon -->
-  <rect width="1920" height="1080" fill="url(#bgGradient)"/>
-  <rect width="1920" height="1080" fill="url(#grid)"/>
+  <!-- ========== BAZA QATLAMI ========== -->
+  <rect width="1920" height="1080" fill="url(#bgRadial)"/>
+  <rect width="1920" height="1080" fill="url(#bgAccent)"/>
 
-  <!-- Shahar yorug'lik halosi (markazda) -->
-  <ellipse cx="960" cy="540" rx="780" ry="430" fill="url(#cityGlow)"/>
+  <!-- ========== CIRCUIT NAQSH ========== -->
+  <rect width="1920" height="1080" fill="url(#circuitGrid)" opacity="0.6"/>
+  <rect width="1920" height="1080" fill="url(#dotGrid)" opacity="0.5"/>
 
-  <!--
-    ============================================================
-    TOSHKENT TUMANLARI (stilizatsiya qilingan polygonlar)
-    Koordinatalar 1920×1080 maydoniga moslashtirilgan
-    ============================================================
-  -->
-  <g stroke="#1E40AF" stroke-width="1.2" fill="#0F2557" fill-opacity="0.55" stroke-opacity="0.85">
-    <!-- Yunusobod (yuqori-o'ng) -->
-    <polygon points="1100,180 1320,170 1450,260 1430,360 1280,400 1130,360 1080,280"/>
-    <!-- Mirzo Ulug'bek (o'ng) -->
-    <polygon points="1280,400 1430,360 1560,440 1580,580 1450,640 1320,600 1290,490"/>
-    <!-- Yashnobod (pastki-o'ng) -->
-    <polygon points="1320,600 1450,640 1480,790 1380,880 1240,860 1200,720"/>
-    <!-- Bektemir (pastki-o'ng eng chekka) -->
-    <polygon points="1480,790 1580,750 1700,820 1720,930 1600,980 1480,940 1380,880"/>
-    <!-- Sergeli (pastki) -->
-    <polygon points="1000,800 1200,720 1240,860 1180,980 1020,990 880,920 880,830"/>
-    <!-- Mirobod (markaz pastroq) -->
-    <polygon points="900,560 1080,540 1200,620 1200,720 1000,800 880,720"/>
-    <!-- Mirabad (markaz) -->
-    <polygon points="900,560 1080,540 1080,480 950,420 820,460 800,520"/>
-    <!-- Yakkasaroy (markaz, kichik) -->
-    <polygon points="800,520 900,560 880,720 720,720 700,620 730,560"/>
-    <!-- Shayxontohur (markaz-yuqori) -->
-    <polygon points="700,400 850,380 950,420 820,460 800,520 730,560 660,500"/>
-    <!-- Chilonzor (markaz-chap) -->
-    <polygon points="500,500 700,400 660,500 730,560 700,620 540,680 420,620"/>
-    <!-- Uchtepa (chap-yuqori) -->
-    <polygon points="380,300 580,280 700,400 500,500 380,460"/>
-    <!-- Olmazor (yuqori-chap) -->
-    <polygon points="500,150 720,140 850,260 850,380 700,400 580,280 480,240"/>
+  <!-- ========== ENERGIYA OQIMI CHIZIQLARI (Bezier) ========== -->
+  <g opacity="0.55" filter="url(#glowSoft)">
+    <!-- Asosiy gorizontal energiya yo'llari -->
+    <path d="M0,250 Q480,180 960,300 T1920,260" fill="none" stroke="url(#energyFlow1)" stroke-width="2"/>
+    <path d="M0,540 Q480,620 960,500 T1920,580" fill="none" stroke="url(#energyFlow1)" stroke-width="2.5"/>
+    <path d="M0,820 Q480,750 960,880 T1920,800" fill="none" stroke="url(#energyFlow2)" stroke-width="2"/>
+
+    <!-- Diagonal energiya tarmoqlari -->
+    <path d="M200,0 Q400,400 700,540 T1200,1080" fill="none" stroke="url(#energyFlow3)" stroke-width="1.5"/>
+    <path d="M1700,0 Q1500,300 1200,500 T700,1080" fill="none" stroke="url(#energyFlow2)" stroke-width="1.5"/>
+    <path d="M0,100 Q600,200 1200,150 T1920,80" fill="none" stroke="url(#energyFlow1)" stroke-width="1"/>
   </g>
 
-  <!--
-    ============================================================
-    KANALLAR (Anhor / Bo'zsuv kanali) — moviy chiziqlar
-    ============================================================
-  -->
-  <g fill="none" stroke="#0EA5E9" stroke-width="2.5" opacity="0.55" stroke-linecap="round">
-    <!-- Bo'zsuv kanali (shimol-janub) -->
-    <path d="M 600 100 Q 700 280 750 480 T 900 800 Q 950 950 1000 1080"/>
-    <!-- Anhor kanali (markazda diagonal) -->
-    <path d="M 200 400 Q 400 480 600 540 T 1000 660 Q 1200 720 1450 800"/>
-    <!-- Salar kanali (chap tomon) -->
-    <path d="M 100 700 Q 300 740 500 760 T 900 820"/>
-  </g>
-  <g fill="none" stroke="#38BDF8" stroke-width="0.8" opacity="0.4" stroke-linecap="round">
-    <path d="M 600 100 Q 700 280 750 480 T 900 800 Q 950 950 1000 1080"/>
-    <path d="M 200 400 Q 400 480 600 540 T 1000 660 Q 1200 720 1450 800"/>
-  </g>
-
-  <!--
-    ============================================================
-    ASOSIY YO'LLAR (Kichik halqa, Katta halqa, radial yo'llar)
-    ============================================================
-  -->
-  <g fill="none" stroke="#475569" stroke-width="1.5" opacity="0.7">
-    <!-- Katta halqa yo'l (Big ring road) -->
-    <ellipse cx="960" cy="540" rx="700" ry="380"/>
-    <!-- Kichik halqa yo'l -->
-    <ellipse cx="960" cy="540" rx="350" ry="200"/>
-  </g>
-  <g fill="none" stroke="#64748B" stroke-width="1.2" opacity="0.55">
-    <!-- Radial yo'llar (markazdan tashqariga) -->
-    <line x1="960" y1="540" x2="320" y2="200"/>
-    <line x1="960" y1="540" x2="1620" y2="180"/>
-    <line x1="960" y1="540" x2="1700" y2="540"/>
-    <line x1="960" y1="540" x2="1620" y2="900"/>
-    <line x1="960" y1="540" x2="320" y2="900"/>
-    <line x1="960" y1="540" x2="220" y2="540"/>
-    <line x1="960" y1="540" x2="960" y2="120"/>
-    <line x1="960" y1="540" x2="960" y2="980"/>
-  </g>
-
-  <!--
-    ============================================================
-    YUQORI VOLTLI ELEKTR LINIYALARI (110/220 kV)
-    Substansiyalardan tarqalgan asosiy ulanishlar
-    ============================================================
-  -->
-  <g fill="none" stroke="url(#hvLine)" stroke-width="2.2" opacity="0.85"
-     stroke-dasharray="0" stroke-linecap="round">
-    <!-- Asosiy ko'l simlari (tarmoq baqo'yi) -->
-    <path d="M 280 240 L 540 320 L 800 360 L 960 380"/>
-    <path d="M 960 380 L 1180 340 L 1380 300 L 1560 260"/>
-    <path d="M 960 380 L 1080 540 L 1100 700"/>
-    <path d="M 1100 700 L 1300 760 L 1500 820 L 1640 880"/>
-    <path d="M 1100 700 L 920 780 L 760 820 L 580 800"/>
-    <path d="M 580 800 L 420 760 L 280 700"/>
-    <path d="M 800 360 L 720 500 L 640 620 L 540 720"/>
-    <path d="M 280 240 L 240 420 L 280 700"/>
-    <path d="M 1560 260 L 1640 460 L 1680 660 L 1640 880"/>
-    <!-- Markaziy halqa (smart grid loop) -->
-    <path d="M 800 480 L 1080 460 L 1180 580 L 1080 700 L 800 720 L 700 600 Z"/>
-  </g>
-
-  <!-- Yuqori voltli liniyalar — ikkinchi qatlam (yorug'lik effekti) -->
-  <g fill="none" stroke="#06B6D4" stroke-width="0.6" opacity="0.6" filter="url(#glow)">
-    <path d="M 280 240 L 540 320 L 800 360 L 960 380"/>
-    <path d="M 960 380 L 1180 340 L 1380 300 L 1560 260"/>
-    <path d="M 800 480 L 1080 460 L 1180 580 L 1080 700 L 800 720 L 700 600 Z"/>
-  </g>
-
-  <!--
-    ============================================================
-    SUBSTANSIYALAR (Asosiy elektr stansiyalari) — sariq glow
-    ============================================================
-  -->
+  <!-- ========== ELEKTR UZATISH STATSIYALARI (Glow Nodes) ========== -->
   <g>
-    <!-- Glow halqalar -->
-    <circle cx="280"  cy="240" r="40" fill="url(#subGlow)"/>
-    <circle cx="800"  cy="360" r="40" fill="url(#subGlow)"/>
-    <circle cx="960"  cy="380" r="50" fill="url(#subGlow)"/>
-    <circle cx="1560" cy="260" r="40" fill="url(#subGlow)"/>
-    <circle cx="1640" cy="880" r="40" fill="url(#subGlow)"/>
-    <circle cx="280"  cy="700" r="40" fill="url(#subGlow)"/>
-    <circle cx="1080" cy="540" r="45" fill="url(#subGlow)"/>
-    <circle cx="540"  cy="720" r="35" fill="url(#subGlow)"/>
-    <!-- Markaz (qattiq belgi) -->
-    <g fill="#FBBF24" stroke="#0F172A" stroke-width="1.5">
-      <rect x="270"  y="230" width="20" height="20" rx="3"/>
-      <rect x="790"  y="350" width="20" height="20" rx="3"/>
-      <rect x="950"  y="370" width="22" height="22" rx="3"/>
-      <rect x="1550" y="250" width="20" height="20" rx="3"/>
-      <rect x="1630" y="870" width="20" height="20" rx="3"/>
-      <rect x="270"  y="690" width="20" height="20" rx="3"/>
-      <rect x="1070" y="530" width="22" height="22" rx="3"/>
-      <rect x="530"  y="710" width="18" height="18" rx="3"/>
-    </g>
-    <!-- ⚡ belgi -->
-    <g fill="#0F172A" font-family="Arial,sans-serif" font-size="14" font-weight="900" text-anchor="middle">
-      <text x="280"  y="246">⚡</text>
-      <text x="800"  y="366">⚡</text>
-      <text x="961"  y="388">⚡</text>
-      <text x="1560" y="266">⚡</text>
-      <text x="1640" y="886">⚡</text>
-      <text x="280"  y="706">⚡</text>
-      <text x="1081" y="548">⚡</text>
-      <text x="539"  y="725">⚡</text>
-    </g>
+    <!-- Asosiy stansiyalar (yorqin) -->
+    <circle cx="320" cy="280" r="45" fill="url(#nodeGlow)"/>
+    <circle cx="320" cy="280" r="4" fill="#FFFFFF" filter="url(#glowSoft)"/>
+
+    <circle cx="960" cy="540" r="60" fill="url(#nodeGlow)"/>
+    <circle cx="960" cy="540" r="5" fill="#FFFFFF" filter="url(#glowStrong)"/>
+
+    <circle cx="1600" cy="320" r="40" fill="url(#nodeGlow)"/>
+    <circle cx="1600" cy="320" r="3.5" fill="#FFFFFF" filter="url(#glowSoft)"/>
+
+    <circle cx="1450" cy="780" r="50" fill="url(#nodeGlowAmber)"/>
+    <circle cx="1450" cy="780" r="4" fill="#FFFFFF" filter="url(#glowSoft)"/>
+
+    <circle cx="480" cy="820" r="42" fill="url(#nodeGlow)"/>
+    <circle cx="480" cy="820" r="3.5" fill="#FFFFFF" filter="url(#glowSoft)"/>
+
+    <circle cx="800" cy="160" r="35" fill="url(#nodeGlow)"/>
+    <circle cx="800" cy="160" r="3" fill="#FFFFFF" filter="url(#glowSoft)"/>
+
+    <circle cx="1200" cy="900" r="38" fill="url(#nodeGlow)"/>
+    <circle cx="1200" cy="900" r="3" fill="#FFFFFF" filter="url(#glowSoft)"/>
+
+    <circle cx="150" cy="600" r="32" fill="url(#nodeGlow)"/>
+    <circle cx="150" cy="600" r="2.5" fill="#FFFFFF" filter="url(#glowSoft)"/>
+
+    <circle cx="1820" cy="950" r="36" fill="url(#nodeGlow)"/>
+    <circle cx="1820" cy="950" r="3" fill="#FFFFFF" filter="url(#glowSoft)"/>
   </g>
 
-  <!--
-    ============================================================
-    SENSORLAR (kichik nuqtalar — 1200 sensor stilizatsiyasi)
-    ============================================================
-  -->
-  <g>
-    <!-- Yashil sensorlar (havfsiz) — qalin -->
-    <g fill="#10B981">
-      <circle cx="350"  cy="300" r="2"/>
-      <circle cx="420"  cy="350" r="2"/>
-      <circle cx="480"  cy="280" r="2"/>
-      <circle cx="540"  cy="380" r="2"/>
-      <circle cx="600"  cy="320" r="2"/>
-      <circle cx="660"  cy="240" r="2"/>
-      <circle cx="720"  cy="320" r="2"/>
-      <circle cx="780"  cy="260" r="2"/>
-      <circle cx="850"  cy="320" r="2"/>
-      <circle cx="900"  cy="280" r="2"/>
-      <circle cx="970"  cy="240" r="2"/>
-      <circle cx="1020" cy="280" r="2"/>
-      <circle cx="1080" cy="220" r="2"/>
-      <circle cx="1150" cy="280" r="2"/>
-      <circle cx="1220" cy="240" r="2"/>
-      <circle cx="1280" cy="280" r="2"/>
-      <circle cx="1340" cy="220" r="2"/>
-      <circle cx="1400" cy="280" r="2"/>
-      <circle cx="1460" cy="320" r="2"/>
-      <circle cx="380"  cy="440" r="2"/>
-      <circle cx="450"  cy="480" r="2"/>
-      <circle cx="520"  cy="440" r="2"/>
-      <circle cx="580"  cy="500" r="2"/>
-      <circle cx="640"  cy="460" r="2"/>
-      <circle cx="700"  cy="540" r="2"/>
-      <circle cx="760"  cy="500" r="2"/>
-      <circle cx="820"  cy="560" r="2"/>
-      <circle cx="880"  cy="500" r="2"/>
-      <circle cx="940"  cy="580" r="2"/>
-      <circle cx="1000" cy="500" r="2"/>
-      <circle cx="1060" cy="600" r="2"/>
-      <circle cx="1140" cy="500" r="2"/>
-      <circle cx="1200" cy="600" r="2"/>
-      <circle cx="1260" cy="500" r="2"/>
-      <circle cx="1320" cy="560" r="2"/>
-      <circle cx="1380" cy="500" r="2"/>
-      <circle cx="1440" cy="600" r="2"/>
-      <circle cx="1500" cy="540" r="2"/>
-      <circle cx="380"  cy="640" r="2"/>
-      <circle cx="450"  cy="700" r="2"/>
-      <circle cx="520"  cy="640" r="2"/>
-      <circle cx="600"  cy="720" r="2"/>
-      <circle cx="680"  cy="660" r="2"/>
-      <circle cx="760"  cy="740" r="2"/>
-      <circle cx="840"  cy="680" r="2"/>
-      <circle cx="920"  cy="760" r="2"/>
-      <circle cx="1000" cy="700" r="2"/>
-      <circle cx="1080" cy="800" r="2"/>
-      <circle cx="1160" cy="740" r="2"/>
-      <circle cx="1240" cy="800" r="2"/>
-      <circle cx="1320" cy="720" r="2"/>
-      <circle cx="1400" cy="800" r="2"/>
-      <circle cx="1480" cy="740" r="2"/>
-      <circle cx="1560" cy="820" r="2"/>
-      <circle cx="320"  cy="540" r="2"/>
-      <circle cx="1620" cy="540" r="2"/>
-      <circle cx="1620" cy="660" r="2"/>
-      <circle cx="320"  cy="660" r="2"/>
-    </g>
-    <!-- Sariq sensorlar (ogohlantirish) -->
-    <g fill="#FBBF24">
-      <circle cx="500"  cy="380" r="2.4"/>
-      <circle cx="900"  cy="420" r="2.4"/>
-      <circle cx="1180" cy="420" r="2.4"/>
-      <circle cx="600"  cy="600" r="2.4"/>
-      <circle cx="1100" cy="660" r="2.4"/>
-      <circle cx="780"  cy="640" r="2.4"/>
-      <circle cx="1380" cy="660" r="2.4"/>
-      <circle cx="540"  cy="780" r="2.4"/>
-      <circle cx="1240" cy="380" r="2.4"/>
-      <circle cx="420"  cy="540" r="2.4"/>
-    </g>
-    <!-- Qizil sensorlar (muammo) — glow bilan -->
-    <g>
-      <circle cx="700"  cy="420" r="9" fill="url(#dangerGlow)"/>
-      <circle cx="1320" cy="500" r="9" fill="url(#dangerGlow)"/>
-      <circle cx="980"  cy="680" r="9" fill="url(#dangerGlow)"/>
-      <circle cx="1480" cy="380" r="9" fill="url(#dangerGlow)"/>
-      <circle cx="540"  cy="600" r="9" fill="url(#dangerGlow)"/>
-      <g fill="#EF4444">
-        <circle cx="700"  cy="420" r="2.6"/>
-        <circle cx="1320" cy="500" r="2.6"/>
-        <circle cx="980"  cy="680" r="2.6"/>
-        <circle cx="1480" cy="380" r="2.6"/>
-        <circle cx="540"  cy="600" r="2.6"/>
-      </g>
-    </g>
+  <!-- ========== STATSIYALARNI BOG'LOVCHI CHIZIQLAR ========== -->
+  <g stroke="#06B6D4" stroke-width="0.8" fill="none" opacity="0.35">
+    <line x1="320" y1="280" x2="960" y2="540"/>
+    <line x1="960" y1="540" x2="1600" y2="320"/>
+    <line x1="960" y1="540" x2="1450" y2="780"/>
+    <line x1="960" y1="540" x2="480" y2="820"/>
+    <line x1="320" y1="280" x2="800" y2="160"/>
+    <line x1="800" y1="160" x2="1600" y2="320"/>
+    <line x1="1450" y1="780" x2="1820" y2="950"/>
+    <line x1="480" y1="820" x2="1200" y2="900"/>
+    <line x1="1200" y1="900" x2="1450" y2="780"/>
+    <line x1="150" y1="600" x2="480" y2="820"/>
+    <line x1="150" y1="600" x2="320" y2="280"/>
   </g>
 
-  <!--
-    ============================================================
-    TUMAN NOMLARI (yengil, yarim shaffof)
-    ============================================================
-  -->
-  <g fill="#94A3B8" font-family="Inter,Arial,sans-serif" font-size="12" font-weight="600"
-     opacity="0.45" text-anchor="middle" letter-spacing="0.06em">
-    <text x="650"  y="220" text-transform="uppercase">OLMAZOR</text>
-    <text x="490"  y="400" text-transform="uppercase">UCHTEPA</text>
-    <text x="780"  y="430" text-transform="uppercase">SHAYXONTOHUR</text>
-    <text x="600"  y="580" text-transform="uppercase">CHILONZOR</text>
-    <text x="800"  y="640" text-transform="uppercase">YAKKASAROY</text>
-    <text x="930"  y="490" text-transform="uppercase">MIRABAD</text>
-    <text x="1040" y="640" text-transform="uppercase">MIROBOD</text>
-    <text x="1230" y="280" text-transform="uppercase">YUNUSOBOD</text>
-    <text x="1430" y="500" text-transform="uppercase">M. ULUG'BEK</text>
-    <text x="1340" y="760" text-transform="uppercase">YASHNOBOD</text>
-    <text x="1080" y="900" text-transform="uppercase">SERGELI</text>
-    <text x="1580" y="880" text-transform="uppercase">BEKTEMIR</text>
+  <!-- ========== ANIMATSIYALI ENERGIYA PULSI ========== -->
+  <g opacity="0.7">
+    <line x1="320" y1="280" x2="960" y2="540" stroke="url(#pulseLine)" stroke-width="2.5"/>
+    <line x1="960" y1="540" x2="1600" y2="320" stroke="url(#pulseLine)" stroke-width="2.5"/>
+    <line x1="960" y1="540" x2="1450" y2="780" stroke="url(#pulseLine)" stroke-width="2.5"/>
   </g>
 
-  <!--
-    ============================================================
-    LEGEND (pastki-chap)
-    ============================================================
-  -->
-  <g opacity="0.7" font-family="Inter,Arial,sans-serif" font-size="11" font-weight="600">
-    <rect x="40" y="980" width="280" height="80" rx="8" fill="#0F172A" fill-opacity="0.6" stroke="#3B82F6" stroke-opacity="0.4"/>
-    <text x="56" y="1004" fill="#94A3B8" letter-spacing="0.08em">TOSHKENT — ELEKTR TARMOG'I</text>
-    <g transform="translate(56,1020)">
-      <circle cx="6" cy="6" r="4" fill="#FBBF24"/>
-      <text x="18" y="10" fill="#CBD5E1">Substansiya</text>
-    </g>
-    <g transform="translate(56,1040)">
-      <line x1="0" y1="6" x2="14" y2="6" stroke="url(#hvLine)" stroke-width="2.5"/>
-      <text x="22" y="10" fill="#CBD5E1">Yuqori voltli liniya</text>
-    </g>
-    <g transform="translate(180,1020)">
-      <circle cx="6" cy="6" r="3" fill="#10B981"/>
-      <text x="14" y="10" fill="#CBD5E1">Havfsiz</text>
-    </g>
-    <g transform="translate(180,1040)">
-      <circle cx="6" cy="6" r="3" fill="#EF4444"/>
-      <text x="14" y="10" fill="#CBD5E1">Muammo</text>
-    </g>
+  <!-- ========== STATSIYALAR ATROFIDA PULSATSIYALANUVCHI HALQALAR ========== -->
+  <g fill="none" stroke="#06B6D4" stroke-width="1.5" opacity="0.6">
+    <circle cx="960" cy="540" r="20">
+      <animate attributeName="r" values="20;80;20" dur="4s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="0.6;0;0.6" dur="4s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="1450" cy="780" r="15" stroke="#F59E0B">
+      <animate attributeName="r" values="15;60;15" dur="3.5s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="0.7;0;0.7" dur="3.5s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="320" cy="280" r="15">
+      <animate attributeName="r" values="15;55;15" dur="5s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="0.6;0;0.6" dur="5s" repeatCount="indefinite"/>
+    </circle>
   </g>
 
-  <!-- Kompas (yuqori-o'ng) -->
-  <g transform="translate(1820,80)" opacity="0.5">
-    <circle cx="0" cy="0" r="38" fill="#0F172A" fill-opacity="0.55" stroke="#3B82F6" stroke-opacity="0.5"/>
-    <polygon points="0,-28 -8,8 0,2 8,8" fill="#EF4444"/>
-    <polygon points="0,28 -8,-8 0,-2 8,-8" fill="#94A3B8"/>
-    <text x="0" y="-32" font-family="Inter,Arial" font-size="11" font-weight="800"
-          fill="#94A3B8" text-anchor="middle">N</text>
-  </g>
-
-  <!-- Yumshoq overlay (matn o'qish uchun) -->
-  <rect width="1920" height="1080" fill="#0B1220" opacity="0.18"/>
+  <!-- ========== YUQORI VINJETKA (chuqurlik uchun) ========== -->
+  <radialGradient id="vignette" cx="50%" cy="50%" r="75%">
+    <stop offset="60%" stop-color="#000000" stop-opacity="0"/>
+    <stop offset="100%" stop-color="#000000" stop-opacity="0.55"/>
+  </radialGradient>
+  <rect width="1920" height="1080" fill="url(#vignette)"/>
 </svg>

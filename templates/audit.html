@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Audit Trail · ElectroGrid</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{url_for('static', filename='style.css')}}">
+  <style>
+    .log-row { padding: .55rem .85rem; border-bottom: 1px solid var(--border-subtle, #eee); display: flex; gap: 12px; align-items: center; font-size: .85rem; }
+    .log-row:hover { background: var(--bg-surface, #f8f9fa); }
+    .log-icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .log-action { font-weight: 600; color: var(--text-primary, #1f2937); }
+    .log-meta { color: var(--text-muted, #6b7280); font-size: .78rem; margin-top: 2px; }
+    .filter-pill { cursor: pointer; padding: .35rem .85rem; border-radius: 20px; background: var(--bg-surface, #f3f4f6); font-size: .82rem; border: 1px solid var(--border-subtle, #e5e7eb); transition: all .15s; }
+    .filter-pill.active { background: #2563eb; color: white; border-color: #2563eb; }
+  </style>
+</head>
+<body>
+{% include 'navbar.html' %}
+
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="fw-bold mb-0"><i class="fas fa-clipboard-list me-2 text-primary"></i>Audit Trail — Tizim hodisalari</h4>
+    <div class="text-muted small" id="totalCount">0 ta yozuv</div>
+  </div>
+
+  <div class="d-flex gap-2 mb-3 flex-wrap" id="filters">
+    <span class="filter-pill active" data-filter="all">Barchasi</span>
+    <span class="filter-pill" data-filter="login">Kirishlar</span>
+    <span class="filter-pill" data-filter="logout">Chiqishlar</span>
+    <span class="filter-pill" data-filter="ticket">Buyurtmalar</span>
+    <span class="filter-pill" data-filter="maintenance">Ta'mirlash</span>
+    <span class="filter-pill" data-filter="export">Eksport</span>
+    <span class="filter-pill" data-filter="user_registered">Ro'yxatdan o'tish</span>
+  </div>
+
+  <div class="card border-0 shadow-sm">
+    <div id="logsList"><div class="text-center text-muted py-4">Yuklanmoqda...</div></div>
+    <div class="text-center py-3">
+      <button class="btn btn-outline-primary btn-sm" id="loadMoreBtn" onclick="loadMore()">Ko'proq yuklash</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let allLogs = [];
+let currentFilter = 'all';
+let displayCount = 50;
+
+const ICONS = {
+  login: ['fa-sign-in-alt', '#3b82f6'],
+  logout: ['fa-sign-out-alt', '#6b7280'],
+  ticket_create: ['fa-tools', '#f59e0b'],
+  ticket_close: ['fa-check-circle', '#22c55e'],
+  maintenance_create: ['fa-calendar-plus', '#8b5cf6'],
+  maintenance_delete: ['fa-calendar-minus', '#ef4444'],
+  user_registered: ['fa-user-plus', '#06b6d4'],
+  export_excel: ['fa-file-excel', '#10b981'],
+  export_csv: ['fa-file-csv', '#22c55e'],
+  export_pdf: ['fa-file-pdf', '#ef4444'],
+  reload_model: ['fa-sync', '#8b5cf6'],
+};
+
+function iconFor(action){
+  for(const k in ICONS){ if(action.startsWith(k.split('_')[0])) return ICONS[k] || ['fa-circle','#6b7280']; }
+  return ['fa-circle-info', '#6b7280'];
+}
+
+function render(){
+  let logs = allLogs;
+  if(currentFilter !== 'all') logs = logs.filter(l => (l.action||'').includes(currentFilter));
+  document.getElementById('totalCount').textContent = `${logs.length} ta yozuv`;
+  const slice = logs.slice(0, displayCount);
+  const el = document.getElementById('logsList');
+  if(!slice.length){ el.innerHTML='<div class="text-center text-muted py-4">Yozuvlar yo\'q</div>'; return; }
+  el.innerHTML = slice.map(l=>{
+    const [icon,color] = iconFor(l.action || '');
+    const detailsStr = l.details ? JSON.stringify(l.details).substring(0,120) : '';
+    return `<div class="log-row">
+      <div class="log-icon" style="background:${color}20;color:${color}"><i class="fas ${icon}"></i></div>
+      <div class="flex-grow-1">
+        <div class="log-action">${l.action} <span class="text-muted fw-normal small">— ${l.user||'system'}</span></div>
+        <div class="log-meta">${(l.timestamp||'').replace('T',' ').slice(0,19)} • IP: ${l.ip||'-'} ${detailsStr?'• '+detailsStr:''}</div>
+      </div>
+    </div>`;
+  }).join('');
+  document.getElementById('loadMoreBtn').style.display = logs.length > displayCount ? 'inline-block' : 'none';
+}
+
+function loadMore(){ displayCount += 50; render(); }
+
+document.querySelectorAll('.filter-pill').forEach(p=>{
+  p.onclick = ()=>{
+    document.querySelectorAll('.filter-pill').forEach(x=>x.classList.remove('active'));
+    p.classList.add('active');
+    currentFilter = p.dataset.filter;
+    displayCount = 50;
+    render();
+  };
+});
+
+function load(){
+  fetch('/api/audit-logs?page=1').then(r=>r.json()).then(d=>{
+    allLogs = d.logs || [];
+    render();
+  });
+}
+
+load();
+setInterval(load, 60000);
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="{{url_for('static', filename='theme.js')}}"></script>
+</body>
+</html>

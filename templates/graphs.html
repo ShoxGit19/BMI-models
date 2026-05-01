@@ -280,7 +280,7 @@
         y: currents,
         type: 'scatter',
         mode: 'lines',
-        line: { color: '#28a745', width: 2 },
+        line: { color: '#28a745', width: 2.5, shape: 'spline', smoothing: 1.0 },
         fill: 'tozeroy',
         fillcolor: 'rgba(40, 167, 69, 0.2)'
       };
@@ -296,7 +296,7 @@
         y: voltages,
         type: 'scatter',
         mode: 'lines',
-        line: { color: '#17a2b8', width: 2 },
+        line: { color: '#17a2b8', width: 2.5, shape: 'spline', smoothing: 1.0 },
         fill: 'tozeroy',
         fillcolor: 'rgba(23, 162, 184, 0.2)'
       };
@@ -312,7 +312,7 @@
         y: powers,
         type: 'scatter',
         mode: 'lines',
-        line: { color: '#ffc107', width: 2 },
+        line: { color: '#ffc107', width: 2.5, shape: 'spline', smoothing: 1.0 },
         fill: 'tozeroy',
         fillcolor: 'rgba(255, 193, 7, 0.2)'
       };
@@ -328,7 +328,7 @@
         y: vibs,
         type: 'scatter',
         mode: 'lines',
-        line: { color: '#dc3545', width: 2 },
+        line: { color: '#dc3545', width: 2.5, shape: 'spline', smoothing: 1.0 },
         fill: 'tozeroy',
         fillcolor: 'rgba(220, 53, 69, 0.2)'
       };
@@ -344,7 +344,7 @@
         y: filtered.map(d => d.Harorat || 0),
         type: 'scatter',
         mode: 'lines',
-        line: { color: '#e74c3c', width: 2 },
+        line: { color: '#e74c3c', width: 2.5, shape: 'spline', smoothing: 1.0 },
         fill: 'tozeroy',
         fillcolor: 'rgba(231,76,60,0.2)'
       };
@@ -360,7 +360,7 @@
         y: filtered.map(d => d.Sim_holati || 0),
         type: 'scatter',
         mode: 'lines',
-        line: { color: '#27ae60', width: 2 },
+        line: { color: '#27ae60', width: 2.5, shape: 'spline', smoothing: 1.0 },
         fill: 'tozeroy',
         fillcolor: 'rgba(39,174,96,0.2)'
       };
@@ -376,7 +376,7 @@
         y: filtered.map(d => d.Humidity || 0),
         type: 'scatter',
         mode: 'lines',
-        line: { color: '#3498db', width: 2 },
+        line: { color: '#3498db', width: 2.5, shape: 'spline', smoothing: 1.0 },
         fill: 'tozeroy',
         fillcolor: 'rgba(52,152,219,0.2)'
       };
@@ -392,7 +392,7 @@
         y: filtered.map(d => d.Shamol || 0),
         type: 'scatter',
         mode: 'lines',
-        line: { color: '#8e44ad', width: 2 },
+        line: { color: '#8e44ad', width: 2.5, shape: 'spline', smoothing: 1.0 },
         fill: 'tozeroy',
         fillcolor: 'rgba(142,68,173,0.2)'
       };

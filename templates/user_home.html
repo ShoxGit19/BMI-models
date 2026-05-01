@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Shaxsiy Dashboard · ElectroGrid Monitoring</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{url_for('static', filename='style.css')}}">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    .user-hero {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 2rem 0;
+      border-radius: 0 0 var(--radius-lg, 16px) var(--radius-lg, 16px);
+    }
+    .user-card {
+      background: var(--bg-elevated, #fff);
+      border: 1px solid var(--border-subtle, #e0e0e0);
+      border-radius: var(--radius-md, 12px);
+      padding: 1.5rem;
+      margin-bottom: 1rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+      transition: transform 0.15s;
+    }
+    .user-card:hover { transform: translateY(-2px); }
+    .sensor-mini {
+      display: flex; align-items: center; gap: 12px;
+      padding: 0.75rem 1rem;
+      border-radius: var(--radius-sm, 8px);
+      margin-bottom: 0.5rem;
+      background: var(--bg-surface, #f8f9fa);
+      border: 1px solid var(--border-subtle, #e0e0e0);
+    }
+    .sensor-mini .badge-dot {
+      width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
+    }
+    .sensor-mini .badge-dot.safe { background: #22c55e; }
+    .sensor-mini .badge-dot.warning { background: #f59e0b; }
+    .sensor-mini .badge-dot.danger { background: #ef4444; animation: pulse-dot 1.5s infinite; }
+    @keyframes pulse-dot { 0%,100%{opacity:1} 50%{opacity:0.4} }
+    #userMap { height: 350px; border-radius: var(--radius-md, 12px); }
+    .weather-box {
+      background: linear-gradient(135deg, #74b9ff, #0984e3);
+      color: white; border-radius: var(--radius-md, 12px);
+      padding: 1.25rem; text-align: center;
+    }
+  </style>
+</head>
+<body>
+{% include 'navbar.html' %}
+
+<div class="user-hero">
+  <div class="container">
+    <div class="d-flex align-items-center gap-3">
+      <div>
+        <i class="fas fa-user-circle fa-3x" style="opacity:0.8"></i>
+      </div>
+      <div>
+        <h4 class="mb-1 fw-bold" id="userName">{{ session.get('user_name', session.get('user', 'Foydalanuvchi')) }}</h4>
+        <span class="badge bg-white text-dark me-2">
+          <i class="fas fa-map-marker-alt"></i> <span id="userDistrict">{{ session.get('district', '') }}</span>
+        </span>
+        <span class="badge bg-white bg-opacity-25">
+          <i class="fas fa-shield-alt"></i> {{ session.get('role', 'user') }}
+        </span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="container py-4">
+  <div class="row g-3">
+
+    <!-- Ob-havo -->
+    <div class="col-md-4">
+      <div class="weather-box" id="weatherBox">
+        <i class="fas fa-cloud-sun fa-2x mb-2"></i>
+        <div class="fs-5 fw-bold" id="weatherTemp">--°C</div>
+        <div class="small opacity-75" id="weatherMeta">Yuklanmoqda...</div>
+      </div>
+    </div>
+
+    <!-- Tuman statistikasi -->
+    <div class="col-md-8">
+      <div class="user-card">
+        <h6 class="fw-bold mb-3"><i class="fas fa-chart-pie me-2"></i>Tuman holati: <span id="districtName">{{ session.get('district', '') }}</span></h6>
+        <div class="row text-center" id="districtStats">
+          <div class="col-4">
+            <div class="fs-2 fw-bold text-success" id="dSafe">-</div>
+            <div class="small text-muted">Xavfsiz</div>
+          </div>
+          <div class="col-4">
+            <div class="fs-2 fw-bold text-warning" id="dWarn">-</div>
+            <div class="small text-muted">Ogohlantirish</div>
+          </div>
+          <div class="col-4">
+            <div class="fs-2 fw-bold text-danger" id="dDanger">-</div>
+            <div class="small text-muted">Xavfli</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Yaqin sensorlar -->
+    <div class="col-md-6">
+      <div class="user-card">
+        <h6 class="fw-bold mb-3"><i class="fas fa-broadcast-tower me-2"></i>Yaqin sensorlar</h6>
+        <div id="nearSensorsList">
+          <div class="text-muted text-center py-3">Yuklanmoqda...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Xarita -->
+    <div class="col-md-6">
+      <div class="user-card">
+        <h6 class="fw-bold mb-3"><i class="fas fa-map me-2"></i>Sizning hududingiz</h6>
+        <div id="userMap"></div>
+      </div>
+    </div>
+
+    <!-- So'nggi ogohlantirishlar -->
+    <div class="col-12">
+      <div class="user-card">
+        <h6 class="fw-bold mb-3"><i class="fas fa-exclamation-triangle me-2 text-warning"></i>Xavfli sensorlar (sizning tuman)</h6>
+        <div id="dangerList">
+          <div class="text-muted text-center py-3">Yuklanmoqda...</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const district = "{{ session.get('district', '') }}";
+
+// Ob-havo
+fetch("https://api.open-meteo.com/v1/forecast?latitude=41.3&longitude=69.27&current_weather=true")
+  .then(r=>r.json()).then(d=>{
+    const cw=d.current_weather||{};
+    document.getElementById("weatherTemp").textContent=cw.temperature+"°C";
+    document.getElementById("weatherMeta").textContent=`Shamol: ${cw.windspeed} km/h`;
+  }).catch(()=>{});
+
+// Tuman statistikasi va sensorlar
+fetch("/api/stats").then(r=>r.json()).then(data=>{
+  if(data.districts){
+    const dd = data.districts.find(d=>d.name===district);
+    if(dd){
+      document.getElementById("dSafe").textContent=dd.safe||0;
+      document.getElementById("dWarn").textContent=dd.warning||0;
+      document.getElementById("dDanger").textContent=dd.danger||0;
+    }
+  }
+}).catch(()=>{});
+
+// Yaqin sensorlar
+fetch("/api/nearest-sensors?n=5").then(r=>r.json()).then(data=>{
+  const el = document.getElementById("nearSensorsList");
+  if(!data.sensors||data.sensors.length===0){
+    el.innerHTML='<div class="text-muted text-center">Yaqin sensor topilmadi</div>';
+    return;
+  }
+  let html='';
+  data.sensors.forEach(s=>{
+    const cls = s.Fault===2?'danger':s.Fault===1?'warning':'safe';
+    const label = s.Fault===2?'Xavfli':s.Fault===1?'Ogohlantirish':'Xavfsiz';
+    html+=`<div class="sensor-mini">
+      <div class="badge-dot ${cls}"></div>
+      <div class="flex-grow-1">
+        <strong>${s.SensorID}</strong>
+        <span class="text-muted ms-2 small">${s.District||''}</span>
+      </div>
+      <div class="small">${s.Kuchlanish||'?'} V</div>
+      <div class="small text-muted">${s._distance_km} km</div>
+      <span class="badge bg-${cls==='safe'?'success':cls==='warning'?'warning':'danger'} bg-opacity-25 text-${cls==='safe'?'success':cls==='warning'?'warning':'danger'}">${label}</span>
+    </div>`;
+  });
+  el.innerHTML=html;
+
+  // Xaritani chizish
+  if(data.user_location){
+    const map = L.map("userMap").setView([data.user_location.lat, data.user_location.lon], 13);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:18}).addTo(map);
+    L.marker([data.user_location.lat,data.user_location.lon],{
+      icon: L.divIcon({className:'',html:'<i class="fas fa-user-circle text-primary" style="font-size:24px"></i>',iconSize:[24,24],iconAnchor:[12,12]})
+    }).addTo(map).bindPopup("📍 Sizning joylashuvingiz");
+
+    data.sensors.forEach(s=>{
+      const color = s.Fault===2?'red':s.Fault===1?'orange':'green';
+      L.circleMarker([s.Latitude,s.Longitude],{radius:7,color,fillColor:color,fillOpacity:0.7})
+        .addTo(map).bindPopup(`<b>${s.SensorID}</b><br>${s.District}<br>${s.Kuchlanish} V`);
+    });
+  }
+}).catch(()=>{
+  document.getElementById("nearSensorsList").innerHTML='<div class="text-muted">GPS joylashuv topilmadi</div>';
+  const map = L.map("userMap").setView([41.31,69.28],12);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:18}).addTo(map);
+});
+
+// Xavfli sensorlar (faqat user tumani)
+fetch("/api/map-data").then(r=>r.json()).then(data=>{
+  const el = document.getElementById("dangerList");
+  let sensors = data.sensors || data || [];
+  if(district) sensors = sensors.filter(s=>s.district===district||s.District===district);
+  const danger = sensors.filter(s=>(s.fault||s.Fault)==2);
+  if(danger.length===0){
+    el.innerHTML='<div class="text-center text-success py-2"><i class="fas fa-check-circle me-2"></i>Xavfli sensor yo\'q!</div>';
+    return;
+  }
+  let html='<div class="table-responsive"><table class="table table-sm mb-0"><thead><tr><th>Sensor</th><th>Kuchlanish</th><th>Chastota</th><th>Harorat</th></tr></thead><tbody>';
+  danger.slice(0,10).forEach(s=>{
+    html+=`<tr class="table-danger"><td><strong>${s.sensor_id||s.SensorID}</strong></td><td>${s.kuchlanish||s['Kuchlanish (V)']||'?'} V</td><td>${s.chastota||s['Chastota (Hz)']||'?'} Hz</td><td>${s.harorat||s['Muhit_harorat (C)']||'?'}°C</td></tr>`;
+  });
+  html+='</tbody></table></div>';
+  if(danger.length>10) html+=`<div class="text-muted small text-center mt-2">+${danger.length-10} ta yana...</div>`;
+  el.innerHTML=html;
+}).catch(()=>{});
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="{{url_for('static', filename='theme.js')}}"></script>
+</body>
+</html>

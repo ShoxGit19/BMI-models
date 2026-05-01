@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="ElectroGrid Monitoring">
+  <defs>
+    <linearGradient id="iconBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1E3A8A"/>
+      <stop offset="55%" stop-color="#2563EB"/>
+      <stop offset="100%" stop-color="#06B6D4"/>
+    </linearGradient>
+    <radialGradient id="iconGlow" cx="50%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="iconShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="6" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <!-- Background rounded square (maskable safe zone) -->
+  <rect width="512" height="512" rx="96" ry="96" fill="url(#iconBg)"/>
+  <rect width="512" height="512" rx="96" ry="96" fill="url(#iconGlow)"/>
+
+  <!-- Circuit accent lines -->
+  <g stroke="#FFFFFF" stroke-width="2" opacity="0.18" fill="none">
+    <path d="M40,160 L160,160 L200,200 L320,200"/>
+    <path d="M472,360 L360,360 L320,320 L200,320"/>
+    <circle cx="160" cy="160" r="4" fill="#FFFFFF" opacity="0.5"/>
+    <circle cx="360" cy="360" r="4" fill="#FFFFFF" opacity="0.5"/>
+  </g>
+
+  <!-- Lightning bolt (asosiy belgi) -->
+  <g filter="url(#iconShadow)">
+    <path d="M286,76 L156,288 L232,288 L210,436 L356,212 L272,212 L302,76 Z"
+          fill="#FFFFFF" stroke="#E0F2FE" stroke-width="3" stroke-linejoin="round"/>
+    <path d="M286,76 L156,288 L232,288 L210,436 L356,212 L272,212 L302,76 Z"
+          fill="url(#iconGlow)"/>
+  </g>
+
+  <!-- Pulse ring -->
+  <circle cx="256" cy="256" r="220" fill="none" stroke="#FFFFFF" stroke-width="2" opacity="0.12"/>
+</svg>
