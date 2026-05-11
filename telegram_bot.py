@@ -1602,6 +1602,54 @@ async def unsubscribe_command(update: Update, context: ContextTypes.DEFAULT_TYPE
     await update.message.reply_text(text, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
 
 
+def create_banner_image(title: str, subtitle: str, lines: list[str], color: str = "red") -> io.BytesIO:
+    """Telegram uchun styled banner rasm yaratadi (screenshot uslubida)."""
+    fig, ax = plt.subplots(figsize=(8, 4.2))
+    fig.patch.set_facecolor("#0a0f1e")
+    ax.set_facecolor("#0a0f1e")
+    ax.set_xlim(0, 1); ax.set_ylim(0, 1)
+    ax.axis("off")
+
+    accent = "#e63946" if color == "red" else "#2ec4b6"
+    light   = "#f1faee"
+
+    # Yuqori chiziq (accent)
+    ax.axhline(y=0.96, xmin=0, xmax=1, color=accent, linewidth=4)
+
+    # Logotip / badge
+    ax.text(0.03, 0.88, "⚡ ELEKTR MONITORING", color=accent,
+            fontsize=9, fontweight="bold", va="top",
+            fontfamily="DejaVu Sans")
+
+    # Asosiy sarlavha
+    ax.text(0.03, 0.75, title, color=light,
+            fontsize=18, fontweight="bold", va="top",
+            fontfamily="DejaVu Sans", wrap=True)
+
+    # Kichik sarlavha
+    ax.text(0.03, 0.52, subtitle, color="#a8dadc",
+            fontsize=10, va="top", fontfamily="DejaVu Sans")
+
+    # Qatorlar
+    y = 0.38
+    for ln in lines[:6]:
+        ax.text(0.03, y, ln, color=light, fontsize=8.5, va="top",
+                fontfamily="DejaVu Sans")
+        y -= 0.09
+
+    # Pastki chiziq + vaqt
+    ax.axhline(y=0.04, xmin=0, xmax=1, color=accent, linewidth=1.5, alpha=0.5)
+    ax.text(0.97, 0.01, datetime.datetime.now().strftime("%d.%m.%Y %H:%M"),
+            color="#6c757d", fontsize=7, ha="right", va="bottom")
+
+    buf = io.BytesIO()
+    plt.savefig(buf, format="png", dpi=130, bbox_inches="tight",
+                facecolor=fig.get_facecolor())
+    plt.close(fig)
+    buf.seek(0)
+    return buf
+
+
 async def alert_check(context: ContextTypes.DEFAULT_TYPE):
     """Har soatda xavfli sensorlarni tekshirish; silent_mode ni hurmat qiladi."""
     if df is None or df.empty or not subscribers:
@@ -1612,15 +1660,25 @@ async def alert_check(context: ContextTypes.DEFAULT_TYPE):
         return
 
     now_hour = datetime.datetime.now().hour
-    text = (
-        f"🚨 *AVTOMATIK OGOHLANTIRISH*\n━━━━━━━━━━━━━━━━━━━━\n"
-        f"📅 {datetime.datetime.now().strftime('%Y-%m-%d %H:%M')}\n"
+    lines = []
+    for _, row in danger.head(6).iterrows():
+        lines.append(f"🔴 {row['SensorID']} — {row['District']} | {row['Kuchlanish (V)']:.0f}V")
+    if len(danger) > 6:
+        lines.append(f"... va yana {len(danger)-6} ta sensor")
+
+    caption = (
+        f"🚨 *AVTOMATIK OGOHLANTIRISH*\n"
+        f"━━━━━━━━━━━━━━━━━━━━\n"
         f"🔴 Muammoli sensorlar: *{len(danger)} ta*\n\n"
+        + "\n".join(f"🔴 *{r['SensorID']}* — {r['District']} | {r['Kuchlanish (V)']:.0f}V"
+                   for _, r in danger.head(10).iterrows())
+        + (f"\n\n_... va yana {len(danger)-10} ta_" if len(danger) > 10 else "")
     )
-    for _, row in danger.head(10).iterrows():
-        text += f"🔴 *{row['SensorID']}* — {row['District']} | 🔌{row['Kuchlanish (V)']:.0f}V\n"
-    if len(danger) > 10:
-        text += f"\n... va yana {len(danger)-10} ta"
+
+    keyboard = InlineKeyboardMarkup([[
+        InlineKeyboardButton("📊 Batafsil ko'rish", url=SITE_BASE),
+        InlineKeyboardButton("🔍 Sensorlar", callback_data="danger_sensors"),
+    ]])
 
     users_list = load_users()
     user_map = {u["id"]: u for u in users_list}
@@ -1630,7 +1688,19 @@ async def alert_check(context: ContextTypes.DEFAULT_TYPE):
         if u.get("silent_mode") and (now_hour >= 22 or now_hour < 7):
             continue
         try:
-            await context.bot.send_message(chat_id=chat_id, text=text, parse_mode="Markdown")
+            banner = create_banner_image(
+                title="AVARIYA OGOHLANTIRISH!",
+                subtitle=f"{len(danger)} ta sensor xavfli holatda",
+                lines=lines,
+                color="red"
+            )
+            await context.bot.send_photo(
+                chat_id=chat_id,
+                photo=banner,
+                caption=caption,
+                parse_mode="Markdown",
+                reply_markup=keyboard
+            )
         except Exception:
             subscribers.discard(chat_id)
             save_subscribers(subscribers)
@@ -1981,10 +2051,15 @@ async def admin_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"🔔 Obunchilar: {len(subscribers)}\n\n"
         f"✅{safe} | ⚠️{warn} | 🔴{danger_cnt}\n"
         f"🔴 Eng muammoli: *{top_d}*\n\n"
-        f"🔧 `/broadcast <matn>` — Matn\n"
+        f"🔧 `/broadcast <matn>` — Barchaga xabar\n"
+        f"🔧 `/contacts` — Kontaktlar ro'yxati\n"
+        f"🔧 `/send_user <id> <matn>` — Shaxsiy xabar\n"
         f"🔧 Rasmga reply + `/broadcast` — Media"
     )
-    keyboard = [[InlineKeyboardButton("🔙 Bosh menyu", callback_data="menu")]]
+    keyboard = [
+        [InlineKeyboardButton("👥 Kontaktlar", callback_data="contacts_cmd"),
+         InlineKeyboardButton("🔙 Bosh menyu", callback_data="menu")]
+    ]
     await update.message.reply_text(text, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
 
 
@@ -1994,46 +2069,335 @@ async def broadcast_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("🔒 Admin huquqi yo'q!")
         return
 
+    if not subscribers:
+        await update.message.reply_text(
+            "⚠️ Hech kim obuna bo'lmagan!\n"
+            "Foydalanuvchilar /subscribe buyrug'ini yuborishi kerak."
+        )
+        return
+
+    # ── Reply orqali (rasm / video / hujjat / matn) ──
     reply = update.message.reply_to_message
     if reply:
-        sent = failed = 0
         caption = " ".join(context.args) if context.args else None
+        sent = failed = 0
         for chat_id in list(subscribers):
             try:
                 if reply.photo:
-                    await context.bot.send_photo(chat_id=chat_id, photo=reply.photo[-1].file_id, caption=caption)
+                    await context.bot.send_photo(
+                        chat_id=chat_id,
+                        photo=reply.photo[-1].file_id,
+                        caption=caption,
+                        parse_mode="Markdown" if caption else None
+                    )
                 elif reply.video:
-                    await context.bot.send_video(chat_id=chat_id, video=reply.video.file_id, caption=caption)
+                    await context.bot.send_video(
+                        chat_id=chat_id,
+                        video=reply.video.file_id,
+                        caption=caption,
+                        parse_mode="Markdown" if caption else None
+                    )
                 elif reply.document:
-                    await context.bot.send_document(chat_id=chat_id, document=reply.document.file_id, caption=caption)
+                    await context.bot.send_document(
+                        chat_id=chat_id,
+                        document=reply.document.file_id,
+                        caption=caption,
+                        parse_mode="Markdown" if caption else None
+                    )
                 elif reply.text:
-                    await context.bot.send_message(chat_id=chat_id,
-                                                   text=f"📢 *Admin xabari:*\n\n{reply.text}",
-                                                   parse_mode="Markdown")
+                    await context.bot.send_message(
+                        chat_id=chat_id,
+                        text=f"📢 *Admin xabari:*\n\n{reply.text}",
+                        parse_mode="Markdown"
+                    )
                 sent += 1
-            except Exception:
+            except Exception as e:
+                logger.warning(f"broadcast reply xato {chat_id}: {e}")
                 failed += 1
-        await update.message.reply_text(f"📢 Yuborildi: {sent} | ❌ Xato: {failed}")
+        await update.message.reply_text(
+            f"✅ Yuborildi: *{sent}* ta\n❌ Xato: {failed} ta",
+            parse_mode="Markdown"
+        )
         return
 
+    # ── Oddiy matn broadcast ──
     if not context.args:
         await update.message.reply_text(
-            "⚠️ Ishlatish:\n• `/broadcast Matn` — matn\n• Rasmga reply qilib `/broadcast` — media",
+            "📢 *Broadcast ishlatish:*\n\n"
+            "• `/broadcast Xabar matni` — matn yuborish\n"
+            "• Rasmga reply + `/broadcast` — rasm yuborish\n"
+            "• Rasmga reply + `/broadcast Sarlavha` — rasm + sarlavha",
             parse_mode="Markdown"
         )
         return
 
     msg_text = " ".join(context.args)
+    full_caption = f"📢 *Admin xabari:*\n\n{msg_text}"
     sent = failed = 0
+
     for chat_id in list(subscribers):
         try:
-            await context.bot.send_message(chat_id=chat_id,
-                                           text=f"📢 *Admin xabari:*\n\n{msg_text}",
-                                           parse_mode="Markdown")
+            # Avval banner bilan yuborishga urinib ko'ramiz
+            try:
+                parts = msg_text.split("\n", 1)
+                b_title = parts[0][:40].upper()
+                b_subtitle = parts[1][:80] if len(parts) > 1 else ""
+                banner = create_banner_image(
+                    title=b_title,
+                    subtitle=b_subtitle,
+                    lines=[],
+                    color="blue"
+                )
+                await context.bot.send_photo(
+                    chat_id=chat_id,
+                    photo=banner,
+                    caption=full_caption,
+                    parse_mode="Markdown",
+                    reply_markup=InlineKeyboardMarkup([[
+                        InlineKeyboardButton("🌐 Dashboard", url=SITE_BASE)
+                    ]])
+                )
+            except Exception:
+                # Banner muvaffaqiyatsiz bo'lsa — oddiy matn yuboramiz
+                await context.bot.send_message(
+                    chat_id=chat_id,
+                    text=full_caption,
+                    parse_mode="Markdown"
+                )
             sent += 1
-        except Exception:
+        except Exception as e:
+            logger.warning(f"broadcast xato {chat_id}: {e}")
             failed += 1
-    await update.message.reply_text(f"📢 Yuborildi: {sent} | ❌ Xato: {failed}")
+
+    await update.message.reply_text(
+        f"✅ Yuborildi: *{sent}* ta\n❌ Xato: {failed} ta",
+        parse_mode="Markdown"
+    )
+
+
+# ==================== 🖼 CONTACTS BANNER (PIL) ====================
+
+def create_contacts_banner(fname: str, lname: str, phone: str,
+                           username: str, district: str) -> io.BytesIO:
+    """Haqiqiy brand ikonlari bilan kontakt kartochkasi yaratadi (PIL)."""
+    from PIL import Image, ImageDraw, ImageFont
+
+    W, H = 900, 520
+    img  = Image.new("RGBA", (W, H), (10, 15, 30, 255))
+    draw = ImageDraw.Draw(img)
+
+    # ── Fon gradient (diagonal) ──
+    for y in range(H):
+        t = y / H
+        r = int(10  + (30 - 10)  * t)
+        g = int(15  + (40 - 15)  * t)
+        b = int(30  + (80 - 30)  * t)
+        draw.line([(0, y), (W, y)], fill=(r, g, b, 255))
+
+    # ── Yuqori accent chiziq ──
+    draw.rectangle([0, 0, W, 6], fill=(46, 171, 238, 255))
+
+    # ─── Fontlar ────────────────────────────────────────────────
+    def fnt(size):
+        for path in ["C:/Windows/Fonts/arialbd.ttf",
+                     "C:/Windows/Fonts/calibrib.ttf"]:
+            try:
+                return ImageFont.truetype(path, size)
+            except Exception:
+                pass
+        return ImageFont.load_default()
+
+    def fnt_reg(size):
+        for path in ["C:/Windows/Fonts/arial.ttf",
+                     "C:/Windows/Fonts/calibri.ttf"]:
+            try:
+                return ImageFont.truetype(path, size)
+            except Exception:
+                pass
+        return ImageFont.load_default()
+
+    # ── Sarlavha ──
+    draw.text((40, 22), "BOT ASOSCHISI", font=fnt(15),
+              fill=(46, 171, 238, 255))
+    draw.text((40, 50), f"{fname} {lname}", font=fnt(46),
+              fill=(241, 250, 238, 255))
+    draw.text((40, 108), f"📱 {phone}", font=fnt_reg(22),
+              fill=(168, 218, 220, 255))
+    draw.text((40, 138), f"🆔 {username}", font=fnt_reg(22),
+              fill=(168, 218, 220, 255))
+    draw.text((40, 168), f"🏘  {district}", font=fnt_reg(22),
+              fill=(168, 218, 220, 255))
+
+    # ── Ajratuvchi chiziq ──
+    draw.rectangle([40, 206, W - 40, 208], fill=(46, 171, 238, 80))
+    draw.text((40, 216), "IJTIMOIY TARMOQLAR", font=fnt(14),
+              fill=(100, 160, 200, 255))
+
+    # ── Ikonkalar ──────────────────────────────────────────────
+    ICON_SIZE = 80
+    ICONS_DIR = os.path.join(os.path.dirname(__file__), "static", "icons")
+
+    social = [
+        ("linkedin.png",  "LinkedIn"),
+        ("github.png",    "GitHub"),
+        ("instagram.png", "Instagram"),
+        ("telegram.png",  "Telegram"),
+    ]
+
+    gap      = (W - 80 - ICON_SIZE * len(social)) // (len(social) - 1 or 1)
+    gap      = min(gap, 80)
+    total_w  = ICON_SIZE * len(social) + gap * (len(social) - 1)
+    x_start  = (W - total_w) // 2
+    y_icon   = 246
+
+    for i, (fname_ic, label) in enumerate(social):
+        icon_path = os.path.join(ICONS_DIR, fname_ic)
+        x = x_start + i * (ICON_SIZE + gap)
+
+        # Oq doira fon — ikonka kontrast uchun
+        bg_pad = 4
+        draw.ellipse(
+            [x - bg_pad, y_icon - bg_pad,
+             x + ICON_SIZE + bg_pad, y_icon + ICON_SIZE + bg_pad],
+            fill=(255, 255, 255, 255)
+        )
+
+        if os.path.exists(icon_path):
+            try:
+                ic = Image.open(icon_path).convert("RGBA").resize(
+                    (ICON_SIZE, ICON_SIZE), Image.LANCZOS)
+                img.paste(ic, (x, y_icon), ic)
+            except Exception:
+                draw.ellipse([x, y_icon, x + ICON_SIZE, y_icon + ICON_SIZE],
+                             fill=(60, 60, 80, 255))
+        else:
+            draw.ellipse([x, y_icon, x + ICON_SIZE, y_icon + ICON_SIZE],
+                         fill=(60, 60, 80, 255))
+
+        # Label
+        lbl_font = fnt_reg(16)
+        bbox = draw.textbbox((0, 0), label, font=lbl_font)
+        lw = bbox[2] - bbox[0]
+        lx = x + (ICON_SIZE - lw) // 2
+        draw.text((lx, y_icon + ICON_SIZE + 10), label,
+                  font=lbl_font, fill=(200, 220, 240, 255))
+
+    # ── Pastki info matni ──
+    draw.text((40, H - 52), "Savollar uchun murojaat qiling 👇",
+              font=fnt_reg(20), fill=(120, 160, 200, 255))
+    draw.rectangle([0, H - 5, W, H], fill=(46, 171, 238, 255))
+
+    buf = io.BytesIO()
+    img.convert("RGB").save(buf, format="PNG", dpi=(150, 150))
+    buf.seek(0)
+    return buf
+
+
+# ==================== ✉️ SEND_USER (ADMIN) ====================
+
+async def send_user_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """/send_user <user_id> <matn> — Admindan bitta foydalanuvchiga xabar."""
+    if not is_admin(update):
+        await update.message.reply_text("🔒 Faqat admin!"); return
+    if len(context.args) < 2:
+        await update.message.reply_text(
+            "⚠️ Ishlatish: `/send_user 123456789 Salom!`",
+            parse_mode="Markdown"
+        ); return
+    try:
+        target_id = int(context.args[0])
+    except ValueError:
+        await update.message.reply_text("❌ User ID raqam bo'lishi kerak!"); return
+    msg_text = " ".join(context.args[1:])
+    u    = get_user_by_id(target_id) or {}
+    name = f"{u.get('first_name','')} {u.get('last_name','')}".strip() or str(target_id)
+    try:
+        banner = create_banner_image(
+            title="ADMIN XABARI",
+            subtitle=f"Sizga shaxsiy xabar keldi",
+            lines=[msg_text[:80]],
+            color="blue"
+        )
+        await context.bot.send_photo(
+            chat_id=target_id,
+            photo=banner,
+            caption=f"📩 *Admin xabari:*\n\n{msg_text}",
+            parse_mode="Markdown"
+        )
+        await update.message.reply_text(f"✅ *{name}* ga xabar yuborildi!", parse_mode="Markdown")
+    except Exception as e:
+        await update.message.reply_text(f"❌ Xato: {e}")
+
+
+# ==================== 👥 CONTACTS (ADMIN) ====================
+
+async def contacts_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Asoschi (admin) ning kontakt ma'lumotlarini ko'rsatish — hamma uchun."""
+    users_list = load_users()
+
+    # Faqat admin foydalanuvchini topamiz (username bo'yicha)
+    admin_user = next(
+        (u for u in users_list
+         if (u.get("username") or "").lstrip("@").lower() == ADMIN_USERNAME.lower()),
+        None
+    )
+
+    if not admin_user:
+        await update.message.reply_text(
+            "📭 Admin ma'lumotlari topilmadi."
+        )
+        return
+
+    fname    = admin_user.get("first_name", "") or ""
+    lname    = admin_user.get("last_name",  "") or ""
+    username = admin_user.get("username",   "") or f"@{ADMIN_USERNAME}"
+    phone    = admin_user.get("phone",      "") or "—"
+    district = admin_user.get("district",   "") or "—"
+    joined   = admin_user.get("joined",     "—")
+    lat      = admin_user.get("latitude")
+    lon      = admin_user.get("longitude")
+
+    # Brand ikonlari bilan maxsus PIL banner
+    banner = create_contacts_banner(
+        fname=fname, lname=lname,
+        phone=phone, username=username, district=district
+    )
+
+    caption = (
+        f"👑 *BOT ASOSCHISI*\n"
+        f"━━━━━━━━━━━━━━━━━━━━\n"
+        f"👤 *{fname} {lname}*\n"
+        f"📱 `{phone}`\n"
+        f"🆔 {username}  |  🏘 {district}\n\n"
+        f"[LinkedIn](https://www.linkedin.com/in/shohjahon-g-aybullayev-b93765299/)  "
+        f"[GitHub](https://github.com/ShoxGit19)  "
+        f"[Instagram](https://instagram.com/1gaybullayeev_)  "
+        f"[Telegram](https://t.me/gaybullayeev19)\n\n"
+        f"_Savollar uchun murojaat qiling_ 👇"
+    )
+
+    btn_rows = [
+        [
+            InlineKeyboardButton("Telegram",  url="https://t.me/gaybullayeev19"),
+            InlineKeyboardButton("LinkedIn",  url="https://www.linkedin.com/in/shohjahon-g-aybullayev-b93765299/"),
+        ],
+        [
+            InlineKeyboardButton("GitHub",    url="https://github.com/ShoxGit19"),
+            InlineKeyboardButton("Instagram", url="https://instagram.com/1gaybullayeev_"),
+        ],
+    ]
+    if lat and lon:
+        btn_rows.append([
+            InlineKeyboardButton("📍 Joylashuvi",
+                                 callback_data=f"contact_loc:{admin_user.get('id')}:{lat}:{lon}")
+        ])
+
+    await update.message.reply_photo(
+        photo=banner,
+        caption=caption,
+        parse_mode="Markdown",
+        reply_markup=InlineKeyboardMarkup(btn_rows)
+    )
 
 
 # ==================== 🔘 CALLBACK ====================
@@ -2221,6 +2585,108 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         else:
             await context.bot.send_message(chat_id=update.effective_chat.id, text="❌ Xarita yaratilmadi.")
 
+    # ── Kontakt: joylashuvni ko'rish ──
+    elif data.startswith("contact_loc:"):
+        parts = data.split(":")
+        uid  = int(parts[1])
+        lat  = float(parts[2])
+        lon  = float(parts[3])
+        u    = get_user_by_id(uid) or {}
+        name = f"{u.get('first_name','')} {u.get('last_name','')}".strip() or str(uid)
+        await context.bot.send_location(chat_id=update.effective_chat.id, latitude=lat, longitude=lon)
+        await context.bot.send_message(
+            chat_id=update.effective_chat.id,
+            text=f"📍 *{name}* ning joylashuvi\n`{lat:.5f}, {lon:.5f}`",
+            parse_mode="Markdown"
+        )
+
+    # ── Kontakt: xabar yuborish (faqat admin) ──
+    elif data.startswith("contact_msg:"):
+        if not is_admin(update):
+            await query.answer("🔒 Faqat admin xabar yubora oladi!", show_alert=True); return
+        uid  = int(data.split(":")[1])
+        u    = get_user_by_id(uid) or {}
+        name = f"{u.get('first_name','')} {u.get('last_name','')}".strip() or str(uid)
+        await query.message.reply_text(
+            f"✉️ *{name}* ga xabar yuborish:\n\n"
+            f"`/send_user {uid} <matn>`\n\n"
+            f"_Yoki /broadcast — barchaga_",
+            parse_mode="Markdown"
+        )
+
+    # ── Kontakt: profil ko'rish ──
+    elif data.startswith("contact_profile:"):
+        caller_admin = is_admin(update)
+        uid = int(data.split(":")[1])
+        u   = get_user_by_id(uid) or {}
+        fname    = u.get("first_name", "") or ""
+        lname    = u.get("last_name",  "") or ""
+        username = u.get("username",   "") or "—"
+        phone    = u.get("phone",      "") or "—"
+        district = u.get("district",   "") or "—"
+        role     = u.get("role",       "user")
+        joined   = u.get("joined",     "—")
+        lat      = u.get("latitude",   None)
+        lon      = u.get("longitude",  None)
+        is_sub   = "🔔 Ha" if uid in subscribers else "🔕 Yo'q"
+
+        banner_info_lines = [
+            f"📱 {phone}" if caller_admin else f"🏘 {district}",
+            f"🆔 {username}",
+            f"📅 Ro'yxatdan: {joined[:10] if joined != '—' else '—'}",
+            f"🔔 Obunachi: {is_sub}",
+            f"📍 {lat}, {lon}" if (lat and lon) else "📍 Joylashuv yo'q",
+        ]
+        profile_banner = create_banner_image(
+            title=f"{fname} {lname}".upper().strip() or "FOYDALANUVCHI",
+            subtitle=f"{district} · {role.upper()}",
+            lines=banner_info_lines,
+            color="blue"
+        )
+
+        caption_lines = (
+            f"👤 *{fname} {lname}*\n"
+            f"━━━━━━━━━━━━━━━━━━━━\n"
+        )
+        if caller_admin:
+            caption_lines += f"📱 `{phone}`\n"
+        caption_lines += (
+            f"🆔 `{username}`\n"
+            f"🏘 {district}\n"
+            f"👑 Rol: {role}\n"
+            f"🔔 Obunachi: {is_sub}\n"
+            f"📅 Qo'shilgan: {joined[:10] if joined != '—' else '—'}"
+        )
+
+        btn_rows = [[InlineKeyboardButton("🔙 Kontaktlar", callback_data="contacts_back")]]
+        if lat and lon:
+            btn_rows.insert(0, [InlineKeyboardButton(
+                "📍 Xaritada ko'rish",
+                callback_data=f"contact_loc:{uid}:{lat}:{lon}"
+            )])
+        await context.bot.send_photo(
+            chat_id=update.effective_chat.id,
+            photo=profile_banner,
+            caption=caption_lines,
+            parse_mode="Markdown",
+            reply_markup=InlineKeyboardMarkup(btn_rows)
+        )
+
+    elif data == "contacts_back":
+        await query.message.reply_text(
+            "👥 Kontaktlar uchun qayta: `/contacts`",
+            parse_mode="Markdown"
+        )
+
+    elif data == "admin_broadcast_hint":
+        await query.answer(
+            "Barchaga xabar yuborish uchun: /broadcast <matn>",
+            show_alert=True
+        )
+
+    elif data == "contacts_cmd":
+        await contacts_command(update, context)
+
 
 # ==================== MORNING REPORT ====================
 async def morning_report(context: ContextTypes.DEFAULT_TYPE):
@@ -2271,10 +2737,20 @@ async def morning_report(context: ContextTypes.DEFAULT_TYPE):
             f"🌐 Dashboard: {SITE_BASE}"
         )
 
+        banner_lines = [
+            f"✅ Xavfsiz: {safe_count}  ⚠️ Ogohlantirish: {warning_count}  🔴 Xavfli: {danger_count}",
+            f"⚡ O'rtacha kuchlanish: {avg_v:.1f} V",
+            f"📡 O'rtacha chastota: {avg_hz:.2f} Hz",
+            f"🌡️ O'rtacha harorat: {avg_t:.1f}°C",
+        ]
+        morning_keyboard = InlineKeyboardMarkup([[
+            InlineKeyboardButton("📊 Dashboard", url=SITE_BASE),
+            InlineKeyboardButton("🔴 Xavflilar", callback_data="danger_sensors"),
+        ]])
+
         sent = 0
         for chat_id in subscribers:
             try:
-                # Foydalanuvchi tumani bo'yicha shaxsiy ogohlantirish
                 u = get_user_by_id(chat_id) or {}
                 u_district = u.get("district")
                 personal = ""
@@ -2288,10 +2764,18 @@ async def morning_report(context: ContextTypes.DEFAULT_TYPE):
                         )
                         danger_rows = dd.head(5).to_dict("records")
 
-                await context.bot.send_message(
+                banner = create_banner_image(
+                    title=f"ERTALABKI HISOBOT",
+                    subtitle=datetime.datetime.now().strftime("%d.%m.%Y — Yangi kun xayrli bo'lsin!"),
+                    lines=banner_lines,
+                    color="blue"
+                )
+                await context.bot.send_photo(
                     chat_id=chat_id,
-                    text=text + personal,
-                    parse_mode="Markdown"
+                    photo=banner,
+                    caption=text + personal,
+                    parse_mode="Markdown",
+                    reply_markup=morning_keyboard
                 )
 
                 # Har bir xavfli sensor uchun KOORDINATA pin'i + tafsilot
@@ -2395,6 +2879,8 @@ def main():
         ("unsubscribe",      unsubscribe_command),
         ("admin",            admin_command),
         ("broadcast",        broadcast_command),
+        ("contacts",         contacts_command),
+        ("send_user",        send_user_command),
     ]:
         app.add_handler(CommandHandler(cmd, fn))
 
