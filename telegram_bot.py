@@ -2890,10 +2890,10 @@ def main():
     if app.job_queue is not None:
         # Faqat ertalabki hisobot — har kuni 06:00 Toshkent vaqti (UTC+5)
         try:
-            import zoneinfo
-            tz_tashkent = zoneinfo.ZoneInfo("Asia/Tashkent")
+            import pytz
+            tz_tashkent = pytz.timezone("Asia/Tashkent")
         except Exception:
-            tz_tashkent = datetime.timezone(datetime.timedelta(hours=5))
+            tz_tashkent = None
         morning_time = datetime.time(hour=6, minute=0, tzinfo=tz_tashkent)
         app.job_queue.run_daily(morning_report, time=morning_time, name="morning_report")
         logger.info("✅ JobQueue: morning_report (06:00 Asia/Tashkent)")
