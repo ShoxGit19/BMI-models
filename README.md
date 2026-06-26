@@ -1,10 +1,10 @@
-# ⚡ ElectroGrid Monitoring — BMI_models
+# ⚡ ElectroGrid Monitoring — BMI Models
 
-> **Toshkent shahri elektr uzatish liniyalari uchun real-time monitoring, gibrid AI bashorat va Telegram bot platformasi.**
+> **Toshkent shahri elektr uzatish liniyalari uchun real-time monitoring, gibrid AI bashorat, nosozlik buyurtma tizimi va Telegram bot platformasi.**
 
 <div align="center">
 
-![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)
+![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)
 ![Flask](https://img.shields.io/badge/Flask-3.0-000000?logo=flask&logoColor=white)
 ![scikit-learn](https://img.shields.io/badge/scikit--learn-1.8-F7931E?logo=scikit-learn&logoColor=white)
 ![Telegram Bot](https://img.shields.io/badge/Telegram_Bot-21.3-2CA5E0?logo=telegram&logoColor=white)
@@ -13,16 +13,18 @@
 ![License](https://img.shields.io/badge/License-MIT-22c55e)
 ![Sensors](https://img.shields.io/badge/Sensorlar-1200-06b6d4)
 ![Districts](https://img.shields.io/badge/Tumanlar-12-2563EB)
-![Data](https://img.shields.io/badge/Yozuvlar-1.2M-8B5CF6)
+![Data](https://img.shields.io/badge/Yozuvlar-1.3M-8B5CF6)
+![Version](https://img.shields.io/badge/Version-3.0-EF4444)
 
-**1,200,000 yozuv · 1,200 sensor · 12 tuman · Hybrid AI · 7 kunlik prognoz · PWA · Premium UI**
+**1,292,959 yozuv · 1,200 sensor · 12 tuman · Hybrid AI · 7 kunlik prognoz · Nosozlik tizimi · PWA**
 
 [🚀 Ishga tushirish](#-ornatish-va-ishga-tushirish) ·
 [🌐 Web sahifalar](#-web-sahifalar) ·
 [📡 API](#-api-endpointlar) ·
 [🤖 Bot](#-telegram-bot) ·
+[🛠️ Buyurtma](#-nosozlik-buyurtma-tizimi) ·
 [🧠 AI](#-ai-model) ·
-[🎨 UI](#-premium-ui-qatlami)
+[💬 Chatbot](#-ai-chatbot-engine)
 
 </div>
 
@@ -32,46 +34,98 @@
 
 1. [Loyiha haqida](#-loyiha-haqida)
 2. [Asosiy imkoniyatlar](#-asosiy-imkoniyatlar)
-3. [Texnologiyalar steki](#%EF%B8%8F-texnologiyalar-steki)
-4. [Loyiha tuzilmasi](#-loyiha-tuzilmasi)
-5. [O'rnatish va ishga tushirish](#-ornatish-va-ishga-tushirish)
-6. [Demo kirish](#-demo-kirish)
-7. [Web sahifalar](#-web-sahifalar)
-8. [API endpointlar](#-api-endpointlar)
-9. [AI model](#-ai-model)
-10. [Sensor parametrlari va chegaralari](#-sensor-parametrlari-va-chegaralari)
-11. [7 kunlik prognoz](#-7-kunlik-prognoz)
-12. [Telegram bot](#-telegram-bot)
-13. [Toshkent tumanlari](#-toshkent-tumanlari)
-14. [Premium UI qatlami](#-premium-ui-qatlami)
-15. [PWA — telefonga o'rnatish](#-pwa--telefonga-ornatish)
-16. [Konfiguratsiya (`config.py`)](#%EF%B8%8F-konfiguratsiya-configpy)
-17. [Konsol skriptlari (`scripts/`)](#-konsol-skriptlari-scripts)
-18. [Muammolarni hal qilish](#-muammolarni-hal-qilish)
-19. [Kengaytirish](#-kengaytirish)
-20. [Xavfsizlik](#-xavfsizlik)
-21. [Litsenziya](#-litsenziya)
-22. [Muallif](#-muallif)
+3. [Yangiliklar (v3.0)](#-yangiliklar-v30)
+4. [Texnologiyalar steki](#%EF%B8%8F-texnologiyalar-steki)
+5. [Loyiha tuzilmasi](#-loyiha-tuzilmasi)
+6. [O'rnatish va ishga tushirish](#-ornatish-va-ishga-tushirish)
+7. [Demo kirish](#-demo-kirish)
+8. [Web sahifalar](#-web-sahifalar)
+9. [API endpointlar](#-api-endpointlar)
+10. [AI Model](#-ai-model)
+11. [AI Chatbot Engine](#-ai-chatbot-engine)
+12. [Sensor parametrlari va chegaralari](#-sensor-parametrlari-va-chegaralari)
+13. [7 kunlik prognoz](#-7-kunlik-prognoz)
+14. [Telegram bot](#-telegram-bot)
+15. [Nosozlik buyurtma tizimi](#-nosozlik-buyurtma-tizimi)
+16. [Toshkent tumanlari](#-toshkent-tumanlari)
+17. [Premium UI qatlami](#-premium-ui-qatlami)
+18. [Ko'p tilli interfeys](#-kop-tilli-interfeys)
+19. [PWA — telefonga o'rnatish](#-pwa--telefonga-ornatish)
+20. [Konsol skriptlari](#-konsol-skriptlari-scripts)
+21. [Muammolarni hal qilish](#-muammolarni-hal-qilish)
+22. [Xavfsizlik](#-xavfsizlik)
+23. [Litsenziya](#-litsenziya)
+24. [Muallif](#-muallif)
 
 ---
 
 ## 📋 Loyiha haqida
 
-**ElectroGrid Monitoring** — Toshkent shahrining 12 tumanidagi **1,200 ta sensor**dan yig'ilgan **1.2 million yozuv** asosida ishlaydigan to'liq monitoring tizimi.
+**ElectroGrid Monitoring** — Toshkent shahrining 12 tumanidagi **1,200 ta sensor**dan yig'ilgan **1,292,959 yozuv** asosida ishlaydigan to'liq monitoring tizimi.
 
-Tizim 8 ta elektr va atrof-muhit parametrini real vaqtda kuzatadi, har bir sensorni 3 bosqichli xavf darajasi (✅ Normal · ⚠️ Ogohlantirish · 🚨 Favqulodda) bo'yicha tasniflaydi, **gibrid AI model** (RandomForest + MLP) yordamida nosozlikni bashorat qiladi va **Open-Meteo** real ob-havo asosida 7 kunlik prognoz beradi. Barcha hodisalar Telegram bot orqali tegishli tuman foydalanuvchisiga jonli yetkaziladi.
+Tizim 8 ta elektr va atrof-muhit parametrini real vaqtda kuzatadi, har bir sensorni 3 bosqichli xavf darajasi bo'yicha tasniflaydi, **gibrid AI model** (RandomForest + MLP) yordamida nosozlikni bashorat qiladi va **wttr.in + Open-Meteo** real ob-havo asosida 7 kunlik prognoz beradi. Barcha hodisalar Telegram bot orqali tegishli tuman foydalanuvchisiga jonli yetkaziladi va foydalanuvchilar bot orqali GPS joylashuv bilan **nosozlik buyurtma** (ticket) bera oladi.
 
 ### Loyihaning kuchli tomonlari
 
-- ⚡ **Real-time** — har 30 sekundda yangilanish, jonli status bar
-- 🧠 **Hybrid AI** — RandomForest + MLP soft-voting, ishonch foizi va matnli tahlil
-- 🌦️ **Real ob-havo** — Open-Meteo API integratsiyasi (har tuman uchun GPS)
-- 🤖 **Telegram bot** — 28+ buyruq, grafik PNG, auto-alert, ro'yxatdan o'tish
-- 🎨 **Premium UI** — glassmorphism, animatsiyalar, command palette (Ctrl+K), toast
-- 📱 **PWA** — telefon/desktopga o'rnatiladi, offline manifest
-- 🌙 **Dark / Light** — qo'lda yoki avtomatik
-- 🌐 **Ko'p tilli interfeys** — uz / ru / en (navbar lang switcher)
-- 📊 **Eksport** — CSV, PDF (HTML hisobot), Excel-mos format
+| | |
+|---|---|
+| ⚡ **Real-time** | Har 30 sekundda yangilanish, jonli status bar |
+| 🧠 **Hybrid AI** | RandomForest + MLP soft-voting, ishonch foizi va matnli tahlil |
+| 🌦️ **Real ob-havo** | wttr.in + Open-Meteo ikki manba (Toshkent haqiqiy ma'lumot) |
+| 🤖 **Telegram bot** | 35+ buyruq, grafik PNG, auto-alert, nosozlik buyurtma |
+| 🛠️ **Ticket tizimi** | GPS + rasm + daraja bilan buyurtma, admin bildirishnoma |
+| 💬 **AI Chatbot** | 24 intent, O'zbek/Kirill/Rus, professional NLU dvigateli |
+| 🎨 **Premium UI** | Glassmorphism, animatsiyalar, command palette (Ctrl+K), toast |
+| 📱 **PWA** | Telefon/desktopga o'rnatiladi, offline manifest |
+| 🌐 **Ko'p tilli** | Lotin / Kirill (147+ so'z lug'ati, MutationObserver) |
+| 📊 **Eksport** | CSV, PDF, Excel-mos format |
+
+---
+
+## 🆕 Yangiliklar (v3.0)
+
+### 🛠️ Nosozlik Buyurtma Tizimi (yangi)
+- Bot orqali GPS joylashuv bilan ticket berish
+- Daraja tanlash: 🔴 Kritik / 🟡 O'rta / 🟢 Past
+- Rasm biriktirish va saytda ko'rsatish
+- GPS asosida eng yaqin sensorni avtomatik aniqlash
+- Admin Telegram bildirishnomasi (joylashuv pin + rasm + tugmalar)
+- `⚙️ Jarayonga o'tkazish` / `✅ Yopish` admin tugmalari botda
+
+### 💬 AI Chatbot yangilandi
+- 13 → **24 ta intent**
+- Vibratsiya, namlik, sim holati, chastota, quvvat — yangi parametrlar
+- O'zbek Kirill to'liq qo'llab-quvvatlash
+- Kontekstli aniqlash: "Chilonzorda muammo bormi?" → district + danger
+- Har parametr uchun chegara tahlili (🟢/🟡/🔴 ko'rsatkich)
+
+### 📡 Ma'lumotlar yangilandi
+- 1,200,000 → **1,292,959 yozuv** (+92,959)
+- 2026-04-23 → **2026-06-26** gacha uzaytirildi
+- Iyun: harorat ~32°C, namlik ~22% (Toshkent yoz) ✅
+
+### 🌤️ Ob-havo aniqroq
+- **wttr.in** asosiy manba (haqiqiy stansiya ma'lumoti)
+- Open-Meteo zaxira sifatida
+- Kesh 30 daqiqa (har 5 daqiqada yangilanishi mumkin)
+- `feels_like`, `cloud`, `description` — yangi maydonlar
+
+### 🗺️ Xarita yaxshilandi
+- `fitBounds` — sensorlar avtomatik ko'rinish maydoni
+- `preferCanvas` — 1200 marker tezkor render
+- Markerlar yuklanib bo'lgach avtomatik zoom
+
+### 🌐 Ko'p tilli (Lotin/Kirill)
+- 80 → **147+ ta lug'at kiritma**
+- Barcha sahifa sarlavhalari, oylar, parametr nomlari
+- Kichik/Katta harf variantlari (`havfsiz`, `HAVFSIZ`, `Havfsiz`)
+- `⏭️ O'tkazib yuborish` bilan joylashuv skip
+
+### 🤖 Bot yangiliklari
+- `/ticket` — nosozlik buyurtma ConversationHandler (5 bosqich)
+- Noto'g'ri buyruq → "❌ Bunday buyruq yo'q. /help yozing"
+- Sensor ID normallashtirish: `S001` → `S0001` avtomatik
+- Admin bildirishnoma: GPS + rasm + sensor holati + tugmalar
 
 ---
 
@@ -79,23 +133,23 @@ Tizim 8 ta elektr va atrof-muhit parametrini real vaqtda kuzatadi, har bir senso
 
 | # | Modul | Tavsif |
 |---|---|---|
-| 📊 | **Real-time Dashboard** | KPI kartalar, jonli sensorlar, trend grafiklar, sparkline mini-charts |
-| 🗺️ | **Interaktiv Xarita** | Leaflet, 1200 sensor, heatmap qatlami, klaster, tuman polygonlari, popup mini-grafik, GPS pin |
+| 📊 | **Real-time Dashboard** | KPI kartalar, jonli sensorlar, trend grafiklar, ob-havo widget |
+| 🗺️ | **Interaktiv Xarita** | Leaflet, 1200 sensor, heatmap, klaster, fitBounds, popup sparkline |
 | 📈 | **Grafiklar** | 8 parametr trend, multi-axis, sensor taqqoslash, tarix tahlili |
-| 📋 | **Jadval** | 1.2M qator, server-side pagination, sort, multi-filter, CSV eksport |
-| 🧠 | **AI Model** | Hybrid VotingClassifier, ishonch %, matnli xulosa, har bir parametr uchun tavsiya |
-| 🔮 | **7 kunlik Prognoz** | Real ob-havo + AI + peak-hour effekt, 28 nuqta, kunlik xulosa |
+| 📋 | **Jadval** | 1.3M qator, server-side pagination, sort, multi-filter, CSV eksport |
+| 🧠 | **AI Model** | Hybrid VotingClassifier, ishonch %, matnli xulosa, parametr tavsiya |
+| 🔮 | **7 kunlik Prognoz** | wttr.in + Open-Meteo + AI, 28 nuqta, kunlik xulosa kartalar |
 | 🆚 | **Solishtirish** | Ikki sensor / tumanni yonma-yon taqqoslash |
 | 📅 | **Kalendar** | Texnik xizmat va inspeksiya rejasi |
-| 🎫 | **Tiketlar** | Muammolar uchun ish hujjati (ticketing) |
+| 🎫 | **Tiketlar** | GPS + rasm + daraja bilan nosozlik ticket tizimi |
+| 💬 | **AI Chatbot** | 24 intent NLU, O'zbek/Kirill/Rus, professional javoblar |
 | 🛠️ | **Audit jurnali** | Foydalanuvchi harakatlari log |
-| 🤖 | **Telegram Bot** | 28+ buyruq, `/predict`, `/chart`, auto-alert, ro'yxatdan o'tish |
-| 🔐 | **Auth + Rollar** | Session-based login, admin / operator |
+| 🤖 | **Telegram Bot** | 35+ buyruq, grafik PNG, auto-alert, ticket, ro'yxatdan o'tish |
+| 🔐 | **Auth + Rollar** | Session-based login, admin / operator, bcrypt |
 | 🌙 | **Dark/Light** | Premium tema, manifest theme-color sinxron |
 | 📱 | **Responsive + PWA** | Mobile/tablet/desktop, telefonga o'rnatish |
 | ⌨️ | **Command Palette** | `Ctrl+K` orqali tezkor navigatsiya |
-| 🔔 | **Toast bildirishnoma** | `egToast({title, msg, type})` API |
-| 🎨 | **Premium SVG fon** | Toshkent elektr tarmog'i, animatsiyali energiya oqimi |
+| 🌐 | **Ko'p tilli** | Lotin ↔ Kirill (147+ lug'at, dinamik DOM tarjima) |
 
 ---
 
@@ -105,110 +159,108 @@ Tizim 8 ta elektr va atrof-muhit parametrini real vaqtda kuzatadi, har bir senso
 
 | Kutubxona | Versiya | Vazifasi |
 |---|---|---|
-| **Python** | 3.10+ | Asosiy til |
-| **Flask** | 3.0.0 | Web server, API |
-| **Flask-SocketIO** | 5.3.6 | (ixtiyoriy) real-time push |
+| **Python** | 3.12 | Asosiy til |
+| **Flask** | 3.0.0 | Web server, API, Jinja2 |
 | **Flask-Caching** | 2.3.1 | Server javoblarini keshlash |
-| **Flask-Limiter** | 4.1.1 | API rate-limit |
+| **Flask-Limiter** | 4.1.1 | API rate-limit (200/min) |
+| **Flask-SocketIO** | 5.3.6 | WebSocket real-time push |
 | **bcrypt** | 5.0.0 | Parol xeshlash |
 | **pandas** | 2.x | Ma'lumotlarni qayta ishlash |
-| **numpy** | 1.x / 2.x | Hisoblash |
-| **pyarrow** | 24.x | CSV → Parquet konvertatsiya |
-| **scikit-learn** | 1.8 | RandomForest + MLP |
-| **scipy** | 1.x | Statistik funksiyalar |
+| **numpy** | 2.x | Hisoblash, AR(1) simulyatsiya |
+| **pyarrow** | 24.x | Parquet format (10× CSV'dan tez) |
+| **scikit-learn** | 1.8 | RandomForest + MLP VotingClassifier |
 | **matplotlib** | 3.x | Bot uchun PNG grafiklar |
-| **plotly** | 5.18 | (ixtiyoriy) interaktiv grafik |
-| **python-telegram-bot** | 21.3 | Telegram bot |
-| **openpyxl** | 3.1.5 | Excel eksport |
-| **requests** | 2.31 | Open-Meteo API |
-| **python-dotenv** | — | `.env` fayl o'qish |
+| **python-telegram-bot** | 21.3 | Telegram bot, ConversationHandler |
+| **requests** | 2.31 | wttr.in + Open-Meteo API |
+| **python-dotenv** | 1.x | `.env` fayl o'qish |
 
 ### Frontend
 
 | Texnologiya | Versiya | Vazifasi |
 |---|---|---|
-| **Bootstrap** | 5.3 | UI framework, grid |
-| **Leaflet.js** | 1.9.4 | Interaktiv xarita |
+| **Bootstrap** | 5.3 | UI framework, grid, modal |
+| **Leaflet.js** | 1.9.4 | Interaktiv xarita, GPS |
 | **Leaflet.heat** | 0.2.0 | Heatmap qatlami |
 | **Leaflet.markercluster** | 1.5.3 | Sensor klasterlash |
-| **Chart.js** | 3.x | Dashboard grafiklar |
-| **Font Awesome** | 6.4 | Ikonkalar |
-| **Inter** | — | Premium font |
-| **Custom enhance.css/js** | — | Glassmorphism, animatsiya, palette, toast |
+| **Plotly.js** | 2.26 | Interaktiv grafiklar |
+| **Font Awesome** | 6.4 | 1500+ ikonka |
+| **Inter** | — | Premium Google Font |
+| **CartoDB** | — | Xarita plitka manba |
 
 ---
 
 ## 📁 Loyiha tuzilmasi
 
-```text
+```
 BMI_models/
-├── app.py                          # Flask asosiy server, barcha API va sahifalar
-├── train_model.py                  # AI modelni o'qitish skripti
-├── telegram_bot.py                 # Telegram bot (28+ buyruq, auto-alert)
-├── chatbot_engine.py               # Bot ichidagi NLP/qoidalar dvigateli
+├── app.py                          # Flask server, 50+ API va sahifalar
+├── chatbot_engine.py               # AI Chatbot NLU (24 intent, 3 til)
+├── telegram_bot.py                 # Telegram bot (35+ buyruq, ticket tizimi)
 ├── config.py                       # Sensor chegaralari, port, yo'llar
-├── utils.py                        # Yordamchi funksiyalar
+├── utils.py                        # Yordamchi: ticket, alert, incident, GPS
+├── train_model.py                  # AI modelni o'qitish skripti
 ├── requirements.txt                # Python paketlar
-├── pyrightconfig.json              # Static type config
-├── bot_token.txt                   # (alternativa .env'ga)
-├── users.json                      # Bot foydalanuvchilari
+├── bot_token.txt                   # Telegram bot tokeni (alternativa)
+├── users.json                      # Bot foydalanuvchilari (telefon, tuman, GPS)
 ├── subscribers.json                # Auto-alert obunachilari
-├── README.md                       # Mana shu fayl
 │
 ├── data/
-│   ├── sensor_data_part1.csv       # 600K yozuv (CSV qism 1)
-│   ├── sensor_data_part2.csv       # 600K yozuv (CSV qism 2)
+│   ├── sensor_data.parquet         # 1,292,959 yozuv (asosiy, tez yuklash)
+│   ├── sensor_data_part1.csv       # CSV qism 1 (zaxira)
+│   ├── sensor_data_part2.csv       # CSV qism 2 (zaxira)
+│   ├── tickets.json                # Nosozlik buyurtmalari
 │   ├── alert_state.json            # Faol ogohlantirishlar
 │   ├── incidents.json              # Hodisalar tarixi
 │   ├── maintenance.json            # Texnik xizmat rejasi
-│   ├── tickets.json                # Tiketlar
-│   └── tashkent_weather_cache.json # Ob-havo keshi
+│   └── tashkent_weather_cache.json # Ob-havo keshi (15 daqiqa)
 │
 ├── models/
-│   └── *.pkl                       # O'qitilgan hybrid model fayllari
+│   ├── hybrid_model_part1.pkl      # Hybrid AI model (qism 1)
+│   └── hybrid_model_part2.pkl      # Hybrid AI model (qism 2)
 │
 ├── logs/
+│   ├── app.log                     # Server loglari
 │   └── audit.json                  # Foydalanuvchi harakatlari
 │
-├── scripts/                        # Yordamchi konsol skriptlar
+├── scripts/
 │   ├── generate_data.py            # CSV ma'lumot generatsiyasi
-│   ├── csv_to_parquet.py           # CSV → Parquet
+│   ├── extend_data_to_june.py      # Ma'lumotni 2026-06-26 gacha uzaytirish
+│   ├── csv_to_parquet.py           # CSV → Parquet konvertatsiya
+│   ├── generate_result_image.py    # AI tahlil natijasi rasmini yaratish
+│   ├── test_chatbot.py             # Chatbot engine unit test
 │   ├── bmi_model.py                # Modelni alohida sinash
 │   ├── fix_coordinates.py          # GPS koordinatalarni tekshirish
-│   ├── _update_map.py              # Xarita JSON yangilash
-│   ├── forecast_params_api.py      # Forecast API sinov
-│   ├── gen_advanced_monitoring.py  # Kengaytirilgan monitoring data
-│   └── test_pages.py               # Sahifalarni avto-test
+│   └── test_pages.py               # Barcha sahifalarni HTTP-test
 │
-├── templates/                      # Jinja2 HTML
-│   ├── navbar.html                 # Umumiy navbar (har sahifaga include)
-│   ├── login.html                  # Kirish sahifasi (animatsiyali fon)
-│   ├── index.html                  # Bosh sahifa
-│   ├── new_dashboard.html          # Yangi dashboard
-│   ├── user_home.html              # Operator home
-│   ├── map.html                    # Leaflet xarita
-│   ├── table.html                  # Jadval
-│   ├── graphs.html                 # Grafiklar
-│   ├── model.html                  # AI model UI
-│   ├── forecast.html               # 7 kunlik prognoz
-│   ├── compare.html                # Sensor/tuman taqqoslash
-│   ├── sensor_detail.html          # Sensor tafsiloti
+├── templates/                      # Jinja2 HTML (16 ta sahifa)
+│   ├── navbar.html                 # Navbar + til switcher + chatbot widget
+│   ├── index.html                  # Bosh sahifa (harita + statistika)
+│   ├── map.html                    # Leaflet xarita (klaster + heatmap)
+│   ├── table.html                  # Jadval (pagination + sort + filter)
+│   ├── graphs.html                 # Trend grafiklar (8 parametr)
+│   ├── model.html                  # AI tahlil va prognoz
+│   ├── forecast.html               # 7 kunlik kelajak prognozi
+│   ├── compare.html                # Sensor/tuman solishtirish
+│   ├── sensor_detail.html          # Bitta sensor tafsiloti
+│   ├── tickets.html                # Nosozlik buyurtmalari (GPS + rasm)
 │   ├── calendar.html               # Texnik xizmat kalendari
-│   ├── tickets.html                # Tiketlar
-│   ├── audit.html                  # Audit jurnali
-│   └── error.html                  # 4xx/5xx
+│   ├── audit.html                  # Audit jurnali (faqat admin)
+│   ├── login.html                  # Kirish sahifasi
+│   ├── user_home.html              # Operator bosh sahifasi
+│   └── error.html                  # 403/404/500 xato sahifasi
 │
 └── static/
-    ├── style.css                   # Asosiy dizayn tizimi (tokens, kartalar)
-    ├── enhance.css                 # Premium qatlam (animatsiya, glass, toast)
-    ├── enhance.js                  # JS qatlam (counter, ripple, palette)
-    ├── theme.js                    # Dark/Light toggle
-    ├── sw.js                       # Service Worker (PWA)
+    ├── style.css                   # Dizayn tizimi (CSS tokens, kartalar)
+    ├── enhance.css                 # Premium: glassmorphism, animatsiya
+    ├── enhance.js                  # JS: counter, ripple, palette, toast
+    ├── theme.js                    # Dark/Light toggle + sinxronizatsiya
+    ├── sw.js                       # Service Worker (PWA offline)
     ├── manifest.json               # PWA manifest
-    ├── bg-tashkent.svg             # Premium fon (elektr tarmog'i, animatsiya)
-    ├── icon.svg                    # Vektor ikonka
-    ├── icon-192.png                # PWA ikonka 192px
-    └── icon-512.png                # PWA ikonka 512px
+    ├── result_preview.png          # AI tahlil natijasi namuna rasmı
+    ├── ticket_photos/              # Bot orqali yuborilgan rasm fayllar
+    ├── bg-tashkent.svg             # Premium animatsiyali fon
+    ├── icon.svg / icon-192.png / icon-512.png  # PWA ikonkalar
+    └── icons/                      # Ijtimoiy tarmoq va kontakt ikonkalari
 ```
 
 ---
@@ -217,49 +269,50 @@ BMI_models/
 
 ### Talablar
 
-- **Python 3.10+** (3.12 tavsiya etiladi)
-- `pip` (Python bilan birga keladi)
-- Internet aloqasi (Open-Meteo va Telegram uchun)
-- ~2 GB bo'sh joy (CSV + model)
+- **Python 3.10+** (3.12 tavsiya)
+- Internet aloqasi (ob-havo API, Telegram)
+- ~500 MB bo'sh joy (Parquet + model)
 
-### Qadamlar (Windows PowerShell)
+### Windows (PowerShell)
 
 ```powershell
 # 1. Klonlash
 git clone https://github.com/ShoxGit19/BMI_models.git
 cd BMI_models
 
-# 2. Virtual muhit yaratish va faollashtirish
+# 2. Virtual muhit
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 
-# 3. Paketlarni o'rnatish
+# 3. Paketlar
 pip install -r requirements.txt
 
-# 4. CSV ma'lumotlarni 'data/' papkasiga joylashtiring
-#    (sensor_data_part1.csv va sensor_data_part2.csv)
+# 4. .env fayl (BOM siz, UTF-8)
+[System.IO.File]::WriteAllText("$PWD\.env",
+  "TELEGRAM_BOT_TOKEN=YOUR_TOKEN`nSITE_BASE=http://localhost:5000`n")
 
-# 5. .env faylni yarating (BOM siz, UTF-8)
-[System.IO.File]::WriteAllText("$PWD\.env", "TELEGRAM_BOT_TOKEN=YOUR_BOT_TOKEN`n")
-
-# 6. AI modelni o'qitish (bir marta, ~3-5 daqiqa)
+# 5. AI modelni o'qitish (bir marta, ~3-5 daqiqa)
 python train_model.py
 
-# 7. Saytni ishga tushirish (Flask + Telegram bot birga)
+# 6. Saytni ishga tushirish
 python app.py
+
+# 7. (Alohida terminal) Telegram bot
+python telegram_bot.py
 ```
 
-### Qadamlar (Linux / macOS)
+### Linux / macOS
 
 ```bash
 git clone https://github.com/ShoxGit19/BMI_models.git
 cd BMI_models
-python3 -m venv .venv
-source .venv/bin/activate
+python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-echo "TELEGRAM_BOT_TOKEN=YOUR_BOT_TOKEN" > .env
+echo "TELEGRAM_BOT_TOKEN=YOUR_TOKEN" > .env
+echo "SITE_BASE=http://localhost:5000" >> .env
 python train_model.py
-python app.py
+python app.py &
+python telegram_bot.py
 ```
 
 > 🌐 Brauzerda oching: **http://localhost:5000**
@@ -270,10 +323,10 @@ python app.py
 
 | Foydalanuvchi | Parol | Rol |
 |---|---|---|
-| `admin` | `admin123` | 👑 Administrator (barcha sahifalar) |
-| `operator` | `operator123` | 👤 Operator (faqat o'qish) |
+| `admin` | `admin123` | 👑 Administrator — barcha sahifalar |
+| `operator` | `operator123` | 👤 Operator — faqat o'qish |
 
-> ⚠️ **Production'da** demo parollarni darhol o'zgartiring (bcrypt bilan xeshlangan parolga o'ting).
+> ⚠️ **Production'da** demo parollarni darhol o'zgartiring.
 
 ---
 
@@ -281,19 +334,18 @@ python app.py
 
 | Sahifa | URL | Tavsifi |
 |---|---|---|
-| Kirish | `/login` | Animatsiyali fon, glass kartalar |
-| Bosh sahifa | `/` | KPI overview, eng so'nggi hodisalar |
-| Dashboard | `/dashboard` | KPI kartalar, sparkline, trend, real-time |
-| Xarita | `/map` | 1200 sensor, heatmap, klaster, polygon |
-| Jadval | `/table` | 1.2M qator, sort, filter, CSV |
-| Grafiklar | `/graphs` | 8 parametr trend, multi-axis |
-| Solishtirish | `/compare` | Ikki sensor/tuman yonma-yon |
-| AI Model | `/model` | 8 parametr → AI xulosa + tavsiyalar |
-| Prognoz | `/forecast` | 7 kunlik AI + ob-havo bashorat |
-| Sensor | `/sensor/<id>` | Sensor: grafik, tarix, holat |
-| Kalendar | `/calendar` | Texnik xizmat rejasi |
-| Tiketlar | `/tickets` | Muammo bilet tizimi |
-| Audit | `/audit` | Foydalanuvchi harakatlari logi |
+| Kirish | `/login` | Animatsiyali fon, bcrypt autentifikatsiya |
+| Bosh sahifa | `/` | KPI statistika, xarita, tumanlar, ob-havo |
+| Xarita | `/map` | 1200 sensor, heatmap, klaster, polygon, GPS eksport |
+| Jadval | `/table` | Pagination, sort, multi-filter, CSV eksport |
+| Grafiklar | `/graphs` | 8 parametr trend, vaqt oralig'i filter |
+| AI Model | `/model` | 8 parametr → hybrid AI xulosa + tavsiyalar |
+| Prognoz | `/forecast` | 7 kunlik AI + ob-havo bashorat, 28 nuqta |
+| Solishtirish | `/compare` | Ikki sensor yoki tuman yonma-yon |
+| Sensor | `/sensor/<id>` | Sensor grafik, tarix, holat tahlili |
+| Tiketlar | `/tickets` | Nosozlik buyurtmalari (GPS, rasm, daraja) |
+| Kalendar | `/calendar` | Texnik xizmat rejasi va avariyalar |
+| Audit | `/audit` | Foydalanuvchi harakatlari (faqat admin) |
 
 ---
 
@@ -301,274 +353,334 @@ python app.py
 
 | Endpoint | Metod | Tavsifi |
 |---|---|---|
-| `/api/data` | GET | Sensor o'qishlari (`?page=&per_page=&district=`) |
-| `/api/stats` | GET | Dashboard umumiy statistika |
+| `/api/stats` | GET | Dashboard statistika (sensor holat, o'rtacha) |
+| `/api/data` | GET | Sensorlar (`?page=&per_page=&district=`) |
 | `/api/graph-data` | GET | Grafik uchun 1000 nuqta |
-| `/api/map-data` | GET | Har sensorning so'nggi holati |
-| `/api/sensor/<id>` | GET | Sensor so'nggi 100 o'qish |
-| `/api/sensor-spark/<id>` | GET | Sparkline uchun 30 ta qiymat |
-| `/api/forecast` | GET | 7 kunlik prognoz (`?latitude=&longitude=`) |
-| `/api/forecast-params` | GET | Parametr trendi (`?param=Kuchlanish`) |
-| `/api/predict` | POST | AI bashorat (JSON: 8 parametr) |
-| `/api/export/csv` | GET | CSV (`?district=&only_faults=1`) |
-| `/api/export/pdf` | GET | HTML hisobot |
-| `/api/tickets` | GET/POST | Tiket CRUD |
-| `/api/incidents` | GET | Hodisalar tarixi |
+| `/api/map-data` | GET | Har sensorning so'nggi holati + koordinata |
+| `/api/sensor/<id>` | GET | Sensor oxirgi 100 o'qish + tarix |
+| `/api/sensor-spark/<id>` | GET | Sparkline 30 ta kuchlanish qiymati |
+| `/api/forecast` | GET | 7 kunlik ob-havo (`?latitude=&longitude=`) |
+| `/api/future-forecast` | GET | AI + ob-havo 28 nuqtali kelajak prognoz |
+| `/api/forecast-params` | GET | Parametr trendi (`?param=Kuchlanish (V)`) |
+| `/api/weather` | GET | Hozirgi ob-havo (wttr.in + Open-Meteo) |
+| `/api/tickets` | GET/POST | Ticket CRUD (bot token orqali ham) |
+| `/api/tickets/<id>/update` | POST | ETA, status, izoh yangilash (admin) |
+| `/api/tickets/<id>/close` | POST | Ticketni yopish (admin) |
+| `/api/compare` | GET | Ikki tuman/sensor taqqoslash (`?type=&a=&b=`) |
+| `/api/chatbot` | POST | AI chatbot (`{question: "..."}`) |
+| `/api/export/csv` | GET | CSV eksport |
+| `/api/export/map-csv` | GET | Xarita CSV (`?district=&only_faults=1`) |
+| `/api/reload-model` | GET | Modelni qayta yuklash (admin) |
+| `/api/set-language` | POST | Til o'zgartirish (`{lang: "uz_cyr"}`) |
 
-### `/api/predict` namuna so'rov
+### Chatbot API namunasi
 
 ```bash
-curl -X POST http://localhost:5000/api/predict \
+curl -X POST http://localhost:5000/api/chatbot \
   -H "Content-Type: application/json" \
-  -d '{
-    "Harorat": 35,
-    "Shamol": 12,
-    "Chastota": 50.0,
-    "Kuchlanish": 220,
-    "Vibratsiya": 0.8,
-    "Sim_holati": 88,
-    "Namlik": 55,
-    "Quvvat": 4.2
-  }'
+  -H "Cookie: session=YOUR_SESSION" \
+  -d '{"question": "Chilonzorda xavfli sensorlar bormi?"}'
 ```
-
-Javob:
 
 ```json
 {
-  "label": 0,
-  "label_name": "safe",
-  "confidence": 0.94,
-  "issues": [],
-  "recommendations": ["Barcha parametrlar normal."]
+  "text": "🔴 **11 ta xavfli sensor** (Chilonzor)...",
+  "cards": [{"title": "S0123", "subtitle": "Chilonzor · 198.2V"}],
+  "quick_replies": ["Xaritada ko'rish", "Statistika"],
+  "intent": "danger_list",
+  "confidence": 7
 }
 ```
 
 ---
 
-## 🧠 AI model
+## 🧠 AI Model
 
 ### Arxitektura
 
 ```
 Kirish (8 parametr)
-        │
-        ▼
-  StandardScaler
-        │
-        ▼
-┌────────────────────────────────────────┐
-│  RandomForestClassifier (100 daraxt)   │
-│                +                       │
-│  MLPClassifier (100 → 50 yashirin qatl)│
-│              soft voting               │
-└────────────────────────────────────────┘
-        │
-        ▼
-  Natija: 0 / 1 / 2  +  ishonch foizi (%)
-        │
-        ▼
-  Matnli xulosa + tavsiyalar
+       │
+       ▼
+ StandardScaler
+       │
+       ▼
+┌─────────────────────────────────────────┐
+│  RandomForestClassifier (100 daraxt)    │
+│              +                          │
+│  MLPClassifier (128 → 64 yashirin qatl) │
+│           soft-voting (0.4:0.6)         │
+└─────────────────────────────────────────┘
+       │
+       ▼
+ Natija: 0/1/2 + ishonch foizi (%)
+       │
+       ▼
+ Matnli xulosa + parametr tahlili + tavsiyalar
 ```
 
-### Sinflar
+### Sinf darajalari
 
 | Kod | Nom | Rang | Ma'no |
 |---|---|---|---|
-| `0` | safe | 🟢 Yashil | Barcha parametrlar normal |
-| `1` | warning | 🟡 Sariq | Bir yoki bir nechta parametr ogoh zonada |
-| `2` | danger | 🔴 Qizil | Kritik chegaradan tashqarida — favqulodda |
+| `0` | safe | 🟢 | Barcha parametrlar normal chegarada |
+| `1` | warning | 🟡 | Bir yoki bir nechta parametr ogoh zonada |
+| `2` | danger | 🔴 | Kritik chegaradan tashqarida — zudlik bilan tekshirish |
 
 ### Modelni qayta o'qitish
 
 ```bash
 python train_model.py
+# Konsol: Accuracy, Precision, Recall, F1 metrika chiqadi
+# Natija: models/hybrid_model_part1.pkl + part2.pkl
 ```
 
-Skript `data/sensor_data_part*.csv` ni o'qib, modelni `models/` ga saqlaydi va konsol orqali metrika ko'rsatadi (Accuracy, Precision, Recall, F1).
+---
+
+## 💬 AI Chatbot Engine
+
+`chatbot_engine.py` — professional NLU dvigateli. Saytdagi chatbot paneliga integratsiyalashgan.
+
+### Qo'llab-quvvatlanadigan intentlar (24 ta)
+
+| Guruh | Intentlar |
+|---|---|
+| **Umumiy** | greeting, help, stats, averages |
+| **Holat** | danger_list, warning_list, safe_list |
+| **Kuchlanish** | voltage_low, voltage_high, voltage_info |
+| **Parametrlar** | temperature_high, temperature_info, vibration_high, wire_low, humidity_check, frequency_check, power_check |
+| **Qidiruv** | sensor_info, district_info, compare_districts, top_danger, top_voltage_low, top_temperature |
+| **Tahlil** | recent_faults, forecast_info, weather, tickets_info, map_info |
+
+### Namuna so'rovlar
+
+```
+"Salom"                          → Salomlashish + tizim holati
+"Statistika"                     → Jami sensor, holat foizlari, o'rtachalar
+"Chilonzorda muammo bormi?"      → Tuman + nosozlik → 11 ta xavfli sensor
+"S0045 holati"                   → Sensor barcha parametrlari (🟢/🟡/🔴)
+"Kuchlanish 200V dan past"       → Filtrlanagan sensor ro'yxati + kartalar
+"So'nggi nosozliklar"            → 24 soatdagi hodisalar
+"Eng past kuchlanishli sensor"   → Top 5 ro'yxat
+"Vibratsiya yuqori sensorlar"    → 1.0 dan oshgan sensorlar
+"O'rtacha ko'rsatkichlar"        → 8 parametr o'rtachalari
+"Chastota holati"                → Normal/ogohlantirish/xavf taqsimoti
+```
+
+### Til qo'llab-quvvatlash
+
+- ✅ O'zbek Lotin (asosiy)
+- ✅ O'zbek Kirill (barcha kalit so'zlar)
+- ✅ Rus tili (statistika, tumanlar, parametrlar)
+- ✅ Ingliz tili (voltage, sensor, danger, warning)
 
 ---
 
 ## 📏 Sensor parametrlari va chegaralari
 
-`config.py` da to'liq sozlanadigan **3 bosqichli** chegaralar:
-
-| Parametr | Birlik | 🟢 Normal | 🟡 Ogohlantirish | 🔴 Favqulodda |
+| Parametr | Birlik | 🟢 Normal | 🟡 Ogohlantirish | 🔴 Xavfli |
 |---|---|---|---|---|
 | **Kuchlanish** | V | 210–230 | 200–210 / 230–240 | < 200 yoki > 240 |
-| **Chastota** | Hz | 49.5–50.5 | 49.0–49.5 / 50.5–51.0 | < 49 yoki > 51 |
+| **Chastota** | Hz | 49.5–50.5 | 49.0–49.5 / 50.5–51.0 | < 49.0 yoki > 51.0 |
 | **Harorat** | °C | < 40 | 40–45 | > 45 |
 | **Shamol** | km/h | < 15 | 15–25 | > 25 |
 | **Vibratsiya** | — | < 1.0 | 1.0–1.5 | > 1.5 |
 | **Sim holati** | % | > 85 | 75–85 | < 75 |
-| **Namlik** | % | 35–85 | 30–35 / 85–90 | < 30 yoki > 90 |
+| **Namlik** | % | 25–85 | 15–25 / 85–90 | < 15 yoki > 90 |
 | **Quvvat** | kW | ≤ 5.0 | 5.0–5.5 | > 5.5 |
 
 ---
 
 ## 🔮 7 kunlik prognoz
 
-Algoritm:
+```
+1. Real ob-havo (wttr.in + Open-Meteo) → harorat, shamol, namlik
+2. AR(1) trend modeli → chastota, kuchlanish, vibratsiya, sim, quvvat
+3. Har 6 soatlik nuqta (28 ta jami)
+4. Hybrid AI → har nuqta uchun xavf bashorat (0/1/2)
+5. Kunlik xulosa → eng xavfli soat, o'rtacha risk %
+```
 
-1. **Real ob-havo** — Open-Meteo API (har tuman uchun GPS)
-2. **Stoxastik simulyatsiya** — mean-reversion (Ornstein–Uhlenbeck) modeli
-3. **Peak-hour effekti** — 08:00–12:00 va 18:00–22:00 yuk pastki
-4. **AI bashorat** — har 6 soatlik nuqta uchun hybrid model
-5. **Aggregatsiya** — kunlik xulosa: o'rtacha risk %, eng xavfli soat
-
-**Natija**: `7 kun × 4 nuqta = 28` bashorat + 7 kunlik xulosa kartalar va risk grafigi.
+**Natija**: 28 nuqtali grafik + 7 kunlik xulosa kartalar + timeline strip + batafsil jadval.
 
 ---
 
-## 🤖 Telegram bot
+## 🤖 Telegram Bot
 
-### Ro'yxatdan o'tish jarayoni
+### Ro'yxatdan o'tish
 
 ```
 /start
-  → 📱 Telefon yuborish (kontakt tugma yoki +998XXXXXXXXX qo'lda)
-  → ✍️  Ism kiriting
-  → ✍️  Familiya kiriting
-  → 🏘️  12 tumandan birini tanlang
-  → ✅  Bosh menyu (inline tugmalar)
+  → 📱 Telefon yuborish
+  → ✍️  Ism + Familiya
+  → 🏘️  12 tumandan biri
+  → 📍 GPS joylashuv (ixtiyoriy)
+  → 🔐 Web login/parol avtomatik yaratiladi
+  → ✅  Bosh menyu
 ```
 
-### Buyruqlar (28+)
+### Barcha buyruqlar
 
 | Buyruq | Tavsifi |
 |---|---|
-| `/start` | Ro'yxatdan o'tish + bosh menyu |
-| `/help` | Barcha buyruqlar ro'yxati |
-| `/stats` | Umumiy statistika (sensorlar, holatlar) |
-| `/forecast` | 7 kunlik prognoz + ob-havo |
-| `/districts` | 12 tuman holati |
-| `/sensor S0001` | Sensor tafsiloti |
+| `/start` | Ro'yxatdan o'tish va bosh menyu |
+| `/help` | Buyruqlar ro'yxati |
+| `/stats` | Umumiy statistika |
+| `/forecast` | 7 kunlik ob-havo prognozi |
+| `/districts` | Tumanlar holati |
+| `/sensor S0001` | Sensor tafsiloti + koordinata pin |
+| `/chart S0001` | Sensor grafik PNG (4 parametr) |
+| `/compare S0001 S0002` | Ikki sensor taqqoslash |
+| `/district_compare A B` | Tumanlarni taqqoslash |
+| `/history S0001 7` | Sensor tarixi (7 kun) |
 | `/predict 30 7 50 220 0.5 90 60 3` | AI bashorat (8 parametr) |
-| `/danger` | Hozirgi muammoli sensorlar |
+| `/danger` | Muammoli sensorlar |
 | `/top` | Top 10 xavfli sensor |
 | `/averages` | O'rtacha qiymatlar |
-| `/weather` | Joriy ob-havo |
-| `/chart S0001` | Sensor grafigi (PNG) |
-| `/compare S0001 S0002` | Ikki sensor + grafik |
-| `/district_compare A B` | Tumanlarni taqqoslash |
-| `/history S0001 7` | Sensor 7 kunlik tarixi |
-| `/search Chilonzor` | Tuman bo'yicha qidiruv |
-| `/filter danger` | Holat bo'yicha filtr |
-| `/report` | CSV hisobot fayl |
-| `/csv S0001` | Bitta sensor CSV |
-| `/map Chilonzor` | Tuman lokatsiya pin |
+| `/weather` | Hozirgi ob-havo |
+| `/search Chilonzor` | Tuman qidiruv |
+| `/filter danger` | Holat filtri (danger/warn/safe) |
+| `/report` | PDF hisobot yuklash |
+| `/map Chilonzor` | Tuman xaritasi + GPS pinlar |
+| `/dashboard` | Vizual monitoring paneli |
+| `/near_sensors` | GPS asosida eng yaqin sensorlar |
+| `/risk` | 24 soat buzilish ehtimoli |
+| `/zones` | Tumanlar xavf darajasi |
+| **`/ticket`** | **🆕 Nosozlik buyurtma berish** |
+| `/tickets` | Faol buyurtmalar |
 | `/subscribe` | Auto-alert obunasi |
 | `/unsubscribe` | Obunani bekor qilish |
-| `/admin` | Admin panel (faqat @gaybullayeev19) |
-| `/broadcast matn` | Ommaviy xabar (admin) |
+| `/silent` | Sokin rejim on/off |
+| `/ask <savol>` | AI chatbot (tabiiy til) |
+| `/mylocation` | GPS joylashuvni yangilash |
+| `/admin` | Admin boshqaruv paneli |
+| `/broadcast <matn>` | Ommaviy xabar (admin) |
 
-### Auto-alert
+---
 
-Foydalanuvchi `/subscribe` qilsa, **uning tumanida** sensor holati `warning` yoki `danger` ga o'tganda darhol xabar oladi. Holatlar `data/alert_state.json` da kuzatiladi (qayta yuborilmaydi).
+## 🛠️ Nosozlik Buyurtma Tizimi
+
+Foydalanuvchilar bot orqali nosozlikni tizimga bildirishi mumkin. Jarayon:
+
+```
+/ticket yoki "🛠️ Nosozlik bildirish" tugmasi
+         ↓
+[1] Sensor tanlash
+    • GPS bo'lsa → 5 ta eng yaqin sensor avtomatik ko'rinadi
+    • GPS yo'q   → Tuman sensorlari ko'rinadi
+    • ID bilmasa → "🤷 Sensor IDni bilmayman" → joylashuv yuboradi
+                   Bot eng yaqin sensorno GPS asosida aniqlaydi
+         ↓
+[2] Daraja tanlash
+    🔴 Kritik (zudlik bilan) / 🟡 O'rta (bugun) / 🟢 Past (reja bilan)
+         ↓
+[3] Muammo tavsifi yozish (min 10 belgi)
+         ↓
+[4] Rasm yuborish (ixtiyoriy)
+    → Sayt /tickets sahifasida ko'rinadi
+         ↓
+[5] Tasdiqlash → Yuborish
+
+NATIJA:
+  ✅ Foydalanuvchi → "Buyurtma ID: T-20260626164800"
+  📲 Admin Telegram → GPS pin + rasm + sensor holati + tugmalar:
+     [⚙️ Jarayonga o'tkazish]  [✅ Yopish]
+     [🗺 Google Maps]           [🧭 Yandex Maps]
+  🌐 Sayt /tickets → GPS koordinata, rasm, daraja, kim/qachon
+```
+
+### Ticket maydonlari
+
+| Maydon | Tavsifi |
+|---|---|
+| `sensor_id` | Sensor identifikatori (yoki UNKNOWN) |
+| `priority` | `kritik` / `o'rta` / `past` |
+| `issue` | Muammo tavsifi (matn) |
+| `latitude`, `longitude` | GPS koordinata |
+| `district` | Tuman nomi |
+| `telegram_user` | Ism, telefon, username |
+| `photo_url` | `/static/ticket_photos/T-xxx.jpg` |
+| `source` | `bot` yoki `web` |
+| `status` | `open` → `in_progress` → `closed` |
 
 ---
 
 ## 🗺️ Toshkent tumanlari
 
-| Tuman | Latitude | Longitude |
-|---|---|---|
-| Bektemir | 41.209 | 69.335 |
-| Chilonzor | 41.256 | 69.204 |
-| Mirobod | 41.286 | 69.264 |
-| Mirzo Ulug'bek | 41.339 | 69.335 |
-| Olmazor | 41.354 | 69.212 |
-| Sergeli | 41.232 | 69.212 |
-| Shayxontohur | 41.328 | 69.229 |
-| Uchtepa | 41.300 | 69.184 |
-| Yakkasaroy | 41.300 | 69.264 |
-| Yashnobod | 41.339 | 69.335 |
-| Yunusobod | 41.354 | 69.335 |
-| Yangihayot | 41.220 | 69.240 |
+| Tuman | Lat | Lon | Sensorlar |
+|---|---|---|---|
+| Bektemir | 41.209 | 69.335 | 100 |
+| Chilonzor | 41.256 | 69.204 | 100 |
+| Mirabad | 41.276 | 69.256 | 100 |
+| Mirobod | 41.286 | 69.264 | 100 |
+| Mirzo Ulug'bek | 41.339 | 69.335 | 100 |
+| Olmazor | 41.354 | 69.212 | 100 |
+| Sergeli | 41.232 | 69.212 | 100 |
+| Shayxontohur | 41.328 | 69.229 | 100 |
+| Uchtepa | 41.300 | 69.184 | 100 |
+| Yakkasaroy | 41.300 | 69.264 | 100 |
+| Yashnobod | 41.339 | 69.335 | 100 |
+| Yunusobod | 41.354 | 69.335 | 100 |
 
 ---
 
 ## 🎨 Premium UI qatlami
 
-[static/enhance.css](static/enhance.css) + [static/enhance.js](static/enhance.js) orqali butun saytga **avtomatik** qo'shilgan:
+`enhance.css` + `enhance.js` orqali butun saytga avtomatik qo'shilgan:
 
 | Imkoniyat | Qayerda ishlaydi |
 |---|---|
-| 🌫️ **Glassmorphism navbar** | Sticky navbar — aylantirganda blur kuchayadi |
-| ✨ **Sahifa fade-up animatsiya** | Har bir `main > .container` |
+| 🌫️ **Glassmorphism navbar** | Sticky, aylantirganda blur kuchayadi |
+| ✨ **Fade-up animatsiya** | Har bir sahifa yuklanishida |
 | 🎯 **3D tilt + lift** | `.card`, `.kpi-card`, `.stat-card` |
-| 💧 **Ripple effekt** | Har bir `.btn` va `<button>` |
-| 🔢 **Counter animatsiyasi** | KPI raqamlar 0 dan haqiqiy songacha |
-| 🟢 **Pulse status dot** | `<span class="eg-pulse-dot"></span>` |
-| 🔴 **LIVE badge** | `<span class="eg-live-badge">…</span>` |
-| 🌈 **Gradient scrollbar** | Butun sayt |
+| 💧 **Ripple effekt** | Har bir tugma bosilganda |
+| 🔢 **Counter animatsiyasi** | KPI raqamlar 0 dan haqiqiy soniga |
+| 🟢 **Pulse status dot** | `<span class="eg-pulse-dot">` |
+| 🔴 **LIVE badge** | Footer status bar |
 | ⌨️ **Command Palette** | `Ctrl+K` — tezkor navigatsiya |
-| 🔔 **Toast bildirishnoma** | `egToast({title, msg, type})` |
-| 📊 **Footer status bar** | Server / DB / Bot / vaqt (jonli) |
-| 💀 **Skeleton loader** | `<span class="eg-skeleton"></span>` |
-| ♿ **Reduced-motion** | OS sozlamasiga hurmat |
-
-### JavaScript API
+| 🔔 **Toast bildirishnoma** | `egToast({title, msg, type})` JS API |
+| 📊 **Footer status bar** | Server / DB / Bot / Vaqt (jonli) |
+| 💀 **Skeleton loader** | `<span class="eg-skeleton">` |
 
 ```js
-// Toast
-egToast({ title: 'Saqlandi', msg: 'Sozlamalar yangilandi', type: 'success' });
+// Toast API
+egToast({ title: 'Saqlandi', msg: 'Buyurtma yuborildi', type: 'success' });
 egToast({ title: 'Xato', msg: 'Server javob bermadi', type: 'error' });
 // type: 'info' | 'success' | 'warning' | 'error'
 ```
 
-### HTML komponentlar
+---
 
-```html
-<!-- Jonli ko'rsatkich -->
-<span class="eg-live-badge"><span class="eg-pulse-dot"></span> Jonli</span>
+## 🌐 Ko'p tilli interfeys
 
-<!-- Sensor holati -->
-<span class="eg-pulse-dot"></span>          <!-- yashil (normal) -->
-<span class="eg-pulse-dot warn"></span>     <!-- sariq (ogohlantirish) -->
-<span class="eg-pulse-dot danger"></span>   <!-- qizil (xato) -->
+Navbar dagi `UZ | КР` tugmalari orqali Lotin ↔ Kirill almashtiriladi:
 
-<!-- Counter (avtomatik 0 dan ishga tushadi) -->
-<span class="eg-counter" data-to="1247">0</span>
+- **147+ lug'at kiritma** (barcha sahifalar, parametrlar, oylar)
+- **MutationObserver** — AJAX bilan yuklanadigan kontent ham tarjima qilinadi
+- **localStorage** — sahifalar o'rtasida til saqlandi
+- **Regex** — uzun iboralar avval, keyin qisqaroqlari mos keladi
 
-<!-- Skroll bilan paydo bo'luvchi blok -->
-<div class="eg-reveal">…</div>
-
-<!-- Skeleton loader -->
-<span class="eg-skeleton" style="width:120px"></span>
+```js
+// Tilni JavaScript dan o'zgartirish
+fetch('/api/set-language', {
+  method: 'POST',
+  headers: {'Content-Type': 'application/json'},
+  body: JSON.stringify({lang: 'uz_cyr'})
+});
 ```
 
 ---
 
 ## 📱 PWA — telefonga o'rnatish
 
-Sayt **Progressive Web App** sifatida ishlaydi:
-
 - `manifest.json` — ikonka, ranglar, standalone rejim
 - `sw.js` — Service Worker (offline keshi)
-- `icon.svg` + `icon-192.png` + `icon-512.png` — premium ikonkalar
+- `icon.svg` + `icon-192.png` + `icon-512.png`
 
-**Telefonda o'rnatish**:
-1. Chrome/Edge'da saytni oching
-2. ⋮ menyusi → **"Bosh ekranga qo'shish"** / **"Install"**
-3. Sayt ilova ko'rinishida ochiladi
-
----
-
-## ⚙️ Konfiguratsiya (`config.py`)
-
-```python
-class Config:
-    DEBUG = True
-    DATA_FILES = ["data/sensor_data_part1.csv", "data/sensor_data_part2.csv"]
-    MODEL_FILES = ["models/hybrid_model_part1.pkl", "models/hybrid_model_part2.pkl"]
-    REFRESH_INTERVAL = 30000   # ms — front-end auto-refresh
-    PORT = 5000
-    HOST = "0.0.0.0"
-
-    SENSOR_LIMITS = { ... }    # 3 bosqichli chegaralar
-```
-
-Sozlamalarni o'zgartirish uchun `Config` klassi maydonlarini tahrirlang. `DevelopmentConfig` va `ProductionConfig` orqali rejimlar ajratiladi.
+**O'rnatish (mobil):**
+1. Chrome/Edge brauzerda saytni oching
+2. ⋮ → **"Bosh ekranga qo'shish"** / **"Install"**
+3. Sayt to'liq ekranda ilova sifatida ochiladi
 
 ---
 
@@ -576,19 +688,24 @@ Sozlamalarni o'zgartirish uchun `Config` klassi maydonlarini tahrirlang. `Develo
 
 | Skript | Vazifasi |
 |---|---|
-| [generate_data.py](scripts/generate_data.py) | 1.2M yozuvli realistik CSV generatsiyasi |
-| [csv_to_parquet.py](scripts/csv_to_parquet.py) | CSV → Parquet (10× tezroq) |
-| [bmi_model.py](scripts/bmi_model.py) | Modelni alohida sinab ko'rish |
-| [fix_coordinates.py](scripts/fix_coordinates.py) | Sensor GPS koordinatalarini tekshirish |
-| [_update_map.py](scripts/_update_map.py) | Xarita JSON ni yangilash |
-| [forecast_params_api.py](scripts/forecast_params_api.py) | Forecast API qo'lda sinov |
-| [gen_advanced_monitoring.py](scripts/gen_advanced_monitoring.py) | Kengaytirilgan monitoring data |
-| [test_pages.py](scripts/test_pages.py) | Barcha sahifalarni HTTP-test |
+| `generate_data.py` | 1.2M yozuvli realistik CSV generatsiyasi |
+| `extend_data_to_june.py` | Ma'lumotni 2026-06-26 gacha uzaytirish |
+| `csv_to_parquet.py` | CSV → Parquet (10× tezroq, 21 MB) |
+| `generate_result_image.py` | AI tahlil natijasi professional rasmi |
+| `test_chatbot.py` | Chatbot engine 10 savol bilan test |
+| `bmi_model.py` | Modelni alohida sinab ko'rish |
+| `fix_coordinates.py` | Sensor GPS koordinatalarini tekshirish |
+| `test_pages.py` | Barcha sahifalarni HTTP-test |
 
 ```powershell
-# Misol
-python scripts\generate_data.py
-python scripts\test_pages.py
+# Ma'lumotni yangilash
+python scripts\extend_data_to_june.py
+
+# Chatbot testlash
+python scripts\test_chatbot.py
+
+# AI natijasi rasmi
+python scripts\generate_result_image.py
 ```
 
 ---
@@ -597,43 +714,32 @@ python scripts\test_pages.py
 
 | Muammo | Yechim |
 |---|---|
-| `FileNotFoundError: data/sensor_data_part1.csv` | CSV fayllarni `data/` ga qo'shing |
-| `FileNotFoundError: models/...pkl` | `python train_model.py` bajaring |
+| `FileNotFoundError: sensor_data.parquet` | `python scripts\csv_to_parquet.py` bajaring |
+| `FileNotFoundError: models/*.pkl` | `python train_model.py` bajaring |
 | Port 5000 band | `config.py` da `PORT = 5001` |
-| Bot **401 Unauthorized** | `.env` ichidagi tokenni qayta tekshiring |
-| Bot **Conflict 409** | Boshqa joyda ishlayotgan bot sessiyasini to'xtating |
-| `\ufeff` BOM `.env` da | `[System.IO.File]::WriteAllText(...)` ishlating |
-| `__stop_running_marker` xatosi | `pip install "python-telegram-bot>=21.10"` |
-| `ModuleNotFoundError` | `.venv` faollashganini tekshiring va `pip install -r requirements.txt` |
-| Open-Meteo `Timeout` | Internet aloqasini tekshiring (kesh ishlatadi) |
-| Brauzerda eski CSS | **Ctrl+F5** (cache tozalash) |
-
----
-
-## 🔧 Kengaytirish
-
-| Vazifa | Qaerda |
-|---|---|
-| Yangi API endpoint | [app.py](app.py) → `@app.route()` |
-| Yangi bot buyruq | [telegram_bot.py](telegram_bot.py) → `CommandHandler` + `main()` |
-| Yangi sahifa | [templates/](templates/) ga HTML + [app.py](app.py) ga route |
-| Modelni qayta o'qitish | [train_model.py](train_model.py) ni o'zgartiring |
-| Sensor chegaralari | [config.py](config.py) → `SENSOR_LIMITS` |
-| Yangi tuman | `DISTRICTS` + `DISTRICT_COORDS` + xarita polygon |
-| Yangi til | `navbar.html` lang switcher + Jinja `{% if lang == 'xx' %}` |
-| Yangi UI komponent | [static/enhance.css](static/enhance.css) + [enhance.js](static/enhance.js) |
+| Bot **401 Unauthorized** | `.env` da `TELEGRAM_BOT_TOKEN` ni tekshiring |
+| Bot **Conflict 409** | Boshqa ishlayotgan bot sessiyasini to'xtating |
+| `/ticket` ishlamaydi | Botni qayta ishga tushiring (`Ctrl+C → python telegram_bot.py`) |
+| Xarita sensorlar burchakda | Sahifani `Ctrl+Shift+R` bilan yangilang |
+| Ob-havo noto'g'ri | `data/tashkent_weather_cache.json` ni o'chiring |
+| Kirill tarjima ishlamaydi | `Ctrl+Shift+R` (cache tozalash), keyin `КР` tugmasini bosing |
+| `ModuleNotFoundError` | `.venv` faol, `pip install -r requirements.txt` |
+| `__stop_running_marker` | `pip install "python-telegram-bot>=21.10"` |
+| `﻿` BOM `.env` | `[System.IO.File]::WriteAllText(...)` ishlating |
 
 ---
 
 ## 🔒 Xavfsizlik
 
-- ✅ **Session-based auth** — Flask session cookie
-- ✅ **CSRF** — POST formalarida tekshiruv (kengaytirilishi mumkin)
-- ✅ **Rate-limit** — `Flask-Limiter` orqali API'larda
-- ✅ **bcrypt** — parol xeshlash uchun tayyor
-- ⚠️ **Demo parollar** — production'da darhol almashtiring
-- ⚠️ **`.env`** — `gitignore` ichida bo'lishi shart (token sirligi)
-- ✅ **OWASP Top-10** — SQL injection (DBsiz), XSS (Jinja avto-escape), open redirect tekshirilgan
+- ✅ **Session-based auth** — Flask session cookie, login required
+- ✅ **bcrypt** — parol xeshlash (salt random, har sessiya yangi)
+- ✅ **Rate-limit** — `Flask-Limiter`: 200/daqiqa, 2000/soat
+- ✅ **Bot token** — API'ga `_bot_token` tekshiruvi
+- ✅ **Admin dekorator** — `@admin_required` — 403 qaytaradi
+- ✅ **XSS** — Jinja2 avto-escape, HTML sanitize JS
+- ✅ **Audit log** — barcha login/logout/ticket/model harakatlar
+- ⚠️ **Demo parollar** — production'da darhol o'zgartiring
+- ⚠️ **`.env`** — `gitignore` ichida bo'lishi shart
 
 ---
 
@@ -643,10 +749,6 @@ python scripts\test_pages.py
 
 ```
 Copyright (c) 2024–2026 G'aybullayev Shohjahon
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction…
 ```
 
 ---
@@ -657,12 +759,13 @@ in the Software without restriction…
 
 ### G'aybullayev Shohjahon
 
-**🌍 Toshkent · Bekobod · 2024–2026**
+**🌍 Toshkent · Bekobod · 2026**
 
-**Bitiruv malakaviy ishi · Sun'iy intellekt asosida elektr tarmog'i monitoringi**
+**Bitiruv malakaviy ishi — Sun'iy intellekt asosida elektr tarmog'i monitoringi**
 
 [![Telegram](https://img.shields.io/badge/Telegram-@gaybullayeev19-2CA5E0?logo=telegram&logoColor=white)](https://t.me/gaybullayeev19)
 [![GitHub](https://img.shields.io/badge/GitHub-ShoxGit19-181717?logo=github&logoColor=white)](https://github.com/ShoxGit19)
+[![Instagram](https://img.shields.io/badge/Instagram-@ShoxGit19-E4405F?logo=instagram&logoColor=white)](https://instagram.com/ShoxGit19)
 
 </div>
 
@@ -670,9 +773,9 @@ in the Software without restriction…
 
 <div align="center">
 
-**⚡ ElectroGrid Monitoring System · v2.0 · Toshkent · 2026**
+**⚡ ElectroGrid Monitoring System · v3.0 · Toshkent · 2026**
 
-*1,200,000 sensor yozuvi · 12 tuman · Hybrid AI · Real-time monitoring · PWA · Premium UI*
+*1,292,959 sensor yozuvi · 12 tuman · Hybrid AI · Ticket tizimi · Real-time · PWA*
 
 ⭐ **Loyiha sizga foydali bo'lsa — yulduzcha qoldiring!**
 

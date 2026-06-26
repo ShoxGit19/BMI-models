@@ -169,39 +169,92 @@ def logout():
 
 # --- Ob-havo (Toshkent, real vaqt) ---
 def get_current_weather():
+    """Ob-havo: wttr.in (asosiy) + Open-Meteo (zaxira). 15 daqiqa disk kesh."""
+    import json as _json, time as _t
+    cache_file = "data/tashkent_weather_cache.json"
+
+    # Keshdan o'qish
     try:
-        cache_file = "data/tashkent_weather_cache.json"
-        import json, time
         if os.path.exists(cache_file):
-            with open(cache_file) as f:
-                cached = json.load(f)
-            if time.time() - cached.get("fetched_at", 0) < 1800:
-                return cached.get("weather")
-        resp = http_requests.get(
-            "https://api.open-meteo.com/v1/forecast",
-            params={"latitude": 41.2995, "longitude": 69.2401,
-                    "current_weather": True, "hourly": "relativehumidity_2m",
-                    "timezone": "Asia/Tashkent"},
-            timeout=5
-        )
-        if resp.status_code == 200:
-            data = resp.json()
-            cw = data.get("current_weather", {})
-            weather = {
-                "temperature": cw.get("temperature"),
-                "windspeed": cw.get("windspeed"),
-                "time": cw.get("time", "")[:16].replace("T", " "),
-            }
-            with open(cache_file, "w") as f:
-                json.dump({"weather": weather, "fetched_at": time.time()}, f)
-            return weather
+            with open(cache_file, encoding="utf-8") as _f:
+                _c = _json.load(_f)
+            if _t.time() - _c.get("fetched_at", 0) < 900:
+                w = _c.get("weather")
+                if w and w.get("temperature") is not None:
+                    return w
     except Exception:
         pass
+
+    # 1) wttr.in — haqiqiy ob-havo stansiyasi
+    try:
+        _r = http_requests.get(
+            "https://wttr.in/Tashkent?format=j1",
+            headers={"User-Agent": "Mozilla/5.0 (compatible; ElectroGrid/2.0)"},
+            timeout=7
+        )
+        if _r.status_code == 200:
+            _cur = _r.json()["current_condition"][0]
+            _desc = _cur.get("lang_uz", [{}])[0].get("value") or _cur["weatherDesc"][0]["value"]
+            _now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+            weather = {
+                "temperature": int(_cur["temp_C"]),
+                "feels_like":  int(_cur["FeelsLikeC"]),
+                "windspeed":   int(_cur["windspeedKmph"]),
+                "humidity":    int(_cur["humidity"]),
+                "cloud":       int(_cur.get("cloudcover", 0)),
+                "description": _desc,
+                "source":      "wttr.in",
+                "time":        _now,
+            }
+            try:
+                os.makedirs("data", exist_ok=True)
+                with open(cache_file, "w", encoding="utf-8") as _f:
+                    _json.dump({"weather": weather, "fetched_at": _t.time()}, _f)
+            except Exception:
+                pass
+            return weather
+    except Exception as _e:
+        logger.warning(f"wttr.in xato: {_e}")
+
+    # 2) Open-Meteo — zaxira manba
+    try:
+        _resp = http_requests.get(
+            "https://api.open-meteo.com/v1/forecast",
+            params={
+                "latitude": 41.2995, "longitude": 69.2401,
+                "current": "temperature_2m,apparent_temperature,wind_speed_10m,relative_humidity_2m,cloud_cover",
+                "timezone": "Asia/Tashkent"
+            },
+            timeout=8
+        )
+        if _resp.status_code == 200:
+            _cw = _resp.json().get("current", {})
+            _cl  = _cw.get("cloud_cover") or 0
+            weather = {
+                "temperature": _cw.get("temperature_2m"),
+                "feels_like":  _cw.get("apparent_temperature"),
+                "windspeed":   _cw.get("wind_speed_10m"),
+                "humidity":    _cw.get("relative_humidity_2m"),
+                "cloud":       _cl,
+                "description": "Quyoshli" if _cl < 30 else ("Qisman bulutli" if _cl < 70 else "Bulutli"),
+                "source":      "open-meteo",
+                "time":        (_cw.get("time") or "")[:16].replace("T", " "),
+            }
+            try:
+                os.makedirs("data", exist_ok=True)
+                with open(cache_file, "w", encoding="utf-8") as _f:
+                    _json.dump({"weather": weather, "fetched_at": _t.time()}, _f)
+            except Exception:
+                pass
+            return weather
+    except Exception as _e:
+        logger.warning(f"Open-Meteo zaxira xato: {_e}")
+
     return None
 
 # --- Ob-havo API (JS uchun real-time) ---
 @app.route("/api/weather")
-@cache.cached(timeout=600)  # 10 daqiqa ob-havo keshi
+@cache.cached(timeout=300)  # 5 daqiqa kesh (aniqroq yangilanish)
 def weather_api():
     weather = get_current_weather()
     if weather:
@@ -691,6 +744,7 @@ def future_forecast():
                 params={
                     "latitude": lat, "longitude": lon,
                     "hourly": "temperature_2m,wind_speed_10m,relative_humidity_2m",
+                    "current": "temperature_2m,wind_speed_10m,relative_humidity_2m",
                     "timezone": "Asia/Tashkent",
                     "forecast_days": 8
                 },
@@ -1500,12 +1554,12 @@ def tickets_page():
 
 
 @app.route("/api/tickets", methods=["GET", "POST"])
-@login_required
 def tickets_api():
     from utils import load_tickets, save_tickets, create_ticket
     if request.method == "GET":
+        if "user" not in session:
+            return jsonify({"error": "Login kerak"}), 401
         tickets = load_tickets()
-        # User uchun faqat o'z tumanidagi
         if session.get("role") != "admin":
             user_district = session.get("district", "")
             if user_district and df is not None:
@@ -1513,17 +1567,38 @@ def tickets_api():
                 tickets = [t for t in tickets if str(t.get("sensor_id")) in district_sensors]
         return jsonify({"tickets": tickets})
 
-    # POST — admin only
-    if session.get("role") != "admin":
-        return jsonify({"error": "Admin huquqi yo'q"}), 403
+    # POST — login kerak (admin + bot token orqali)
     data = request.json or {}
+    # Bot API token orqali kelgan so'rovlar uchun
+    bot_token = data.get("_bot_token", "")
+    from utils import read_bot_token
+    is_bot = bot_token and bot_token == read_bot_token()
+    is_admin = session.get("role") == "admin"
+
+    if not is_bot and not is_admin:
+        if "user" not in session:
+            return jsonify({"error": "Login kerak"}), 401
+        return jsonify({"error": "Admin huquqi yo'q"}), 403
+
     sensor_id = data.get("sensor_id", "").strip()
     issue = data.get("issue", "").strip()
-    eta = data.get("eta")
     if not sensor_id or not issue:
         return jsonify({"error": "sensor_id va issue kerak"}), 400
-    ticket = create_ticket(sensor_id, issue, eta=eta, created_by=session.get("user", "admin"))
-    _audit_log("ticket_create", {"ticket": ticket})
+
+    ticket = create_ticket(
+        sensor_id, issue,
+        eta=data.get("eta"),
+        created_by=data.get("created_by", session.get("user", "admin")),
+        priority=data.get("priority", "o'rta"),
+        latitude=data.get("latitude"),
+        longitude=data.get("longitude"),
+        district=data.get("district"),
+        telegram_user=data.get("telegram_user"),
+        photo_file_id=data.get("photo_file_id"),
+        photo_url=data.get("photo_url"),
+        source=data.get("source", "web")
+    )
+    _audit_log("ticket_create", {"ticket": ticket, "source": ticket.get("source")})
     return jsonify({"ok": True, "ticket": ticket})
 
 
@@ -1536,6 +1611,33 @@ def close_ticket_api(ticket_id):
         return jsonify({"error": "Topilmadi"}), 404
     _audit_log("ticket_close", {"ticket_id": ticket_id})
     return jsonify({"ok": True, "ticket": t})
+
+
+@app.route("/api/tickets/<ticket_id>/update", methods=["POST"])
+@admin_required
+def update_ticket_api(ticket_id):
+    """Admin ETA va status yangilashi."""
+    from utils import load_tickets, save_tickets
+    data = request.json or {}
+    tickets = load_tickets()
+    for t in tickets:
+        if t.get("id") == ticket_id:
+            if "eta" in data:
+                t["eta"] = data["eta"]
+            if "status" in data and data["status"] in ("open", "in_progress", "closed"):
+                t["status"] = data["status"]
+                if data["status"] == "closed":
+                    t["closed_at"] = datetime.datetime.now().isoformat()
+            if "note" in data and data["note"].strip():
+                t.setdefault("notes", []).append({
+                    "text": data["note"].strip(),
+                    "by": session.get("user", "admin"),
+                    "at": datetime.datetime.now().isoformat()
+                })
+            save_tickets(tickets)
+            _audit_log("ticket_update", {"ticket_id": ticket_id, "changes": data})
+            return jsonify({"ok": True, "ticket": t})
+    return jsonify({"error": "Topilmadi"}), 404
 
 
 @app.route("/api/sensor-status/<sensor_id>")
@@ -1704,13 +1806,13 @@ def audit_page():
 # LANGUAGE PREFERENCE
 # ========================
 @app.route("/api/set-language", methods=["POST"])
-@login_required
 def set_language_api():
     data = request.json or {}
     lang = data.get("lang", "uz")
     if lang not in ("uz", "uz_cyr"):
         return jsonify({"error": "Noma'lum til"}), 400
     session["lang"] = lang
+    session.modified = True
     return jsonify({"ok": True, "lang": lang})
 
 

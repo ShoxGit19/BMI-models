@@ -31,11 +31,11 @@
   --accent-pink: #EC4899;
   --accent-indigo: #6366F1;
 
-  /* Surfaces (light theme) */
-  --bg-page: #F8FAFC;
-  --bg-elevated: #FFFFFF;
-  --bg-subtle: #F1F5F9;
-  --bg-overlay: rgba(255, 255, 255, 0.85);
+  /* Surfaces — SVG dark fon ustida shaffof glass */
+  --bg-page: transparent;
+  --bg-elevated: rgba(255, 255, 255, 0.72);
+  --bg-subtle: rgba(241, 245, 249, 0.60);
+  --bg-overlay: rgba(255, 255, 255, 0.82);
 
   /* Text */
   --text-primary: #0F172A;
@@ -83,10 +83,10 @@
 
 /* ========== DARK THEME ========== */
 [data-theme="dark"] {
-  --bg-page: #020617;
-  --bg-elevated: #0F172A;
-  --bg-subtle: #1E293B;
-  --bg-overlay: rgba(15, 23, 42, 0.85);
+  --bg-page: transparent;
+  --bg-elevated: rgba(10, 18, 40, 0.70);
+  --bg-subtle: rgba(20, 32, 60, 0.65);
+  --bg-overlay: rgba(10, 18, 40, 0.82);
   --text-primary: #F1F5F9;
   --text-secondary: #CBD5E1;
   --text-muted: #64748B;
@@ -106,7 +106,13 @@ html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
 
 body {
   font-family: 'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  background: var(--bg-page);
+  /* ── bg-tashkent.svg to'g'ridan-to'g'ri fon ── */
+  background-color: #0a1628;
+  background-image: url("/static/bg-tashkent.svg");
+  background-size: cover;
+  background-position: center top;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
   color: var(--text-primary);
   font-size: 14.5px;
   line-height: 1.6;
@@ -121,47 +127,6 @@ body {
   overflow-x: hidden;
 }
 html { overflow-x: hidden; }
-
-/* Loyiha foni — premium elektr tarmog'i (Toshkent BMI Monitoring) */
-body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: -2;
-  background-image: url("/static/bg-tashkent.svg");
-  background-size: cover;
-  background-position: center center;
-  background-repeat: no-repeat;
-  background-attachment: fixed;
-  opacity: 0.08;
-  filter: saturate(1.1);
-  pointer-events: none;
-  transition: opacity 0.4s var(--ease-out);
-}
-/* Light mavzuda — fonni oqartiruvchi yumshoq qatlam */
-body::after {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  background:
-    radial-gradient(at 20% 0%, rgba(37, 99, 235, 0.08) 0px, transparent 55%),
-    radial-gradient(at 80% 100%, rgba(6, 182, 212, 0.07) 0px, transparent 55%),
-    linear-gradient(180deg, rgba(248, 250, 252, 0.92) 0%, rgba(241, 245, 249, 0.94) 100%);
-  pointer-events: none;
-  transition: opacity 0.4s var(--ease-out);
-}
-/* Dark mavzu — fon to'liq ko'rinadi, oqartiruvchi qatlam olib tashlanadi */
-[data-theme="dark"] body::before {
-  opacity: 0.55;
-  filter: saturate(1.2) brightness(1.1);
-}
-[data-theme="dark"] body::after {
-  background:
-    radial-gradient(at 20% 0%, rgba(37, 99, 235, 0.15) 0px, transparent 55%),
-    radial-gradient(at 80% 100%, rgba(6, 182, 212, 0.12) 0px, transparent 55%),
-    linear-gradient(180deg, rgba(2, 6, 23, 0.55) 0%, rgba(15, 23, 42, 0.65) 100%);
-}
 
 main { flex: 1; }
 
@@ -270,6 +235,8 @@ a:hover { color: var(--brand-primary-dark); }
   box-shadow: var(--shadow-xs);
   transition: var(--transition);
   overflow: hidden;
+  backdrop-filter: blur(12px) saturate(1.2);
+  -webkit-backdrop-filter: blur(12px) saturate(1.2);
 }
 .card:hover {
   box-shadow: var(--shadow-md);
@@ -297,12 +264,21 @@ a:hover { color: var(--brand-primary-dark); }
 
 /* ========== HERO / PAGE HEADERS ========== */
 .page-hero, header.page-hero {
-  background: var(--gradient-hero);
+  /* SVG fon ustida yariq-shaffof to'q ko'k */
+  background: linear-gradient(
+    135deg,
+    rgba(9, 25, 74, 0.78) 0%,
+    rgba(16, 42, 132, 0.72) 50%,
+    rgba(30, 58, 138, 0.68) 100%
+  );
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
   color: var(--text-on-brand);
   padding: 2.5rem 0 2.25rem;
   position: relative;
   overflow: hidden;
   border: none !important;
+  border-bottom: 1px solid rgba(37, 99, 235, 0.25) !important;
   margin-bottom: 0;
 }
 .page-hero::before {
@@ -427,6 +403,8 @@ a:hover { color: var(--brand-primary-dark); }
   border-radius: var(--radius-md);
   padding: 1.4rem 1.25rem;
   position: relative;
+  backdrop-filter: blur(12px) saturate(1.2);
+  -webkit-backdrop-filter: blur(12px) saturate(1.2);
   overflow: hidden;
   transition: var(--transition);
   box-shadow: var(--shadow-xs);
@@ -753,6 +731,21 @@ footer {
 .custom-progress .fill-warning { background: var(--gradient-warning); }
 .custom-progress .fill-danger { background: var(--gradient-danger); }
 .custom-progress .fill-primary { background: var(--gradient-primary); }
+
+/* ── Glassmorphism: barcha panel/container elementlar ── */
+.stat-strip,
+.navbar,
+.bottom-strip,
+.map-stat-strip,
+.table-wrapper,
+.compare-card,
+.side-card,
+.map-panel,
+.eg-header,
+.panel {
+  backdrop-filter: blur(14px) saturate(1.3);
+  -webkit-backdrop-filter: blur(14px) saturate(1.3);
+}
 
 /* ========== STAT STRIP DARK MODE ========== */
 [data-theme="dark"] .stat-strip {

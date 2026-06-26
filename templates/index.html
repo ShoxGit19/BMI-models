@@ -168,14 +168,16 @@
         </div>
         <!-- Weather widget -->
         <div class="weather-widget animate-fade">
-          <i class="fas fa-cloud-sun icon"></i>
+          <i class="fas fa-sun icon" id="w-icon"></i>
           <div>
-            <div class="label">Toshkent · Hozir</div>
+            <div class="label">Toshkent · Hozirgi ob-havo</div>
             <div class="d-flex align-items-baseline gap-2 mt-1">
               <span class="temp" id="w-temp">--°C</span>
-              <span style="font-size: 0.85rem; opacity: 0.85;">
-                <i class="fas fa-wind"></i> <span id="w-wind">--</span>
-              </span>
+              <span style="font-size:0.8rem;opacity:0.8;" id="w-feels">his: --</span>
+            </div>
+            <div style="font-size:0.78rem;opacity:0.85;margin-top:3px;display:flex;gap:10px;">
+              <span><i class="fas fa-wind me-1"></i><span id="w-wind">--</span></span>
+              <span><i class="fas fa-droplet me-1"></i><span id="w-hum">--%</span></span>
             </div>
             <div class="meta" id="w-time">--</div>
           </div>
@@ -355,13 +357,21 @@
         const w = await res.json();
         if (w.temperature !== undefined) {
           document.getElementById('w-temp').textContent = w.temperature + '°C';
-          document.getElementById('w-wind').textContent = w.windspeed + ' km/h';
-          document.getElementById('w-time').textContent = w.time || '';
+          document.getElementById('w-feels').textContent = 'his: ' + (w.feels_like ?? w.temperature) + '°C';
+          document.getElementById('w-wind').textContent = (w.windspeed ?? '--') + ' km/h';
+          document.getElementById('w-hum').textContent  = (w.humidity ?? '--') + '%';
+          document.getElementById('w-time').textContent = (w.description || '') + ' · ' + (w.time || '');
+          // Ikonka: kun holati
+          const cloud = w.cloud || 0;
+          const ic = document.getElementById('w-icon');
+          if (cloud > 70) ic.className = 'fas fa-cloud icon';
+          else if (cloud > 30) ic.className = 'fas fa-cloud-sun icon';
+          else ic.className = 'fas fa-sun icon';
         }
       } catch(e) {}
     }
     loadWeather();
-    setInterval(loadWeather, 600000);
+    setInterval(loadWeather, 300000);  // 5 daqiqada yangilanadi
 
     // ===== STATS + KPI =====
     async function loadStats() {

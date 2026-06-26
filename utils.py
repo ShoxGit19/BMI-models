@@ -454,18 +454,31 @@ def get_active_ticket(sensor_id):
     return None
 
 
-def create_ticket(sensor_id, issue, eta=None, created_by="admin"):
-    """Yangi ta'mirlash buyurtmasi yaratish."""
+def create_ticket(sensor_id, issue, eta=None, created_by="admin",
+                  priority="o'rta", latitude=None, longitude=None,
+                  district=None, telegram_user=None, photo_file_id=None,
+                  photo_url=None, source="web"):
+    """Yangi ta'mirlash buyurtmasi yaratish (bot va web uchun)."""
     tickets = load_tickets()
+    now = datetime.datetime.now()
     ticket = {
-        "id": f"T-{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}",
+        "id": f"T-{now.strftime('%Y%m%d%H%M%S')}",
         "sensor_id": str(sensor_id),
         "issue": issue,
-        "status": "in_progress",
+        "status": "open",
+        "priority": priority,          # kritik / o'rta / past
         "eta": eta,
-        "created_at": datetime.datetime.now().isoformat(),
+        "created_at": now.isoformat(),
         "created_by": created_by,
-        "closed_at": None
+        "source": source,              # web / bot
+        "district": district or "",
+        "latitude": latitude,
+        "longitude": longitude,
+        "telegram_user": telegram_user,  # {"id":..,"name":..,"username":..,"phone":..}
+        "photo_file_id": photo_file_id,
+        "photo_url":     photo_url,
+        "closed_at": None,
+        "notes": []                    # Admin izohlari
     }
     tickets.append(ticket)
     save_tickets(tickets)

@@ -86,20 +86,67 @@ function loadTickets(){
     const el = document.getElementById('ticketsList');
     if(!list.length){ el.innerHTML='<div class="text-center text-muted py-5"><i class="fas fa-inbox fa-3x mb-3"></i><div>Hech qanday buyurtma yo\'q</div></div>'; return; }
     el.innerHTML = list.map(t=>{
-      const statusBadge = t.status==='closed' ? '<span class="badge-status bg-success bg-opacity-25 text-success">Yopilgan</span>'
-        : t.status==='in_progress' ? '<span class="badge-status bg-warning bg-opacity-25 text-warning">Jarayonda</span>'
-        : '<span class="badge-status bg-danger bg-opacity-25 text-danger">Yangi</span>';
-      const closeBtn = (isAdmin && t.status!=='closed') ? `<button class="btn btn-sm btn-success" onclick="closeT('${t.id}')"><i class="fas fa-check"></i> Yopish</button>` : '';
+      const statusBadge = t.status==='closed'
+        ? '<span class="badge-status bg-success bg-opacity-25 text-success"><i class="fas fa-check me-1"></i>Yopilgan</span>'
+        : t.status==='in_progress'
+        ? '<span class="badge-status bg-warning bg-opacity-25 text-warning"><i class="fas fa-spinner me-1"></i>Jarayonda</span>'
+        : '<span class="badge-status bg-danger bg-opacity-25 text-danger"><i class="fas fa-exclamation me-1"></i>Yangi</span>';
+
+      const priMap = {'kritik':'🔴 Kritik','o\'rta':'🟡 O\'rta','past':'🟢 Past'};
+      const priBadge = t.priority
+        ? `<span class="badge-status ms-1" style="background:rgba(37,99,235,.1);color:#2563eb">${priMap[t.priority]||t.priority}</span>` : '';
+
+      const srcIcon = t.source==='bot' ? '🤖 Bot' : '🌐 Web';
+      const tgUser = t.telegram_user;
+      const whoLine = tgUser
+        ? `${srcIcon} — ${tgUser.name||''} ${tgUser.phone?'('+tgUser.phone+')':''} ${tgUser.username?'@'+tgUser.username:''}`
+        : `${srcIcon} — ${t.created_by||''}`;
+
+      const mapBtn = (t.latitude && t.longitude)
+        ? `<a href="https://www.google.com/maps?q=${t.latitude},${t.longitude}" target="_blank" class="btn btn-sm btn-outline-primary ms-1"><i class="fas fa-map-pin me-1"></i>Xarita</a>` : '';
+
+      const adminBtns = isAdmin && t.status!=='closed' ? `
+        <div class="d-flex gap-1 flex-wrap mt-2">
+          <button class="btn btn-sm btn-success" onclick="closeT('${t.id}')"><i class="fas fa-check me-1"></i>Yopish</button>
+          <button class="btn btn-sm btn-warning" onclick="setInProgress('${t.id}')"><i class="fas fa-tools me-1"></i>Jarayon</button>
+          <button class="btn btn-sm btn-outline-secondary" onclick="setEta('${t.id}')"><i class="fas fa-clock me-1"></i>ETA</button>
+        </div>` : '';
+
+      const notesHtml = (t.notes||[]).map(n=>
+        `<div class="small text-muted mt-1 ps-2 border-start border-2 border-primary">
+          <i class="fas fa-user-circle me-1"></i>${n.by} — ${(n.at||'').slice(0,16).replace('T',' ')}: ${n.text}
+        </div>`
+      ).join('');
+
       return `<div class="ticket-card ${t.status}">
-        <div class="d-flex justify-content-between align-items-start">
-          <div>
-            <strong class="me-2"><i class="fas fa-broadcast-tower me-1"></i>${t.sensor_id}</strong>
-            ${statusBadge}
-            <div class="text-muted small mt-1">${t.id} • ${t.created_by} • ${(t.created_at||'').slice(0,16).replace('T',' ')}</div>
-            <div class="mt-2">${t.issue}</div>
-            ${t.eta?`<div class="small mt-1"><i class="fas fa-clock me-1"></i>ETA: ${(t.eta||'').replace('T',' ')}</div>`:''}
+        <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+          <div class="flex-grow-1">
+            <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
+              <strong><i class="fas fa-broadcast-tower me-1 text-primary"></i>${t.sensor_id}</strong>
+              ${statusBadge}${priBadge}
+              ${t.district?`<span class="badge bg-light text-muted">${t.district}</span>`:''}
+            </div>
+            <div class="text-muted small">${t.id} &bull; ${whoLine} &bull; ${(t.created_at||'').slice(0,16).replace('T',' ')}</div>
+            <div class="mt-2 fw-500">${t.issue}</div>
+            ${t.eta?`<div class="small text-info mt-1"><i class="fas fa-clock me-1"></i>ETA: ${(t.eta||'').replace('T',' ')}</div>`:''}
+            ${(t.latitude&&t.longitude)?`<div class="small text-success mt-1"><i class="fas fa-map-pin me-1"></i>${parseFloat(t.latitude).toFixed(5)}, ${parseFloat(t.longitude).toFixed(5)}${mapBtn}</div>`:''}
+            ${t.photo_url
+              ? `<div class="mt-2">
+                   <a href="${t.photo_url}" target="_blank">
+                     <img src="${t.photo_url}" alt="Rasm"
+                          style="max-width:100%;max-height:220px;border-radius:8px;
+                                 border:1px solid #e5e7eb;cursor:pointer;object-fit:cover;"
+                          onerror="this.style.display='none'">
+                   </a>
+                   <div class="small text-muted mt-1"><i class="fas fa-camera me-1"></i>Bot orqali yuborilgan rasm</div>
+                 </div>`
+              : t.photo_file_id
+              ? `<div class="small text-info mt-1"><i class="fas fa-camera me-1"></i>Rasm biriktilgan (bot orqali)</div>`
+              : ''
+            }
+            ${notesHtml}
+            ${adminBtns}
           </div>
-          <div>${closeBtn}</div>
         </div>
       </div>`;
     }).join('');
@@ -121,6 +168,19 @@ function createTicket(){
 function closeT(id){
   if(!confirm('Buyurtmani yopish?')) return;
   fetch('/api/tickets/'+id+'/close',{method:'POST'}).then(r=>r.json()).then(d=>{ if(d.ok) loadTickets(); });
+}
+
+function setInProgress(id){
+  fetch('/api/tickets/'+id+'/update',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({status:'in_progress'})}).then(r=>r.json()).then(d=>{ if(d.ok) loadTickets(); });
+}
+
+function setEta(id){
+  const eta = prompt('ETA (taxminiy tugash vaqti, masalan: 2026-06-28T14:00):');
+  if(!eta) return;
+  const note = prompt('Izoh (ixtiyoriy):') || '';
+  fetch('/api/tickets/'+id+'/update',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({eta, note})}).then(r=>r.json()).then(d=>{ if(d.ok) loadTickets(); });
 }
 
 loadTickets();
