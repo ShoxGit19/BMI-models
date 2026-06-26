@@ -3,10 +3,80 @@
     "id": "T-20260502021712",
     "sensor_id": "S0011",
     "issue": "Juda yomon axvolda",
-    "status": "in_progress",
+    "status": "closed",
     "eta": "2026-05-07T00:00",
     "created_at": "2026-05-02T02:17:12.064828",
     "created_by": "admin",
-    "closed_at": null
+    "closed_at": "2026-06-26T17:48:13.860679"
+  },
+  {
+    "id": "T-20260626170615",
+    "sensor_id": "S0005",
+    "issue": "«Kuchlanish keskin tushib ketdi, 190V ga yetdi. Xo'jalik substansiyasida uzilish bo'lyapti.»",
+    "status": "closed",
+    "priority": "o'rta",
+    "eta": null,
+    "created_at": "2026-06-26T17:06:15.629421",
+    "created_by": "+998946541922",
+    "source": "bot",
+    "district": "Yunusobod",
+    "latitude": 41.2995,
+    "longitude": 69.2641,
+    "telegram_user": {
+      "id": 6954909676,
+      "name": "Shohjahon G'aybullayev",
+      "username": "gaybullayeev19",
+      "phone": "+998946541922"
+    },
+    "photo_file_id": "AgACAgIAAxkBAAIFS2o-ay_7AAG9ySIQOiB208a5O7TabAACdxdrG3cq8El-u2_6N6mTNQEAAwIAA3kAAzwE",
+    "closed_at": "2026-06-26T17:48:18.934335",
+    "notes": []
+  },
+  {
+    "id": "T-20260626172119",
+    "sensor_id": "unknown",
+    "issue": "Kuchlanish keskin tushib ketdi, 190V ga yetdi. Xo'jalik substansiyasida uzilish bo'lyapti.",
+    "status": "open",
+    "priority": "kritik",
+    "eta": null,
+    "created_at": "2026-06-26T17:21:19.298015",
+    "created_by": "+998946541922",
+    "source": "bot",
+    "district": "Yunusobod",
+    "latitude": 41.2995,
+    "longitude": 69.2641,
+    "telegram_user": {
+      "id": 6954909676,
+      "name": "Shohjahon G'aybullayev",
+      "username": "gaybullayeev19",
+      "phone": "+998946541922"
+    },
+    "photo_file_id": null,
+    "closed_at": null,
+    "notes": []
+  },
+  {
+    "id": "T-20260626173131",
+    "sensor_id": "unknown",
+    "issue": "Kuchlanish keskin tushib ketdi, 190V ga yetdi. Xo'jalik substansiyasida uzilish bo'lyapti.",
+    "status": "open",
+    "priority": "kritik",
+    "eta": null,
+    "created_at": "2026-06-26T17:31:31.947446",
+    "created_by": "+998946541922",
+    "source": "bot",
+    "district": "Yunusobod",
+    "latitude": 41.2995,
+    "longitude": 69.2641,
+    "telegram_user": {
+      "id": 6954909676,
+      "name": "Shohjahon G'aybullayev",
+      "username": "gaybullayeev19",
+      "phone": "+998946541922"
+    },
+    "photo_file_id": "AgACAgIAAxkBAAIFi2o-cO7ld7jHlqrl1YwTKpJV1YQiAAKUF2sbdyrwSRMbRTb66OfsAQADAgADeQADPAQ",
+    "photo_url": "/static/ticket_photos/T-20260626173129.jpg",
+    "closed_at": null,
+    "notes": []
   }
 ]

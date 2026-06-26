@@ -11,3 +11,10 @@ fix_csv_faults.py
 analyze_faults.py
 .env
 telegram_bot.py
+data/tashkent_weather_cache.json
+.gitignore
+.gitignore
+logs/
+static/ticket_photos/
+data/tashkent_weather_cache.json
+.claude/
