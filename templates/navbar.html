@@ -221,6 +221,13 @@
 </div>
 
 <style>
+  @keyframes bell-pulse {
+    0%,100%{transform:scale(1)}
+    50%{transform:scale(1.15)}
+  }
+  #tickets-bell-btn { color: var(--text-secondary); }
+  #tickets-bell-btn:hover { color: var(--brand-primary); }
+  #tickets-bell-btn.has-new { color: #ef4444; }
   @keyframes pulse-bell {
     0%,100%{transform:scale(1) rotate(0)}
     25%{transform:scale(1.2) rotate(-10deg)}
@@ -233,21 +240,43 @@
   var _alertData  = [];
 
   function loadAlerts(){
+    // ── Ticket soni (bot/user dan kelgan buyurtmalar) ──
+    fetch('/api/tickets')
+      .then(r=>r.json())
+      .then(d=>{
+        var tickets = d.tickets || [];
+        // Faqat ochiq + bot orqali kelgan (yoki status open/in_progress)
+        var newTkts = tickets.filter(function(t){
+          return t.status !== 'closed';
+        });
+        var bellBtn   = document.getElementById('tickets-bell-btn');
+        var bellCount = document.getElementById('tickets-bell-count');
+        var bellIcon  = document.getElementById('tickets-bell-icon');
+        if(bellCount && newTkts.length > 0){
+          bellCount.textContent = newTkts.length > 99 ? '99+' : newTkts.length;
+          bellCount.style.display = 'flex';
+          if(bellBtn) bellBtn.classList.add('has-new');
+          if(bellIcon) bellIcon.style.animation = 'pulse-bell 1.5s infinite';
+        } else if(bellCount){
+          bellCount.style.display = 'none';
+          if(bellBtn) bellBtn.classList.remove('has-new');
+          if(bellIcon) bellIcon.style.animation = '';
+        }
+      }).catch(()=>{});
+
+    // ── Xavf alert banner ──
     fetch('/api/alerts/unread')
       .then(r=>r.json())
       .then(d=>{
         _alertCount = d.count || 0;
         _alertData  = d.alerts || [];
         var banner = document.getElementById('eg-alert-banner');
-        var bell   = document.querySelector('.navbar-bell-badge');
         if(_alertCount > 0){
           if(banner) banner.style.display='flex';
-          document.getElementById('eg-alert-text').textContent =
-            '⚡ ' + _alertCount + ' ta yangi xavf ogohlantirishlari keldi!';
-          if(bell){ bell.textContent=_alertCount; bell.style.display='flex'; }
+          var txt = document.getElementById('eg-alert-text');
+          if(txt) txt.textContent = '⚡ ' + _alertCount + ' ta yangi xavf ogohlantirishlari keldi!';
         } else {
           if(banner) banner.style.display='none';
-          if(bell) bell.style.display='none';
         }
         renderAlertList();
       }).catch(()=>{});
@@ -405,26 +434,30 @@
         </li>
 
         <!-- Notifications -->
+        <!-- Buyurtmalar bell — admin uchun ticket soni, user uchun oddiy -->
+        {% if session.get('role') == 'admin' %}
+        <li class="nav-item ms-lg-1">
+          <a href="/tickets" class="nav-notif" id="tickets-bell-btn"
+             title="Yangi buyurtmalar"
+             style="text-decoration:none;position:relative;">
+            <i class="fas fa-bell" id="tickets-bell-icon"></i>
+            <span id="tickets-bell-count" style="
+              display:none;position:absolute;top:-6px;right:-6px;
+              min-width:20px;height:20px;padding:0 4px;
+              background:#ef4444;color:#fff;border-radius:10px;
+              font-size:0.68rem;font-weight:900;
+              align-items:center;justify-content:center;
+              border:2px solid #fff;line-height:1;
+              box-shadow:0 2px 8px rgba(239,68,68,0.5);
+              animation:bell-pulse 2s infinite;">0</span>
+          </a>
+        </li>
+        {% else %}
         <li class="nav-item ms-lg-1">
           <div class="nav-notif" id="nav-notif-btn" title="Ogohlantirishlar">
             <i class="fas fa-bell"></i>
             <span class="notif-count" id="nav-notif-count" style="display:none;">0</span>
           </div>
-        </li>
-
-        <!-- Admin alert bell -->
-        {% if session.get('role') == 'admin' %}
-        <li class="nav-item ms-lg-1">
-          <button class="nav-notif border-0" onclick="openAlertPanel()" title="Ogohlantirishlar"
-            style="position:relative;">
-            <i class="fas fa-bell"></i>
-            <span class="navbar-bell-badge" style="
-              display:none;position:absolute;top:-4px;right:-4px;
-              background:#ef4444;color:#fff;border-radius:50%;
-              width:18px;height:18px;font-size:0.65rem;font-weight:800;
-              align-items:center;justify-content:center;
-              border:2px solid var(--bg-overlay);line-height:1;">0</span>
-          </button>
         </li>
         {% endif %}
 

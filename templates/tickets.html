@@ -31,18 +31,62 @@
   </div>
 
   <div class="row g-2 mb-3">
-    <div class="col-md-3">
-      <div class="ticket-card text-center"><div class="fs-3 fw-bold text-warning" id="cntActive">0</div><div class="small text-muted">Faol</div></div>
+    <div class="col-md-2 col-6">
+      <div class="ticket-card text-center">
+        <div class="fs-3 fw-bold text-danger" id="cntOpen">0</div>
+        <div class="small text-muted">🔴 Yangi</div>
+      </div>
     </div>
-    <div class="col-md-3">
-      <div class="ticket-card text-center"><div class="fs-3 fw-bold text-danger" id="cntOpen">0</div><div class="small text-muted">Yangi</div></div>
+    <div class="col-md-2 col-6">
+      <div class="ticket-card text-center">
+        <div class="fs-3 fw-bold text-warning" id="cntActive">0</div>
+        <div class="small text-muted">🟡 Jarayonda</div>
+      </div>
     </div>
-    <div class="col-md-3">
-      <div class="ticket-card text-center"><div class="fs-3 fw-bold text-success" id="cntClosed">0</div><div class="small text-muted">Yopilgan</div></div>
+    <div class="col-md-2 col-6">
+      <div class="ticket-card text-center">
+        <div class="fs-3 fw-bold text-success" id="cntClosed">0</div>
+        <div class="small text-muted">✅ Yopilgan</div>
+      </div>
     </div>
-    <div class="col-md-3">
-      <div class="ticket-card text-center"><div class="fs-3 fw-bold text-primary" id="cntTotal">0</div><div class="small text-muted">Jami</div></div>
+    <div class="col-md-2 col-6">
+      <div class="ticket-card text-center">
+        <div class="fs-3 fw-bold" style="color:#8b5cf6;" id="cntBot">0</div>
+        <div class="small text-muted">🤖 Bot orqali</div>
+      </div>
     </div>
+    <div class="col-md-2 col-6">
+      <div class="ticket-card text-center">
+        <div class="fs-3 fw-bold" style="color:#06b6d4;" id="cntPhoto">0</div>
+        <div class="small text-muted">📸 Rasmli</div>
+      </div>
+    </div>
+    <div class="col-md-2 col-6">
+      <div class="ticket-card text-center">
+        <div class="fs-3 fw-bold text-primary" id="cntTotal">0</div>
+        <div class="small text-muted">📊 Jami</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filter row -->
+  <div class="d-flex gap-2 mb-3 flex-wrap">
+    <button class="btn btn-sm btn-outline-secondary active" id="filter-all" onclick="filterTickets('all')">
+      Hammasi
+    </button>
+    <button class="btn btn-sm btn-outline-danger" id="filter-open" onclick="filterTickets('open')">
+      🔴 Yangi
+    </button>
+    <button class="btn btn-sm btn-outline-warning" id="filter-inprog" onclick="filterTickets('in_progress')">
+      🟡 Jarayon
+    </button>
+    <button class="btn btn-sm btn-outline-purple" id="filter-bot" onclick="filterTickets('bot')"
+      style="color:#8b5cf6;border-color:#8b5cf6;">
+      🤖 Bot
+    </button>
+    <button class="btn btn-sm btn-outline-danger ms-auto" onclick="loadTickets()" title="Yangilash">
+      <i class="fas fa-rotate-right"></i>
+    </button>
   </div>
 
   <div id="ticketsList"><div class="text-center text-muted py-4">Yuklanmoqda...</div></div>
@@ -71,85 +115,97 @@
 
 <script>
 const isAdmin = "{{ session.get('role') }}" === "admin";
+let _allTickets = [];
+let _curFilter  = 'all';
+
+function filterTickets(f){
+  _curFilter = f;
+  ['all','open','inprog','bot'].forEach(id=>{
+    const btn = document.getElementById('filter-'+id);
+    if(btn) btn.classList.toggle('active', id===f);
+  });
+  renderTickets(_allTickets);
+}
+
+function renderTickets(list){
+  let filtered = list;
+  if(_curFilter==='open')    filtered = list.filter(t=>t.status==='open');
+  if(_curFilter==='in_progress') filtered = list.filter(t=>t.status==='in_progress');
+  if(_curFilter==='bot')     filtered = list.filter(t=>t.source==='bot'||t.source==='bot_photo');
+
+  const el = document.getElementById('ticketsList');
+  if(!filtered.length){
+    el.innerHTML='<div class="text-center text-muted py-5"><i class="fas fa-inbox fa-3x mb-3 d-block"></i>Hech qanday buyurtma yo\'q</div>';
+    return;
+  }
+
+  const statusBadgeMap = {
+    'closed':     '<span class="badge-status bg-success bg-opacity-25 text-success"><i class="fas fa-check me-1"></i>Yopilgan</span>',
+    'in_progress':'<span class="badge-status bg-warning bg-opacity-25 text-warning"><i class="fas fa-spinner me-1"></i>Jarayonda</span>',
+    'open':       '<span class="badge-status bg-danger bg-opacity-25 text-danger"><i class="fas fa-exclamation me-1"></i>Yangi</span>',
+  };
+  const priMap = {'kritik':'🔴 Kritik',"o'rta":'🟡 O\'rta','past':'🟢 Past'};
+  const srcMap = {'bot':'🤖 Bot','bot_photo':'📸 Rasm+Bot','web':'🌐 Web'};
+
+  el.innerHTML = filtered.map(t=>{
+    const statusBadge = statusBadgeMap[t.status] || statusBadgeMap['open'];
+    const priBadge = t.priority
+      ? `<span class="badge-status ms-1" style="background:rgba(37,99,235,.1);color:#2563eb;font-size:.7rem;">${priMap[t.priority]||t.priority}</span>` : '';
+    const srcBadge = `<span style="font-size:.72rem;background:rgba(139,92,246,.1);color:#8b5cf6;padding:2px 7px;border-radius:4px;font-weight:600;">${srcMap[t.source]||t.source||'Web'}</span>`;
+    const tgUser = t.telegram_user;
+    const whoLine = tgUser
+      ? `${tgUser.name||''} ${tgUser.phone?'('+tgUser.phone+')':''} ${tgUser.username?'@'+tgUser.username:''}`
+      : (t.created_by||'');
+    const mapBtn = (t.latitude&&t.longitude)
+      ? `<a href="https://www.google.com/maps?q=${t.latitude},${t.longitude}" target="_blank" class="btn btn-sm btn-outline-primary ms-1 py-0"><i class="fas fa-map-pin"></i></a>` : '';
+    const photoNote = t.photo_file_id ? '<span class="badge bg-info bg-opacity-25 text-info ms-1"><i class="fas fa-camera me-1"></i>Rasm</span>' : '';
+    const adminBtns = isAdmin && t.status!=='closed' ? `
+      <div class="d-flex gap-1 flex-wrap mt-2">
+        <button class="btn btn-sm btn-success py-0" onclick="closeT('${t.id}')"><i class="fas fa-check me-1"></i>Yopish</button>
+        <button class="btn btn-sm btn-warning py-0" onclick="setInProgress('${t.id}')"><i class="fas fa-tools me-1"></i>Jarayon</button>
+        <button class="btn btn-sm btn-outline-secondary py-0" onclick="setEta('${t.id}')"><i class="fas fa-clock me-1"></i>ETA</button>
+      </div>` : '';
+    const notesHtml = (t.notes||[]).map(n=>
+      `<div class="small text-muted mt-1 ps-2 border-start border-2 border-primary">
+        <i class="fas fa-user-circle me-1"></i>${n.by} — ${(n.at||'').slice(0,16).replace('T',' ')}: ${n.text}
+      </div>`
+    ).join('');
+    return `<div class="ticket-card ${t.status}">
+      <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+        <div class="flex-grow-1">
+          <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
+            <strong><i class="fas fa-broadcast-tower me-1 text-primary"></i>${t.sensor_id}</strong>
+            ${statusBadge}${priBadge}${srcBadge}${photoNote}
+            ${t.district?`<span class="badge bg-light text-muted">${t.district}</span>`:''}
+          </div>
+          <div class="text-muted small">${t.id} &bull; ${whoLine} &bull; ${(t.created_at||'').slice(0,16).replace('T',' ')}</div>
+          <div class="mt-2 fw-500">${t.issue}</div>
+          ${t.eta?`<div class="small text-info mt-1"><i class="fas fa-clock me-1"></i>ETA: ${(t.eta||'').replace('T',' ')}</div>`:''}
+          ${(t.latitude&&t.longitude)?`<div class="small text-success mt-1"><i class="fas fa-map-pin me-1"></i>${parseFloat(t.latitude).toFixed(5)}, ${parseFloat(t.longitude).toFixed(5)}${mapBtn}</div>`:''}
+          ${notesHtml}${adminBtns}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
 
 function loadTickets(){
   fetch('/api/tickets').then(r=>r.json()).then(data=>{
     const list = data.tickets || [];
+    _allTickets = list;
     const active = list.filter(t=>t.status==='in_progress').length;
-    const open = list.filter(t=>t.status==='open').length;
+    const open   = list.filter(t=>t.status==='open').length;
     const closed = list.filter(t=>t.status==='closed').length;
-    document.getElementById('cntActive').textContent=active;
-    document.getElementById('cntOpen').textContent=open;
-    document.getElementById('cntClosed').textContent=closed;
-    document.getElementById('cntTotal').textContent=list.length;
+    const botCnt = list.filter(t=>t.source==='bot'||t.source==='bot_photo').length;
+    const photo  = list.filter(t=>t.photo_file_id).length;
+    document.getElementById('cntActive').textContent = active;
+    document.getElementById('cntOpen').textContent   = open;
+    document.getElementById('cntClosed').textContent = closed;
+    document.getElementById('cntTotal').textContent  = list.length;
+    document.getElementById('cntBot').textContent    = botCnt;
+    document.getElementById('cntPhoto').textContent  = photo;
 
-    const el = document.getElementById('ticketsList');
-    if(!list.length){ el.innerHTML='<div class="text-center text-muted py-5"><i class="fas fa-inbox fa-3x mb-3"></i><div>Hech qanday buyurtma yo\'q</div></div>'; return; }
-    el.innerHTML = list.map(t=>{
-      const statusBadge = t.status==='closed'
-        ? '<span class="badge-status bg-success bg-opacity-25 text-success"><i class="fas fa-check me-1"></i>Yopilgan</span>'
-        : t.status==='in_progress'
-        ? '<span class="badge-status bg-warning bg-opacity-25 text-warning"><i class="fas fa-spinner me-1"></i>Jarayonda</span>'
-        : '<span class="badge-status bg-danger bg-opacity-25 text-danger"><i class="fas fa-exclamation me-1"></i>Yangi</span>';
-
-      const priMap = {'kritik':'🔴 Kritik','o\'rta':'🟡 O\'rta','past':'🟢 Past'};
-      const priBadge = t.priority
-        ? `<span class="badge-status ms-1" style="background:rgba(37,99,235,.1);color:#2563eb">${priMap[t.priority]||t.priority}</span>` : '';
-
-      const srcIcon = t.source==='bot' ? '🤖 Bot' : '🌐 Web';
-      const tgUser = t.telegram_user;
-      const whoLine = tgUser
-        ? `${srcIcon} — ${tgUser.name||''} ${tgUser.phone?'('+tgUser.phone+')':''} ${tgUser.username?'@'+tgUser.username:''}`
-        : `${srcIcon} — ${t.created_by||''}`;
-
-      const mapBtn = (t.latitude && t.longitude)
-        ? `<a href="https://www.google.com/maps?q=${t.latitude},${t.longitude}" target="_blank" class="btn btn-sm btn-outline-primary ms-1"><i class="fas fa-map-pin me-1"></i>Xarita</a>` : '';
-
-      const adminBtns = isAdmin && t.status!=='closed' ? `
-        <div class="d-flex gap-1 flex-wrap mt-2">
-          <button class="btn btn-sm btn-success" onclick="closeT('${t.id}')"><i class="fas fa-check me-1"></i>Yopish</button>
-          <button class="btn btn-sm btn-warning" onclick="setInProgress('${t.id}')"><i class="fas fa-tools me-1"></i>Jarayon</button>
-          <button class="btn btn-sm btn-outline-secondary" onclick="setEta('${t.id}')"><i class="fas fa-clock me-1"></i>ETA</button>
-        </div>` : '';
-
-      const notesHtml = (t.notes||[]).map(n=>
-        `<div class="small text-muted mt-1 ps-2 border-start border-2 border-primary">
-          <i class="fas fa-user-circle me-1"></i>${n.by} — ${(n.at||'').slice(0,16).replace('T',' ')}: ${n.text}
-        </div>`
-      ).join('');
-
-      return `<div class="ticket-card ${t.status}">
-        <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
-          <div class="flex-grow-1">
-            <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
-              <strong><i class="fas fa-broadcast-tower me-1 text-primary"></i>${t.sensor_id}</strong>
-              ${statusBadge}${priBadge}
-              ${t.district?`<span class="badge bg-light text-muted">${t.district}</span>`:''}
-            </div>
-            <div class="text-muted small">${t.id} &bull; ${whoLine} &bull; ${(t.created_at||'').slice(0,16).replace('T',' ')}</div>
-            <div class="mt-2 fw-500">${t.issue}</div>
-            ${t.eta?`<div class="small text-info mt-1"><i class="fas fa-clock me-1"></i>ETA: ${(t.eta||'').replace('T',' ')}</div>`:''}
-            ${(t.latitude&&t.longitude)?`<div class="small text-success mt-1"><i class="fas fa-map-pin me-1"></i>${parseFloat(t.latitude).toFixed(5)}, ${parseFloat(t.longitude).toFixed(5)}${mapBtn}</div>`:''}
-            ${t.photo_url
-              ? `<div class="mt-2">
-                   <a href="${t.photo_url}" target="_blank">
-                     <img src="${t.photo_url}" alt="Rasm"
-                          style="max-width:100%;max-height:220px;border-radius:8px;
-                                 border:1px solid #e5e7eb;cursor:pointer;object-fit:cover;"
-                          onerror="this.style.display='none'">
-                   </a>
-                   <div class="small text-muted mt-1"><i class="fas fa-camera me-1"></i>Bot orqali yuborilgan rasm</div>
-                 </div>`
-              : t.photo_file_id
-              ? `<div class="small text-info mt-1"><i class="fas fa-camera me-1"></i>Rasm biriktilgan (bot orqali)</div>`
-              : ''
-            }
-            ${notesHtml}
-            ${adminBtns}
-          </div>
-        </div>
-      </div>`;
-    }).join('');
+    renderTickets(list);
   });
 }
 
