@@ -179,6 +179,135 @@
   }
 </style>
 
+<!-- ═══ ADMIN ALERT BANNER ═══ -->
+{% if session.get('role') == 'admin' %}
+<div id="eg-alert-banner" style="display:none;position:sticky;top:0;z-index:2000;
+  background:linear-gradient(90deg,#b91c1c,#dc2626);color:#fff;
+  padding:0.55rem 1.25rem;font-size:0.85rem;font-weight:600;
+  display:none;align-items:center;justify-content:space-between;gap:12px;
+  box-shadow:0 2px 12px rgba(185,28,28,0.4);">
+  <div style="display:flex;align-items:center;gap:10px;">
+    <span style="font-size:1.1rem;animation:pulse-bell 1.2s infinite;">🔔</span>
+    <span id="eg-alert-text">Yangi xavf ogohlantirishlari!</span>
+  </div>
+  <div style="display:flex;gap:8px;align-items:center;">
+    <button onclick="openAlertPanel()" style="background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.4);
+      color:#fff;padding:3px 14px;border-radius:6px;font-size:0.8rem;cursor:pointer;font-weight:700;">
+      Ko'rish
+    </button>
+    <button onclick="markAllRead()" style="background:transparent;border:none;color:rgba(255,255,255,0.7);
+      cursor:pointer;font-size:1rem;padding:2px 6px;" title="O'qilgan deb belgilash">✕</button>
+  </div>
+</div>
+
+<!-- Alert panel -->
+<div id="eg-alert-panel" style="display:none;position:fixed;top:0;right:0;width:360px;height:100vh;
+  background:rgba(15,23,42,0.97);backdrop-filter:blur(16px);z-index:3000;
+  box-shadow:-4px 0 32px rgba(0,0,0,0.5);overflow-y:auto;border-left:1px solid rgba(255,255,255,0.08);">
+  <div style="padding:1.2rem;border-bottom:1px solid rgba(255,255,255,0.1);
+    display:flex;align-items:center;justify-content:space-between;">
+    <div style="font-weight:800;color:#fff;font-size:1rem;">🔔 Ogohlantirishlar</div>
+    <button onclick="closeAlertPanel()" style="background:rgba(255,255,255,0.1);border:none;
+      color:#fff;width:32px;height:32px;border-radius:8px;cursor:pointer;font-size:1rem;">✕</button>
+  </div>
+  <div id="eg-alert-list" style="padding:0.75rem;"></div>
+  <div style="padding:1rem;border-top:1px solid rgba(255,255,255,0.08);">
+    <button onclick="markAllRead()" style="width:100%;background:rgba(37,99,235,0.2);
+      border:1px solid rgba(37,99,235,0.4);color:#93c5fd;padding:8px;border-radius:8px;
+      cursor:pointer;font-weight:600;font-size:0.85rem;">
+      ✅ Hammasini o'qilgan deb belgilash
+    </button>
+  </div>
+</div>
+
+<style>
+  @keyframes pulse-bell {
+    0%,100%{transform:scale(1) rotate(0)}
+    25%{transform:scale(1.2) rotate(-10deg)}
+    75%{transform:scale(1.2) rotate(10deg)}
+  }
+</style>
+<script>
+(function(){
+  var _alertCount = 0;
+  var _alertData  = [];
+
+  function loadAlerts(){
+    fetch('/api/alerts/unread')
+      .then(r=>r.json())
+      .then(d=>{
+        _alertCount = d.count || 0;
+        _alertData  = d.alerts || [];
+        var banner = document.getElementById('eg-alert-banner');
+        var bell   = document.querySelector('.navbar-bell-badge');
+        if(_alertCount > 0){
+          if(banner) banner.style.display='flex';
+          document.getElementById('eg-alert-text').textContent =
+            '⚡ ' + _alertCount + ' ta yangi xavf ogohlantirishlari keldi!';
+          if(bell){ bell.textContent=_alertCount; bell.style.display='flex'; }
+        } else {
+          if(banner) banner.style.display='none';
+          if(bell) bell.style.display='none';
+        }
+        renderAlertList();
+      }).catch(()=>{});
+  }
+
+  function renderAlertList(){
+    var el = document.getElementById('eg-alert-list');
+    if(!el) return;
+    if(!_alertData.length){
+      el.innerHTML='<div style="color:#64748b;text-align:center;padding:2rem;font-size:0.9rem;">Ogohlantirish yo\'q</div>';
+      return;
+    }
+    el.innerHTML = _alertData.map(a=>{
+      var lvl = a.level==='danger'
+        ? '<span style="background:#fef2f2;color:#dc2626;padding:2px 8px;border-radius:4px;font-size:0.72rem;font-weight:700;">🔴 XAVFLI</span>'
+        : '<span style="background:#fff7ed;color:#ea580c;padding:2px 8px;border-radius:4px;font-size:0.72rem;font-weight:700;">🟡 OGOH</span>';
+      var time = (a.created_at||'').slice(0,16).replace('T',' ');
+      return '<div style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);'
+        +'border-radius:10px;padding:0.85rem;margin-bottom:0.6rem;">'
+        +'<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;">'
+        +'<div style="font-weight:700;color:#fff;font-size:0.9rem;">'+a.sensor_id+' <span style="color:#94a3b8;font-size:0.78rem;">'+a.district+'</span></div>'
+        +lvl+'</div>'
+        +'<div style="color:#cbd5e1;font-size:0.82rem;margin-bottom:4px;">'+a.message+'</div>'
+        +'<div style="color:#64748b;font-size:0.73rem;">'+time+'</div>'
+        +'</div>';
+    }).join('');
+  }
+
+  window.openAlertPanel = function(){
+    document.getElementById('eg-alert-panel').style.display='block';
+    document.body.style.overflow='hidden';
+  };
+  window.closeAlertPanel = function(){
+    document.getElementById('eg-alert-panel').style.display='none';
+    document.body.style.overflow='';
+  };
+  window.markAllRead = function(){
+    fetch('/api/alerts/mark-read',{method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({})
+    }).then(()=>{
+      _alertCount=0; _alertData=[];
+      var banner=document.getElementById('eg-alert-banner');
+      if(banner) banner.style.display='none';
+      var bell=document.querySelector('.navbar-bell-badge');
+      if(bell) bell.style.display='none';
+      document.getElementById('eg-alert-panel').style.display='none';
+      document.body.style.overflow='';
+    }).catch(()=>{});
+  };
+
+  // Har 30s da yangilanadi
+  document.addEventListener('DOMContentLoaded', function(){
+    loadAlerts();
+    setInterval(loadAlerts, 30000);
+  });
+})();
+</script>
+{% endif %}
+
 <!-- FON RASMI — CSS ::before bilan, zaxira sifatida JS ham bor -->
 <script>
 (function(){
@@ -282,6 +411,22 @@
             <span class="notif-count" id="nav-notif-count" style="display:none;">0</span>
           </div>
         </li>
+
+        <!-- Admin alert bell -->
+        {% if session.get('role') == 'admin' %}
+        <li class="nav-item ms-lg-1">
+          <button class="nav-notif border-0" onclick="openAlertPanel()" title="Ogohlantirishlar"
+            style="position:relative;">
+            <i class="fas fa-bell"></i>
+            <span class="navbar-bell-badge" style="
+              display:none;position:absolute;top:-4px;right:-4px;
+              background:#ef4444;color:#fff;border-radius:50%;
+              width:18px;height:18px;font-size:0.65rem;font-weight:800;
+              align-items:center;justify-content:center;
+              border:2px solid var(--bg-overlay);line-height:1;">0</span>
+          </button>
+        </li>
+        {% endif %}
 
         <!-- Theme toggle -->
         <li class="nav-item ms-lg-1">
@@ -417,6 +562,151 @@
 </div>
 
 <script src="{{ url_for('static', filename='theme.js') }}"></script>
+
+<!-- ═══ ONBOARDING TOUR (faqat birinchi kirishda) ═══ -->
+{% if session.get('user') %}
+<style>
+  .eg-tour-overlay {
+    position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:9998;
+    backdrop-filter:blur(3px);animation:tour-fade-in 0.3s ease;
+  }
+  @keyframes tour-fade-in { from{opacity:0} to{opacity:1} }
+  .eg-tour-box {
+    position:fixed;background:#fff;border-radius:16px;padding:1.5rem 1.75rem;
+    max-width:320px;z-index:9999;box-shadow:0 20px 60px rgba(0,0,0,0.4);
+    animation:tour-slide-up 0.3s ease;
+  }
+  @keyframes tour-slide-up { from{transform:translateY(20px);opacity:0} to{transform:translateY(0);opacity:1} }
+  .eg-tour-box::before {
+    content:'';position:absolute;width:12px;height:12px;background:#fff;
+    transform:rotate(45deg);
+  }
+  .eg-tour-box.top-left::before { bottom:-6px;left:20px; }
+  .eg-tour-box.top-right::before { bottom:-6px;right:20px; }
+  .eg-tour-box.bottom-left::before { top:-6px;left:20px; }
+  .eg-tour-title { font-size:1rem;font-weight:800;color:#0f172a;margin-bottom:6px; }
+  .eg-tour-desc { font-size:0.85rem;color:#475569;line-height:1.6;margin-bottom:1rem; }
+  .eg-tour-footer { display:flex;justify-content:space-between;align-items:center; }
+  .eg-tour-step { font-size:0.75rem;color:#94a3b8;font-weight:600; }
+  .eg-tour-next { background:#2563eb;color:#fff;border:none;padding:7px 18px;
+    border-radius:8px;cursor:pointer;font-size:0.85rem;font-weight:700;
+    transition:background 0.2s; }
+  .eg-tour-next:hover { background:#1d4ed8; }
+  .eg-tour-skip { background:none;border:none;color:#94a3b8;cursor:pointer;font-size:0.8rem; }
+  .eg-tour-highlight {
+    outline:3px solid #2563eb;outline-offset:4px;border-radius:8px;
+    position:relative;z-index:9997;
+    box-shadow:0 0 0 4000px rgba(0,0,0,0.75);
+  }
+</style>
+<script>
+(function(){
+  if(localStorage.getItem('eg_tour_done')) return;
+
+  var steps = [
+    {
+      sel:'#kpi-temp',pos:'bottom-left',
+      title:'📊 Real-time parametrlar',
+      desc:'Bu kartalar 1200 sensorning o\'rtacha qiymatlarini real vaqtda ko\'rsatadi. Har 30 soniyada yangilanadi.'
+    },
+    {
+      sel:'#map-container',pos:'top-left',
+      title:'🗺️ Interaktiv xarita',
+      desc:'Yashil = xavfsiz, sariq = ogohlantirish, qizil = xavfli. Sensorni bosib batafsil ma\'lumot oling.'
+    },
+    {
+      sel:'.page-hero',pos:'bottom-left',
+      title:'⚡ ElectroGrid Monitoring',
+      desc:'Toshkent shahridagi 12 tumanda 1200 ta elektr sensori real vaqtda kuzatilmoqda. AI model nosozliklarni oldindan bashorat qiladi.'
+    },
+  ];
+
+  var cur = 0;
+  var overlay, box;
+
+  function show(i){
+    if(i >= steps.length){ finish(); return; }
+    var s = steps[i];
+    var el = document.querySelector(s.sel);
+    if(!el){ next(); return; }
+
+    if(!overlay){
+      overlay = document.createElement('div');
+      overlay.className = 'eg-tour-overlay';
+      document.body.appendChild(overlay);
+    }
+    if(box){ box.remove(); }
+
+    el.classList.add('eg-tour-highlight');
+    var rect = el.getBoundingClientRect();
+
+    box = document.createElement('div');
+    box.className = 'eg-tour-box ' + s.pos;
+    box.innerHTML =
+      '<div class="eg-tour-title">' + s.title + '</div>' +
+      '<div class="eg-tour-desc">' + s.desc + '</div>' +
+      '<div class="eg-tour-footer">' +
+        '<span class="eg-tour-step">' + (i+1) + ' / ' + steps.length + '</span>' +
+        '<div style="display:flex;gap:8px;">' +
+          '<button class="eg-tour-skip" onclick="window._egTourFinish()">O\'tkazib yuborish</button>' +
+          '<button class="eg-tour-next" onclick="window._egTourNext()">' +
+            (i === steps.length-1 ? 'Boshlash! 🚀' : 'Keyingisi →') +
+          '</button>' +
+        '</div>' +
+      '</div>';
+
+    // Pozitsiya
+    var top, left;
+    if(s.pos.includes('bottom')){ top = rect.bottom + window.scrollY + 16; }
+    else { top = rect.top + window.scrollY - box.offsetHeight - 16; }
+    if(s.pos.includes('right')){ left = Math.min(rect.right - 320, window.innerWidth - 336); }
+    else { left = Math.max(rect.left, 16); }
+
+    box.style.top  = (top || 100) + 'px';
+    box.style.left = (Math.max(left,16)||16) + 'px';
+    document.body.appendChild(box);
+
+    // Pozitsiyani to'g'irlash (box hajmi ma'lum bo'lgandan keyin)
+    setTimeout(function(){
+      var bRect = box.getBoundingClientRect();
+      if(s.pos.includes('bottom')){ box.style.top = (rect.bottom + window.scrollY + 16) + 'px'; }
+      else { box.style.top = Math.max(rect.top + window.scrollY - bRect.height - 16, 16) + 'px'; }
+      box.style.left = Math.max(Math.min(rect.left, window.innerWidth - bRect.width - 16), 16) + 'px';
+    }, 10);
+
+    el.scrollIntoView({behavior:'smooth',block:'center'});
+  }
+
+  function clearHighlight(){
+    steps.forEach(function(s){
+      var el = document.querySelector(s.sel);
+      if(el) el.classList.remove('eg-tour-highlight');
+    });
+  }
+
+  function next(){
+    clearHighlight();
+    cur++;
+    show(cur);
+  }
+
+  function finish(){
+    clearHighlight();
+    if(overlay){ overlay.remove(); overlay=null; }
+    if(box){ box.remove(); box=null; }
+    localStorage.setItem('eg_tour_done','1');
+  }
+
+  window._egTourNext = next;
+  window._egTourFinish = finish;
+
+  // Sahifa yuklangandan 1.5s keyin boshlash
+  document.addEventListener('DOMContentLoaded', function(){
+    setTimeout(function(){ show(0); }, 1500);
+  });
+})();
+</script>
+{% endif %}
 
 <!-- ElectroGrid premium UI enhance qatlami -->
 <link rel="stylesheet" href="{{ url_for('static', filename='enhance.css') }}">

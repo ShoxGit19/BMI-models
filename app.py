@@ -1656,6 +1656,34 @@ def sensor_status_api(sensor_id):
 
 
 # ========================
+# ADMIN ALERTS API
+# ========================
+@app.route("/api/alerts/unread")
+@login_required
+def get_unread_alerts():
+    """Admin uchun o'qilmagan xavf ogohlantirishlari."""
+    from utils import load_admin_alerts
+    all_alerts = load_admin_alerts()
+    unread = [a for a in all_alerts if not a.get("read")]
+    unread_sorted = sorted(unread, key=lambda x: x.get("created_at", ""), reverse=True)
+    return jsonify({
+        "count": len(unread),
+        "alerts": unread_sorted[:20]
+    })
+
+
+@app.route("/api/alerts/mark-read", methods=["POST"])
+@login_required
+def mark_alerts_read_api():
+    """O'qilgan deb belgilash — ids=[...] yoki hammasi."""
+    from utils import mark_alerts_read
+    data = request.json or {}
+    ids = data.get("ids")  # None = hammasi
+    mark_alerts_read(ids)
+    return jsonify({"ok": True})
+
+
+# ========================
 # PREDICTIVE MAINTENANCE
 # ========================
 @app.route("/api/predict-failure")

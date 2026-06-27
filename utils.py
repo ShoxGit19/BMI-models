@@ -339,6 +339,57 @@ def read_bot_token(path="bot_token.txt"):
         return ""
 
 
+# ======================== ADMIN ALERTS (website notification) ========================
+ADMIN_ALERTS_FILE = "data/admin_alerts.json"
+
+
+def load_admin_alerts():
+    if os.path.exists(ADMIN_ALERTS_FILE):
+        try:
+            with open(ADMIN_ALERTS_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            return []
+    return []
+
+
+def save_admin_alerts(alerts):
+    os.makedirs("data", exist_ok=True)
+    with open(ADMIN_ALERTS_FILE, "w", encoding="utf-8") as f:
+        json.dump(alerts[-200:], f, ensure_ascii=False, indent=2, default=str)
+
+
+def add_admin_alert(sensor_id, district, level="danger", message="", details=None):
+    """Bot yoki auto-alert dan kelgan ogohlantirishni saqlash."""
+    alerts = load_admin_alerts()
+    alert = {
+        "id": f"AL-{datetime.datetime.now().strftime('%Y%m%d%H%M%S%f')[:17]}",
+        "sensor_id": str(sensor_id),
+        "district": district or "",
+        "level": level,          # "danger" | "warning"
+        "message": message,
+        "details": details or {},
+        "created_at": datetime.datetime.now().isoformat(),
+        "read": False,
+    }
+    alerts.append(alert)
+    save_admin_alerts(alerts)
+    return alert
+
+
+def count_unread_alerts():
+    return sum(1 for a in load_admin_alerts() if not a.get("read"))
+
+
+def mark_alerts_read(ids=None):
+    """ids=None bo'lsa hammasi o'qilgan deb belgilanadi."""
+    alerts = load_admin_alerts()
+    for a in alerts:
+        if ids is None or a.get("id") in ids:
+            a["read"] = True
+    save_admin_alerts(alerts)
+
+
 # ======================== TICKETS / MAINTENANCE ========================
 TICKETS_FILE = "data/tickets.json"
 ALERT_STATE_FILE = "data/alert_state.json"

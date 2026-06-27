@@ -37,7 +37,8 @@ from utils import (
     load_alert_state, save_alert_state, predict_failure_probability,
     load_tickets, get_active_ticket,
     detect_fault_type, create_incident, get_incident, resolve_incident,
-    get_active_incidents
+    get_active_incidents,
+    add_admin_alert, load_admin_alerts, mark_alerts_read
 )
 
 # ======================== CONFIG ========================
@@ -2616,6 +2617,35 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif data == "help":            await help_command(update, context)
     elif data == "dashboard":       await dashboard_command(update, context)
     elif data == "silent_toggle":   await silent_command(update, context)
+    elif data == "new_ticket":      await ticket_start(update, context)
+    elif data == "tickets_list":    await tickets_command(update, context)
+    elif data.startswith("close_ticket_"):
+        tid = data.replace("close_ticket_", "")
+        from utils import close_ticket as _close_t
+        t = _close_t(tid)
+        txt = f"✅ Tiket *{tid[:16]}* yopildi!" if t else "❌ Topilmadi"
+        await query.edit_message_text(txt, parse_mode="Markdown",
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton("📋 Tiketlar", callback_data="tickets_list"),
+                InlineKeyboardButton("🔙 Menyu",   callback_data="menu"),
+            ]]))
+    elif data.startswith("inprog_ticket_"):
+        tid = data.replace("inprog_ticket_", "")
+        from utils import load_tickets as _lt, save_tickets as _st
+        tkts = _lt()
+        for t in tkts:
+            if t.get("id") == tid:
+                t["status"] = "in_progress"
+                break
+        _st(tkts)
+        await query.edit_message_text(
+            f"🔧 *{tid[:16]}* jarayonda!",
+            parse_mode="Markdown",
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton("📋 Tiketlar", callback_data="tickets_list"),
+                InlineKeyboardButton("🔙 Menyu",   callback_data="menu"),
+            ]])
+        )
     elif data == "sensor_check":
         await query.edit_message_text("🔍 Buyruq: `/sensor S001`", parse_mode="Markdown",
                                       reply_markup=InlineKeyboardMarkup(_BACK))
@@ -2815,58 +2845,98 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # ==================== MORNING REPORT ====================
 async def morning_report(context: ContextTypes.DEFAULT_TYPE):
-    """Har kuni ertalab 06:00 da barcha subscriberlarga hisobot yuborish."""
+    """Har kuni ertalab 06:00 — to'liq kunlik + haftalik hisobot."""
     global df, subscribers
     if df is None or df.empty:
         return
 
     try:
-        total = df["SensorID"].nunique()
+        now_dt = datetime.datetime.now()
+        total  = df["SensorID"].nunique()
         latest = df.sort_values("Timestamp").groupby("SensorID").last().reset_index()
 
-        danger_count = int((latest["Fault"] == 2).sum()) if "Fault" in latest.columns else 0
+        danger_count  = int((latest["Fault"] == 2).sum()) if "Fault" in latest.columns else 0
         warning_count = int((latest["Fault"] == 1).sum()) if "Fault" in latest.columns else 0
-        safe_count = total - danger_count - warning_count
+        safe_count    = total - danger_count - warning_count
+        safe_pct      = round(100 * safe_count / total, 1) if total else 0
+        health_icon   = "🟢" if safe_pct >= 80 else ("🟡" if safe_pct >= 60 else "🔴")
 
-        avg_v = latest["Kuchlanish (V)"].mean() if "Kuchlanish (V)" in latest.columns else 0
-        avg_hz = latest["Chastota (Hz)"].mean() if "Chastota (Hz)" in latest.columns else 0
-        avg_t = latest["Muhit_harorat (C)"].mean() if "Muhit_harorat (C)" in latest.columns else 0
+        avg_v  = latest["Kuchlanish (V)"].mean() if "Kuchlanish (V)" in latest.columns else 0
+        avg_hz = latest["Chastota (Hz)"].mean()  if "Chastota (Hz)" in latest.columns else 0
+        avg_t  = latest["Muhit_harorat (C)"].mean() if "Muhit_harorat (C)" in latest.columns else 0
+
+        # ── Kechagi statistika ──
+        yesterday = now_dt - datetime.timedelta(days=1)
+        yesterday_df = df[df["Timestamp"] >= yesterday] if "Timestamp" in df.columns else df.head(0)
+        y_danger  = int((yesterday_df["Fault"] == 2).sum()) if not yesterday_df.empty else 0
+        y_warning = int((yesterday_df["Fault"] == 1).sum()) if not yesterday_df.empty else 0
+
+        # ── Haftalik eng muammoli sensorlar ──
+        week_ago   = now_dt - datetime.timedelta(days=7)
+        week_df    = df[df["Timestamp"] >= week_ago] if "Timestamp" in df.columns else df.head(0)
+        top_week   = ""
+        if not week_df.empty and "Fault" in week_df.columns:
+            top_sensors = (
+                week_df[week_df["Fault"] == 2]
+                .groupby("SensorID")
+                .size()
+                .sort_values(ascending=False)
+                .head(3)
+            )
+            if not top_sensors.empty:
+                top_week = "\n\n📋 *Hafta eng muammoli sensorlar:*\n"
+                for i, (sid, cnt) in enumerate(top_sensors.items(), 1):
+                    dist = latest[latest["SensorID"] == sid]["District"].values
+                    dist_name = dist[0] if len(dist) else "?"
+                    top_week += f"  {i}. 🔴 *{sid}* — {dist_name} ({cnt} marta)\n"
+
+        # ── Tuman reytingi ──
+        district_rank = ""
+        if "District" in latest.columns:
+            dist_stats = latest.groupby("District").agg(
+                muammo=("Fault", lambda x: int((x == 2).sum())),
+                ogoh=("Fault",   lambda x: int((x == 1).sum())),
+            ).sort_values("muammo", ascending=False).head(3)
+            district_rank = "\n\n🏘️ *Tuman reytingi (xavf bo'yicha):*\n"
+            for dist_name, row in dist_stats.iterrows():
+                icon = "🔴" if row["muammo"] > 0 else "🟡"
+                district_rank += f"  {icon} {dist_name}: {row['muammo']} muammo, {row['ogoh']} ogoh\n"
 
         # Ob-havo
         weather_text = ""
         try:
             resp = requests.get(
-                "https://api.open-meteo.com/v1/forecast",
-                params={"latitude": 41.3, "longitude": 69.27, "current_weather": True},
-                timeout=5
+                "https://wttr.in/Tashkent?format=j1",
+                headers={"User-Agent": "ElectroGrid-Bot/3.0"},
+                timeout=6
             )
             if resp.ok:
-                cw = resp.json().get("current_weather", {})
+                cur = resp.json()["current_condition"][0]
                 weather_text = (
-                    f"\n🌤️ *Ob-havo (Toshkent):*\n"
-                    f"🌡️ {cw.get('temperature', '?')}°C | 💨 {cw.get('windspeed', '?')} km/h\n"
+                    f"\n\n🌤️ *Toshkent ob-havo:*\n"
+                    f"🌡️ {cur['temp_C']}°C | 💧 {cur['humidity']}% | 💨 {cur['windspeedKmph']} km/h"
                 )
         except Exception:
             pass
 
         text = (
-            f"☀️ *Ertalabki hisobot — {datetime.datetime.now().strftime('%d.%m.%Y')}*\n\n"
-            f"📊 *Jami sensorlar:* {total}\n"
-            f"✅ Xavfsiz: {safe_count}\n"
-            f"⚠️ Ogohlantirish: {warning_count}\n"
-            f"🔴 Xavfli: {danger_count}\n\n"
-            f"⚡ O'rtacha kuchlanish: {avg_v:.1f} V\n"
-            f"📡 O'rtacha chastota: {avg_hz:.2f} Hz\n"
-            f"🌡️ O'rtacha harorat: {avg_t:.1f}°C\n"
-            f"{weather_text}\n"
-            f"🌐 Dashboard: {SITE_BASE}"
+            f"☀️ *Ertalabki Hisobot* — {now_dt.strftime('%d.%m.%Y')}\n"
+            f"━━━━━━━━━━━━━━━━━━━━\n\n"
+            f"{health_icon} *Tizim sog'ligi: {safe_pct}%*\n\n"
+            f"📡 *Sensorlar:* {total} ta\n"
+            f"✅ Havfsiz: *{safe_count}*\n"
+            f"⚠️ Ogohlantirish: *{warning_count}*\n"
+            f"🔴 Muammo: *{danger_count}*\n\n"
+            f"📅 *Kecha:* {y_danger} muammo, {y_warning} ogohlantirish\n\n"
+            f"⚡ O'rt. kuchlanish: *{avg_v:.1f}V*\n"
+            f"🔄 O'rt. chastota: *{avg_hz:.2f}Hz*\n"
+            f"🌡️ O'rt. harorat: *{avg_t:.1f}°C*"
+            f"{top_week}{district_rank}{weather_text}"
         )
 
         banner_lines = [
             f"✅ Xavfsiz: {safe_count}  ⚠️ Ogohlantirish: {warning_count}  🔴 Xavfli: {danger_count}",
-            f"⚡ O'rtacha kuchlanish: {avg_v:.1f} V",
-            f"📡 O'rtacha chastota: {avg_hz:.2f} Hz",
-            f"🌡️ O'rtacha harorat: {avg_t:.1f}°C",
+            f"⚡ O'rt. kuchlanish: {avg_v:.1f}V  🔄 Chastota: {avg_hz:.2f}Hz  🌡️ Harorat: {avg_t:.1f}°C",
         ]
         morning_keyboard = InlineKeyboardMarkup([[
             InlineKeyboardButton("📊 Dashboard", url=SITE_BASE),
@@ -3734,7 +3804,263 @@ async def _notify_admin_new_ticket(context, tkt, ticket_id):
 
 async def tkt_set_eta(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Admin ETA va status o'rnatishi (callback)."""
-    pass  # Kelajakda kengaytirish uchun
+    pass
+
+
+# ==================== 📸 RASM TAHLILI → TIKET ====================
+
+PHOTO_TKT_SENSOR, PHOTO_TKT_DESCRIBE, PHOTO_TKT_CONFIRM = range(30, 33)
+
+
+async def photo_ticket_entry(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Foydalanuvchi rasm yubordi — tiket yaratish jarayoni boshlanadi."""
+    photo = update.message.photo[-1]
+    context.user_data["ptkt"] = {
+        "photo_id": photo.file_id,
+        "user_id": update.effective_user.id,
+    }
+    user_data = get_user_by_id(update.effective_user.id) or {}
+    u_lat  = user_data.get("latitude")
+    u_lon  = user_data.get("longitude")
+    u_dist = user_data.get("district", "")
+
+    # Yaqin sensorlar
+    keyboard = []
+    if u_lat and u_lon and df is not None:
+        latest = df.sort_values("Timestamp").groupby("SensorID").last().reset_index()
+        dists = []
+        for _, row in latest.iterrows():
+            try:
+                d = haversine(float(u_lat), float(u_lon),
+                              float(row["Latitude"]), float(row["Longitude"]))
+                dists.append((d, row))
+            except Exception:
+                pass
+        dists.sort(key=lambda x: x[0])
+        for d_km, row in dists[:5]:
+            sid   = str(row["SensorID"])
+            fault = int(row.get("Fault", 0))
+            icon  = "🔴" if fault == 2 else ("🟡" if fault == 1 else "🟢")
+            keyboard.append([InlineKeyboardButton(
+                f"{icon} {sid} — {row['District']} ({d_km:.1f}km)",
+                callback_data=f"ptkt_{sid}"
+            )])
+    elif u_dist and df is not None:
+        latest = df.sort_values("Timestamp").groupby("SensorID").last().reset_index()
+        for _, row in latest[latest["District"] == u_dist].head(5).iterrows():
+            sid = str(row["SensorID"])
+            keyboard.append([InlineKeyboardButton(
+                f"🟢 {sid} — {u_dist}", callback_data=f"ptkt_{sid}"
+            )])
+
+    keyboard.append([InlineKeyboardButton("⌨️ ID qo'lda", callback_data="ptkt_manual")])
+    keyboard.append([InlineKeyboardButton("❌ Bekor", callback_data="ptkt_cancel")])
+
+    await update.message.reply_text(
+        "📸 *Rasm qabul qilindi!*\n\n"
+        "📡 *Qaysi sensorda nosozlik?*\n"
+        "_(Pastdan tanlang yoki ID yozing)_",
+        parse_mode="Markdown",
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )
+    return PHOTO_TKT_SENSOR
+
+
+async def photo_tkt_sensor_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    q = update.callback_query
+    await q.answer()
+    if q.data == "ptkt_cancel":
+        context.user_data.pop("ptkt", None)
+        await q.edit_message_text("❌ Bekor qilindi.")
+        return ConversationHandler.END
+    if q.data == "ptkt_manual":
+        await q.edit_message_text("⌨️ Sensor ID yozing (masalan: `S0045`):", parse_mode="Markdown")
+        return PHOTO_TKT_SENSOR
+    sensor_id = q.data.replace("ptkt_", "")
+    context.user_data["ptkt"]["sensor_id"] = sensor_id
+    await q.edit_message_text(
+        f"✅ Sensor: *{sensor_id}*\n\n"
+        "📝 *Nosozlikni qisqacha tasvirlaing:*\n"
+        "_(Masalan: Kuchlanish tushib ketdi, sim qizib ketgan...)_",
+        parse_mode="Markdown"
+    )
+    return PHOTO_TKT_DESCRIBE
+
+
+async def photo_tkt_sensor_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Qo'lda sensor ID kiritildi."""
+    raw = (update.message.text or "").strip()
+    sensor_id = normalize_sensor_id(raw, df["SensorID"] if df is not None else None)
+    if df is not None and sensor_id not in df["SensorID"].values:
+        await update.message.reply_text(
+            f"❌ *{raw.upper()}* topilmadi. Qayta yozing:",
+            parse_mode="Markdown"
+        )
+        return PHOTO_TKT_SENSOR
+    context.user_data["ptkt"]["sensor_id"] = sensor_id
+    await update.message.reply_text(
+        f"✅ Sensor: *{sensor_id}*\n\n📝 Nosozlikni tasvirlaing:",
+        parse_mode="Markdown"
+    )
+    return PHOTO_TKT_DESCRIBE
+
+
+async def photo_tkt_describe(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Tavsif yozildi — tiket yaratiladi."""
+    issue = (update.message.text or "").strip()
+    if len(issue) < 5:
+        await update.message.reply_text("⚠️ Kamida 5 ta belgi yozing:")
+        return PHOTO_TKT_DESCRIBE
+
+    ptkt = context.user_data.get("ptkt", {})
+    user = update.effective_user
+    user_data = get_user_by_id(user.id) or {}
+
+    try:
+        from utils import create_ticket
+        ticket = create_ticket(
+            ptkt.get("sensor_id", "UNKNOWN"),
+            issue,
+            priority="o'rta",
+            latitude=user_data.get("latitude"),
+            longitude=user_data.get("longitude"),
+            district=user_data.get("district", ""),
+            telegram_user={
+                "id": user.id,
+                "name": f"{user_data.get('first_name','')} {user_data.get('last_name','')}".strip() or user.full_name,
+                "username": user.username or "",
+                "phone": user_data.get("phone", ""),
+            },
+            photo_file_id=ptkt.get("photo_id"),
+            source="bot_photo",
+            created_by=user_data.get("phone") or user.full_name
+        )
+        # Saytga admin alert yozish
+        add_admin_alert(
+            sensor_id=ptkt.get("sensor_id", "?"),
+            district=user_data.get("district", ""),
+            level="warning",
+            message=f"Rasm bilan tiket: {issue[:80]}",
+            details={"ticket_id": ticket["id"], "from": user.full_name}
+        )
+        await update.message.reply_text(
+            f"✅ *Tiket yaratildi!*\n"
+            f"🆔 `{ticket['id']}`\n"
+            f"📡 Sensor: {ptkt.get('sensor_id')}\n"
+            f"📸 Rasm biriktilgan\n\n"
+            f"Admin ko'rib chiqadi va ETA belgilaydi.",
+            parse_mode="Markdown",
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton("📋 Tiketlar", callback_data="tickets_list"),
+                InlineKeyboardButton("🔙 Menyu", callback_data="menu"),
+            ]])
+        )
+        # Admin ga xabar
+        await _notify_admin_new_ticket(context, {
+            **ptkt,
+            "user_name": f"{user_data.get('first_name','')} {user_data.get('last_name','')}".strip(),
+            "user_phone": user_data.get("phone", ""),
+            "user_username": user.username or "",
+            "issue": issue,
+            "district": user_data.get("district", ""),
+        }, ticket["id"])
+    except Exception as e:
+        await update.message.reply_text(f"❌ Xato: {e}")
+
+    context.user_data.pop("ptkt", None)
+    return ConversationHandler.END
+
+
+async def photo_tkt_cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    context.user_data.pop("ptkt", None)
+    if update.callback_query:
+        await update.callback_query.answer()
+        await update.callback_query.edit_message_text("❌ Bekor qilindi.")
+    return ConversationHandler.END
+
+
+# ==================== 📅 MAINTENANCE REMINDER ====================
+
+async def schedule_eta_reminder(context, ticket_id, sensor_id, eta_str, admin_ids):
+    """ETA vaqtida admin ga eslatma yuborish."""
+    try:
+        eta_dt = datetime.datetime.fromisoformat(eta_str.replace(" ", "T"))
+        delay = (eta_dt - datetime.datetime.now()).total_seconds()
+        if delay < 60:
+            return  # O'tib ketgan vaqt
+
+        async def send_reminder(ctx):
+            from utils import load_tickets
+            tickets = load_tickets()
+            t = next((x for x in tickets if x.get("id") == ticket_id), None)
+            if t and t.get("status") in ("open", "in_progress"):
+                msg = (
+                    f"⏰ *ETA eslatmasi!*\n"
+                    f"🆔 `{ticket_id}` hali yopilmagan!\n"
+                    f"📡 Sensor: {sensor_id}\n"
+                    f"📝 {t.get('issue','')[:100]}\n\n"
+                    f"Zudlik bilan tekshiring!"
+                )
+                for aid in admin_ids:
+                    try:
+                        await ctx.bot.send_message(
+                            chat_id=aid, text=msg, parse_mode="Markdown",
+                            reply_markup=InlineKeyboardMarkup([[
+                                InlineKeyboardButton("✅ Yopish", callback_data=f"close_ticket_{ticket_id}"),
+                                InlineKeyboardButton("📋 Tiketlar", callback_data="tickets_list"),
+                            ]])
+                        )
+                    except Exception:
+                        pass
+
+        context.job_queue.run_once(send_reminder, when=delay, name=f"eta_{ticket_id}")
+        logger.info(f"ETA reminder scheduled: {ticket_id} → {eta_str} ({delay:.0f}s)")
+    except Exception as e:
+        logger.warning(f"ETA reminder xato: {e}")
+
+
+# ==================== 📊 OPERATOR PANEL (tiket inline boshqaruvi) ====================
+
+async def tickets_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Tiketlar ro'yxati — operator/admin uchun inline boshqaruv."""
+    from utils import load_tickets
+    if update.callback_query:
+        await update.callback_query.answer()
+
+    tickets = load_tickets()
+    open_tickets = [t for t in tickets if t.get("status") != "closed"]
+
+    if not open_tickets:
+        text = "✅ Hozirda faol tiket yo'q."
+        kb = InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Menyu", callback_data="menu")]])
+        if update.callback_query:
+            await update.callback_query.edit_message_text(text, reply_markup=kb)
+        else:
+            await update.message.reply_text(text, reply_markup=kb)
+        return
+
+    status_icon = {"open": "🔴", "in_progress": "🟡", "closed": "🟢"}
+    text = f"🛠 *Faol tiketlar ({len(open_tickets)} ta):*\n━━━━━━━━━━━━━━━━━━━━\n\n"
+    keyboard = []
+    for t in open_tickets[:8]:
+        sid    = t.get("sensor_id", "?")
+        st     = t.get("status", "open")
+        icon   = status_icon.get(st, "⚪")
+        pri    = {"kritik": "🔴", "o'rta": "🟡", "past": "🟢"}.get(t.get("priority", "o'rta"), "")
+        src    = "📱" if t.get("source") == "bot" else "🌐"
+        text  += f"{icon} {pri} *{sid}* {src}\n  `{t['id'][:16]}` — {(t.get('issue',''))[:40]}\n\n"
+        keyboard.append([
+            InlineKeyboardButton(f"✅ Yop | {sid}", callback_data=f"close_ticket_{t['id']}"),
+            InlineKeyboardButton("🔧 Jarayon",       callback_data=f"inprog_ticket_{t['id']}"),
+        ])
+    keyboard.append([InlineKeyboardButton("🔙 Menyu", callback_data="menu")])
+
+    if update.callback_query:
+        await update.callback_query.edit_message_text(
+            text, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
+    else:
+        await update.message.reply_text(
+            text, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
 
 
 # ==================== NOTO'G'RI BUYRUQ HANDLER ====================
@@ -3952,6 +4278,27 @@ def main():
         per_message=False,
     )
     app.add_handler(ticket_conv)
+
+    # ── Rasm tahlili ConversationHandler ──
+    photo_conv = ConversationHandler(
+        entry_points=[MessageHandler(filters.PHOTO & ~filters.COMMAND, photo_ticket_entry)],
+        states={
+            PHOTO_TKT_SENSOR: [
+                CallbackQueryHandler(photo_tkt_sensor_cb,    pattern=r"^ptkt_"),
+                MessageHandler(filters.TEXT & ~filters.COMMAND, photo_tkt_sensor_text),
+            ],
+            PHOTO_TKT_DESCRIBE: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, photo_tkt_describe),
+            ],
+        },
+        fallbacks=[
+            CommandHandler("cancel", photo_tkt_cancel),
+            CallbackQueryHandler(photo_tkt_cancel, pattern="^ptkt_cancel$"),
+        ],
+        allow_reentry=True,
+        per_message=False,
+    )
+    app.add_handler(photo_conv)
 
     for cmd, fn in [
         ("help",             help_command),
