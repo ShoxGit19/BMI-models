@@ -30,8 +30,8 @@ except ImportError:
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "monitoring-secret-2026-toshkent")
 
-# --- Static fayllar uchun cache (1 kun) ---
-app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 86400  # 24h browser cache
+# --- Static fayllar uchun cache (development: 0, production: 1 kun) ---
+app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 0  # kesh o'chirildi — yangilangan fayllar darhol ko'rinadi
 
 # --- Flask-Caching (API javoblarini keshlash) ---
 try:

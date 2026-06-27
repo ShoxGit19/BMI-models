@@ -78,5 +78,53 @@
     "photo_url": "/static/ticket_photos/T-20260626173129.jpg",
     "closed_at": null,
     "notes": []
+  },
+  {
+    "id": "T-20260627093938",
+    "sensor_id": "S0741",
+    "issue": "Juda Katta muammo bor",
+    "status": "closed",
+    "priority": "o'rta",
+    "eta": null,
+    "created_at": "2026-06-27T09:39:38.673629",
+    "created_by": "+998946541922",
+    "source": "bot",
+    "district": "Yunusobod",
+    "latitude": 41.319366,
+    "longitude": 69.24043,
+    "telegram_user": {
+      "id": 6954909676,
+      "name": "Shohjahon G'aybullayev",
+      "username": "gaybullayeev19",
+      "phone": "+998946541922"
+    },
+    "photo_file_id": "AgACAgIAAxkBAAIFoGo_U_0nsD35V0DQ1EU19nPID4jWAAKgGGsbdyr4ScfanB0PpqKZAQADAgADeQADPAQ",
+    "photo_url": "/static/ticket_photos/T-20260627093936.jpg",
+    "closed_at": "2026-06-27T09:41:14.385478",
+    "notes": []
+  },
+  {
+    "id": "T-20260627095850",
+    "sensor_id": "S1101",
+    "issue": "Kuchlanish keskin tushib ketdi, 190V ga yetdi. Xo'jalik substansiyasida uzilish bo'lyapti.",
+    "status": "open",
+    "priority": "past",
+    "eta": null,
+    "created_at": "2026-06-27T09:58:50.651315",
+    "created_by": "+998946541922",
+    "source": "bot",
+    "district": "Yunusobod",
+    "latitude": null,
+    "longitude": null,
+    "telegram_user": {
+      "id": 6954909676,
+      "name": "Shohjahon G'aybullayev",
+      "username": "gaybullayeev19",
+      "phone": "+998946541922"
+    },
+    "photo_file_id": null,
+    "photo_url": null,
+    "closed_at": null,
+    "notes": []
   }
 ]

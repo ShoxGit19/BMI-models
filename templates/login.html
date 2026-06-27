@@ -10,6 +10,19 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='enhance.css') }}">
   <script defer src="{{ url_for('static', filename='enhance.js') }}"></script>
+  <!-- Fon rasm — style.css yuklanishidan oldin inject -->
+  <script>
+  (function(){
+    var s = document.createElement('style');
+    s.textContent =
+      'html{background:#06101f!important}' +
+      'html::before{content:"";position:fixed;top:0;left:0;width:100vw;height:100vh;' +
+      'background:url("{{ url_for("static", filename="Fone_pages.png") }}")center/cover no-repeat;' +
+      'z-index:-1;pointer-events:none}' +
+      'html,body{background-color:transparent!important;background-image:none!important}';
+    document.head.insertBefore(s, document.head.firstChild);
+  })();
+  </script>
   <style>
     /* --- Background --- */
     /* SVG body dan to'g'ridan-to'g'ri ko'rinadi */
@@ -381,20 +394,20 @@
           <span style="color:white;font-weight:800;font-size:1rem;letter-spacing:-0.02em;">ElectroGrid</span>
         </div>
         <div class="promo-title">Toshkent Elektr<br>Monitoring Tizimi</div>
-        <div class="promo-sub">Real vaqt rejimida 500+ sensor ma'lumoti, AI bashorati va to'liq nazorat.</div>
+        <div class="promo-sub">Real vaqt rejimida 1 200 ta sensor ma'lumoti, gibrid AI bashorati va to'liq nazorat.</div>
       </div>
 
       <!-- Stats -->
       <div class="row g-2" style="position:relative;z-index:1;">
         <div class="col-6">
           <div class="promo-stat">
-            <div class="ps-val">500+</div>
+            <div class="ps-val">1 200</div>
             <div class="ps-lbl">Sensor</div>
           </div>
         </div>
         <div class="col-6">
           <div class="promo-stat">
-            <div class="ps-val">11</div>
+            <div class="ps-val">12</div>
             <div class="ps-lbl">Tuman</div>
           </div>
         </div>
@@ -424,7 +437,7 @@
         </div>
         <div class="promo-feat">
           <i class="fas fa-robot" style="display:flex;align-items:center;justify-content:center;"></i>
-          <span>VotingClassifier AI nosozlik aniqlash</span>
+          <span>Gibrid AI (RandomForest + MLP) nosozlik aniqlash</span>
         </div>
         <div class="promo-feat">
           <i class="fab fa-telegram" style="display:flex;align-items:center;justify-content:center;"></i>
@@ -440,7 +453,7 @@
         <div class="logo-icon"><i class="fas fa-bolt"></i></div>
         <div>
           <div class="logo-name">ElectroGrid</div>
-          <div class="logo-sub">Monitoring · v2.0</div>
+          <div class="logo-sub">Monitoring · v3.0</div>
         </div>
       </div>
 

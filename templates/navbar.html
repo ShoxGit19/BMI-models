@@ -179,6 +179,21 @@
   }
 </style>
 
+<!-- FON RASMI — CSS ::before bilan, zaxira sifatida JS ham bor -->
+<script>
+(function(){
+  /* style.css yuklangunga qadar zaxira — inline style eng ustun */
+  var s = document.createElement('style');
+  s.textContent =
+    'html{background:#06101f!important}' +
+    'html::before{content:"";position:fixed;top:0;left:0;width:100vw;height:100vh;' +
+    'background:url("{{ url_for("static", filename="Fone_pages.png") }}")center/cover no-repeat;' +
+    'z-index:-1;pointer-events:none}' +
+    'html,body{background-color:transparent!important;background-image:none!important}';
+  document.head.insertBefore(s, document.head.firstChild);
+})();
+</script>
+
 <nav class="navbar navbar-expand-lg sticky-top">
   <div class="container-fluid px-4">
     <!-- Brand -->
@@ -406,6 +421,128 @@
 <!-- ElectroGrid premium UI enhance qatlami -->
 <link rel="stylesheet" href="{{ url_for('static', filename='enhance.css') }}">
 <script defer src="{{ url_for('static', filename='enhance.js') }}"></script>
+
+<!-- Barcha sahifalar uchun fon rasmi + glassmorphism -->
+<style>
+  /* ── 1) html ga rasm + engil qovoq ── */
+  html {
+    background-color: #06101f !important;
+    background-image:
+      linear-gradient(rgba(20,30,60,0.35), rgba(20,30,60,0.35)),
+      url("{{ url_for('static', filename='Fone_pages.png') }}") !important;
+    background-size: cover !important;
+    background-position: center center !important;
+    background-repeat: no-repeat !important;
+    background-attachment: scroll !important;
+    min-height: 100% !important;
+  }
+
+  /* ── 2) body transparent — html dagi rasm ko'rinsin ── */
+  body {
+    background-color: transparent !important;
+    background-image: none !important;
+  }
+
+  /* ── 3) Bootstrap CSS variable override ── */
+  :root { --bs-body-bg: transparent; }
+  .container, .container-fluid, .container-lg,
+  .container-md, .container-sm, .container-xl,
+  .container-xxl {
+    background: transparent !important;
+  }
+
+  /* ── KARTA VA PANELLAR — shisha effekti ── */
+  .card,
+  .panel,
+  .kpi-card,
+  .stat-strip,
+  .table-wrapper,
+  .compare-card,
+  .side-card,
+  .map-panel,
+  .ticket-card,
+  .qa-item,
+  .ai-summary,
+  .result-banner,
+  .param-card,
+  [class*="chart-card"],
+  .cal-day {
+    background: rgba(255,255,255,0.78) !important;
+    backdrop-filter: blur(12px) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
+    border: 1px solid rgba(255,255,255,0.45) !important;
+  }
+
+  /* ── NAVBAR ── */
+  .navbar-eg {
+    background: rgba(10,18,45,0.82) !important;
+    backdrop-filter: blur(16px) !important;
+    -webkit-backdrop-filter: blur(16px) !important;
+  }
+
+  /* ── STAT STRIP — bosh sahifa ── */
+  .stat-strip {
+    background: rgba(255,255,255,0.70) !important;
+    backdrop-filter: blur(14px) !important;
+    -webkit-backdrop-filter: blur(14px) !important;
+  }
+
+  /* ── KPI KARTALAR ── */
+  .kpi-card {
+    background: rgba(255,255,255,0.72) !important;
+    backdrop-filter: blur(10px) !important;
+    -webkit-backdrop-filter: blur(10px) !important;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.12) !important;
+  }
+
+  /* ── PAGE HERO — yuqori banner ── */
+  .page-hero {
+    background: rgba(10,22,55,0.72) !important;
+    backdrop-filter: blur(8px) !important;
+    -webkit-backdrop-filter: blur(8px) !important;
+  }
+
+  /* ── QUICK LINKS ── */
+  .quick-link {
+    background: rgba(255,255,255,0.60) !important;
+    backdrop-filter: blur(8px) !important;
+    -webkit-backdrop-filter: blur(8px) !important;
+  }
+  .quick-link:hover {
+    background: rgba(37,99,235,0.18) !important;
+  }
+
+  /* ── BOOTSTRAP CARD OVERRIDE ── */
+  .card-body,
+  .card-header {
+    background: transparent !important;
+  }
+
+  /* ── JADVAL ── */
+  #sensor-table thead th {
+    background: rgba(30,58,138,0.85) !important;
+  }
+  #sensor-table tbody tr:hover td {
+    background: rgba(255,255,255,0.50) !important;
+  }
+
+  /* ── DARK THEME ── */
+  [data-theme="dark"] .card,
+  [data-theme="dark"] .panel,
+  [data-theme="dark"] .kpi-card,
+  [data-theme="dark"] .stat-strip,
+  [data-theme="dark"] .ticket-card,
+  [data-theme="dark"] .qa-item {
+    background: rgba(8,16,40,0.80) !important;
+    border-color: rgba(255,255,255,0.08) !important;
+  }
+  [data-theme="dark"] .page-hero {
+    background: rgba(4,10,28,0.82) !important;
+  }
+  [data-theme="dark"] .quick-link {
+    background: rgba(8,16,40,0.65) !important;
+  }
+</style>
 
 <!-- PWA Meta & Manifest -->
 <link rel="manifest" href="/static/manifest.json">
