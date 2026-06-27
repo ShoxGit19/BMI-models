@@ -12,7 +12,7 @@
   {
     "id": "T-20260626170615",
     "sensor_id": "S0005",
-    "issue": "«Kuchlanish keskin tushib ketdi, 190V ga yetdi. Xo'jalik substansiyasida uzilish bo'lyapti.»",
+    "issue": "Kuchlanish keskin tushib ketdi, 190V ga yetdi. Xo'jalik substansiyasida uzilish bo'lyapti.",
     "status": "closed",
     "priority": "o'rta",
     "eta": null,
@@ -30,53 +30,6 @@
     },
     "photo_file_id": "AgACAgIAAxkBAAIFS2o-ay_7AAG9ySIQOiB208a5O7TabAACdxdrG3cq8El-u2_6N6mTNQEAAwIAA3kAAzwE",
     "closed_at": "2026-06-26T17:48:18.934335",
-    "notes": []
-  },
-  {
-    "id": "T-20260626172119",
-    "sensor_id": "unknown",
-    "issue": "Kuchlanish keskin tushib ketdi, 190V ga yetdi. Xo'jalik substansiyasida uzilish bo'lyapti.",
-    "status": "open",
-    "priority": "kritik",
-    "eta": null,
-    "created_at": "2026-06-26T17:21:19.298015",
-    "created_by": "+998946541922",
-    "source": "bot",
-    "district": "Yunusobod",
-    "latitude": 41.2995,
-    "longitude": 69.2641,
-    "telegram_user": {
-      "id": 6954909676,
-      "name": "Shohjahon G'aybullayev",
-      "username": "gaybullayeev19",
-      "phone": "+998946541922"
-    },
-    "photo_file_id": null,
-    "closed_at": null,
-    "notes": []
-  },
-  {
-    "id": "T-20260626173131",
-    "sensor_id": "unknown",
-    "issue": "Kuchlanish keskin tushib ketdi, 190V ga yetdi. Xo'jalik substansiyasida uzilish bo'lyapti.",
-    "status": "open",
-    "priority": "kritik",
-    "eta": null,
-    "created_at": "2026-06-26T17:31:31.947446",
-    "created_by": "+998946541922",
-    "source": "bot",
-    "district": "Yunusobod",
-    "latitude": 41.2995,
-    "longitude": 69.2641,
-    "telegram_user": {
-      "id": 6954909676,
-      "name": "Shohjahon G'aybullayev",
-      "username": "gaybullayeev19",
-      "phone": "+998946541922"
-    },
-    "photo_file_id": "AgACAgIAAxkBAAIFi2o-cO7ld7jHlqrl1YwTKpJV1YQiAAKUF2sbdyrwSRMbRTb66OfsAQADAgADeQADPAQ",
-    "photo_url": "/static/ticket_photos/T-20260626173129.jpg",
-    "closed_at": null,
     "notes": []
   },
   {
@@ -106,8 +59,8 @@
   {
     "id": "T-20260627095850",
     "sensor_id": "S1101",
-    "issue": "Kuchlanish keskin tushib ketdi, 190V ga yetdi. Xo'jalik substansiyasida uzilish bo'lyapti.",
-    "status": "open",
+    "issue": "Kuchlanish keskin tushib ketdi, 190V ga yetdi.",
+    "status": "closed",
     "priority": "past",
     "eta": null,
     "created_at": "2026-06-27T09:58:50.651315",
@@ -124,7 +77,37 @@
     },
     "photo_file_id": null,
     "photo_url": null,
-    "closed_at": null,
+    "closed_at": "2026-06-27T13:00:00",
     "notes": []
+  },
+  {
+    "id": "T-20260627121044",
+    "sensor_id": "S1103",
+    "issue": "Kuchlanish keskin tushib ketdi, 190V ga yetdi. Xo'jalik substansiyasida uzilish bo'lyapti",
+    "status": "closed",
+    "priority": "kritik",
+    "eta": "2026-07-02",
+    "created_at": "2026-06-27T12:10:44.802954",
+    "created_by": "+998946541922",
+    "source": "bot",
+    "district": "Yunusobod",
+    "latitude": null,
+    "longitude": null,
+    "telegram_user": {
+      "id": 6954909676,
+      "name": "Shohjahon G'aybullayev",
+      "username": "gaybullayeev19",
+      "phone": "+998946541922"
+    },
+    "photo_file_id": "AgACAgIAAxkBAAIF5Wo_d2_Bw53yOsZOZ4SaU4l72uQNAAIJGWsbdyr4STtblrFQhfIaAQADAgADeQADPAQ",
+    "photo_url": "/static/ticket_photos/T-20260627121042.jpg",
+    "closed_at": "2026-06-27T13:00:00",
+    "notes": [
+      {
+        "text": "Biz albatta ko'rib chiqamiz",
+        "by": "admin",
+        "at": "2026-06-27T12:11:57.413586"
+      }
+    ]
   }
 ]

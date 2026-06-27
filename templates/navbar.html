@@ -245,9 +245,9 @@
       .then(r=>r.json())
       .then(d=>{
         var tickets = d.tickets || [];
-        // Faqat ochiq + bot orqali kelgan (yoki status open/in_progress)
+        // Faqat status==="open" — yangi kelgan, hali ko'rilmagan
         var newTkts = tickets.filter(function(t){
-          return t.status !== 'closed';
+          return t.status === 'open';
         });
         var bellBtn   = document.getElementById('tickets-bell-btn');
         var bellCount = document.getElementById('tickets-bell-count');
