@@ -2,6 +2,12 @@
 from __future__ import annotations
 
 import os
+
+if __name__ == "__main__" and os.environ.get("BMI_RUN_WORKER") != "1":
+    from run import main as run_project
+    raise SystemExit(run_project())
+
+import asyncio
 import io
 import json
 import math
@@ -9,6 +15,7 @@ import logging
 import datetime
 import pickle
 import requests
+from requests import RequestException
 import re
 import time as _time
 
@@ -20,8 +27,10 @@ import matplotlib.patches as mpatches
 
 from telegram import (
     Update, KeyboardButton, ReplyKeyboardMarkup, ReplyKeyboardRemove,
-    InlineKeyboardButton, InlineKeyboardMarkup
+    InlineKeyboardButton, InlineKeyboardMarkup,
+    BotCommand, BotCommandScopeDefault, BotCommandScopeAllPrivateChats, BotCommandScopeChat
 )
+from telegram.error import BadRequest, Forbidden
 from telegram.ext import (
     Application, CommandHandler, MessageHandler, filters,
     CallbackQueryHandler, ConversationHandler, ContextTypes
@@ -63,6 +72,13 @@ BOT_TOKEN = read_bot_token() or os.environ.get("TELEGRAM_BOT_TOKEN", "")
 SITE_BASE = os.environ.get("SITE_BASE", "http://localhost:5000")
 
 ADMIN_USERNAME = "gaybullayeev19"
+SIMPLIFIED_PUBLIC_COMMANDS = ["start", "menu", "help", "cancel"]
+# Barqaror Telegram ID orqali ruxsat. Username ruxsat manbai emas.
+ADMIN_IDS = frozenset(
+    int(value.strip()) for value in os.environ.get("TELEGRAM_ADMIN_IDS", "").split(",")
+    if value.strip().isdigit()
+)
+SENSOR_ID = 20
 
 REG_PHONE, REG_FIRSTNAME, REG_LASTNAME, REG_DISTRICT, REG_LOCATION = range(5)
 # Buyurtma (ticket) holatlari
@@ -149,11 +165,16 @@ def load_model():
         print(f"Modelni yuklashda xatolik: {e}")
         hybrid_model = None
 
+def is_admin_id(user_id):
+    if user_id in ADMIN_IDS:
+        return True
+    user = get_user_by_id(user_id) or {}
+    return user.get("role") == "admin"
+
+
 def is_admin(update: Update) -> bool:
     user = update.effective_user
-    if user is None:
-        return False
-    return (user.username or "").lower() == ADMIN_USERNAME.lower()
+    return user is not None and is_admin_id(user.id)
 
 async def error_handler(update, context):
     msg = str(context.error)
@@ -164,37 +185,168 @@ async def error_handler(update, context):
     _last_err.update({"msg": msg, "ts": now})
 
 # ======================== MAIN MENU ========================
+def main_menu_markup():
+    return InlineKeyboardMarkup(_MAIN_KEYBOARD)
+
+
+def back_markup():
+    return InlineKeyboardMarkup(_BACK)
+
+
 async def send_main_menu(message):
-    keyboard = [
-        [InlineKeyboardButton("📊 Statistika",        callback_data="stats"),
-         InlineKeyboardButton("🔮 Prognoz",           callback_data="forecast")],
-        [InlineKeyboardButton("🏘️ Tumanlar",          callback_data="districts"),
-         InlineKeyboardButton("🔍 Sensor tekshirish", callback_data="sensor_check")],
-        [InlineKeyboardButton("🧠 Model bashorat",    callback_data="model"),
-         InlineKeyboardButton("🔴 Muammoli sensorlar",callback_data="danger_sensors")],
-        [InlineKeyboardButton("📈 O'rtachalar",       callback_data="averages"),
-         InlineKeyboardButton("📋 Top 10 xavfli",    callback_data="top_danger")],
-        [InlineKeyboardButton("📊 Grafik",            callback_data="chart_check"),
-         InlineKeyboardButton("📈 Taqqoslash",        callback_data="compare_check")],
-        [InlineKeyboardButton("🕐 Tarix",             callback_data="history_check"),
-         InlineKeyboardButton("🗺️ Xarita",            callback_data="map_check")],
-        [InlineKeyboardButton("📥 Hisobot",           callback_data="report_check"),
-         InlineKeyboardButton("🔔 Obuna",             callback_data="subscribe_check")],
-        [InlineKeyboardButton("📊 Dashboard",         callback_data="dashboard"),
-         InlineKeyboardButton("📍 Yaqin sensorlar",  callback_data="near_sensors_info")],
-        [InlineKeyboardButton("🌙 Sokin rejim",       callback_data="silent_toggle"),
-         InlineKeyboardButton("🌤️ Ob-havo",           callback_data="weather")],
-        # ── NOSOZLIK BUYURTMA ──
-        [InlineKeyboardButton("🛠️ Nosozlik bildirish",  callback_data="new_ticket")],
-        [InlineKeyboardButton("ℹ️ Yordam",              callback_data="help")],
+    await message.reply_text(_MAIN_TEXT, reply_markup=main_menu_markup(), parse_mode="Markdown")
+
+
+async def reply_panel(update, text, reply_markup=None, parse_mode=None):
+    """Matn va media callbacklarida bir xil navigatsiya."""
+    markup = reply_markup if reply_markup is not None else back_markup()
+    query = update.callback_query
+    if query and query.message.text:
+        await query.edit_message_text(text, reply_markup=markup, parse_mode=parse_mode)
+    else:
+        await update.effective_message.reply_text(text, reply_markup=markup, parse_mode=parse_mode)
+
+
+def settings_markup(update):
+    subscribed = update.effective_chat.id in subscribers
+    user = get_user_by_id(update.effective_user.id) or {}
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton(
+            "🔕 Obunani bekor qilish" if subscribed else "🔔 Alertga obuna bo'lish",
+            callback_data="unsubscribe" if subscribed else "subscribe")],
+        [InlineKeyboardButton(
+            "🌙 Sokin rejim: " + ("yoqilgan" if user.get("silent_mode") else "o'chirilgan"),
+            callback_data="silent_toggle")],
+        [InlineKeyboardButton("ℹ️ Yordam", callback_data="help")],
+        *_BACK,
+    ])
+
+
+async def monitoring_menu(update, context):
+    await reply_panel(update, "📊 Monitoring — tanlang:", InlineKeyboardMarkup([
+        [InlineKeyboardButton("📊 Dashboard", callback_data="dashboard")],
+        [InlineKeyboardButton("📡 Umumiy statistika", callback_data="stats")],
+        [InlineKeyboardButton("🔴 Muammoli sensorlar", callback_data="danger_sensors")],
+        *_BACK,
+    ]))
+
+
+async def settings_menu(update, context):
+    await reply_panel(update, "⚙️ Sozlamalar va yordam", settings_markup(update))
+
+
+async def menu_command(update, context):
+    for key in ("tkt", "ptkt", "sensor_action"):
+        context.user_data.pop(key, None)
+    if update.callback_query:
+        await update.callback_query.answer()
+    await update.effective_message.reply_text(
+        "🏠 Bosh menyu", reply_markup=ReplyKeyboardRemove())
+    if update.callback_query:
+        await go_menu(update.callback_query)
+    else:
+        await send_main_menu(update.effective_message)
+    return ConversationHandler.END
+
+
+async def cancel_command(update, context):
+    return await menu_command(update, context)
+
+
+async def restart_command(update, context):
+    for key in ("tkt", "ptkt", "sensor_action"):
+        context.user_data.pop(key, None)
+    return await start(update, context)
+
+
+async def active_dialog_hint(update, context):
+    if update.callback_query:
+        await update.callback_query.answer("Avval joriy qadamni yakunlang.")
+    await update.effective_message.reply_text(
+        "Joriy qadamni davom ettiring yoki bosh menyuga qayting.",
+        reply_markup=back_markup())
+    # None qaytarilishi faol holatni saqlaydi.
+
+
+async def sensor_entry(update, context):
+    for key in ("tkt", "ptkt"):
+        context.user_data.pop(key, None)
+    query = update.callback_query
+    if query:
+        await query.answer()
+    action = {"chart_check": "chart", "history_check": "history"}.get(
+        query.data if query else "", "sensor")
+    context.user_data["sensor_action"] = action
+    if df is None or df.empty or "SensorID" not in df.columns:
+        context.user_data.pop("sensor_action", None)
+        await reply_panel(update, "⚠️ Sensor ma'lumotlari hali yuklanmagan.")
+        return ConversationHandler.END
+    if not query and context.args:
+        return await sensor_input(update, context, raw_id=context.args[0])
+    await reply_panel(update, "🔍 Sensor ID yuboring. Masalan: S0001 yoki 1.")
+    return SENSOR_ID
+
+
+async def sensor_input(update, context, raw_id=None):
+    raw_id = raw_id if raw_id is not None else (update.message.text or "").strip()
+    if not re.fullmatch(r"[sS]?[0-9]{1,10}", raw_id):
+        await reply_panel(update, "⚠️ Sensor ID noto'g'ri. Masalan: S0001 yoki 1.")
+        return SENSOR_ID
+    if df is None or df.empty or "SensorID" not in df.columns:
+        context.user_data.pop("sensor_action", None)
+        await reply_panel(update, "⚠️ Sensor ma'lumotlari hali yuklanmagan.")
+        return ConversationHandler.END
+    sensor_id = normalize_sensor_id(raw_id, df["SensorID"])
+    if sensor_id not in df["SensorID"].values:
+        await reply_panel(update, "❌ Sensor topilmadi. Boshqa ID yuboring.")
+        return SENSOR_ID
+    action = context.user_data.pop("sensor_action", "sensor")
+    await run_sensor_action(update, context, action, sensor_id)
+    return ConversationHandler.END
+
+
+async def run_sensor_action(update, context, action, sensor_id):
+    previous_args = context.args
+    context.args = [sensor_id]
+    try:
+        await {"sensor": sensor_command, "chart": chart_command, "history": history_command}[action](
+            update, context)
+    finally:
+        context.args = previous_args
+
+
+def sensor_markup(sensor_id):
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("📊 Grafik", callback_data=f"sensor_chart:{sensor_id}"),
+         InlineKeyboardButton("🕐 Tarix", callback_data=f"sensor_history:{sensor_id}")],
+        [InlineKeyboardButton("🔍 Boshqa sensor", callback_data="sensor_check")],
+        *_BACK,
+    ])
+
+
+async def setup_bot_commands(application):
+    public = [BotCommand(command, description) for command, description in zip(
+        SIMPLIFIED_PUBLIC_COMMANDS,
+        ("Boshlash", "Bosh menyu", "Yordam", "Jarayonni bekor qilish"))]
+    await application.bot.set_my_commands(public, scope=BotCommandScopeDefault())
+    await application.bot.set_my_commands(public, scope=BotCommandScopeAllPrivateChats())
+    admin_commands = public + [
+        BotCommand("admin", "Admin panel"),
+        BotCommand("tickets", "Nosozliklarni boshqarish"),
+        BotCommand("broadcast", "Umumiy xabar"),
+        BotCommand("alert_test", "Alertni tekshirish"),
+        BotCommand("send_user", "Foydalanuvchiga xabar"),
     ]
-    await message.reply_text(
-        "⚡ *Elektr Monitoring Bot*\n"
-        "━━━━━━━━━━━━━━━━━━━━\n"
-        "Quyidagi tugmalardan birini tanlang:",
-        reply_markup=InlineKeyboardMarkup(keyboard),
-        parse_mode="Markdown"
-    )
+    users = load_users()
+    # Oldingi chat menyularini ham yangilash, jumladan admin roli olib tashlangan bo'lsa.
+    chat_ids = {int(user["id"]) for user in users if str(user.get("id", "")).isdigit()}
+    chat_ids.update(ADMIN_IDS)
+    for chat_id in chat_ids:
+        commands = admin_commands if is_admin_id(chat_id) else public
+        try:
+            await application.bot.set_my_commands(commands, scope=BotCommandScopeChat(chat_id))
+        except (BadRequest, Forbidden):
+            logger.warning("Chat %s uchun command menyusi o'rnatilmadi; chat mavjud emas yoki botga yopiq.", chat_id)
 
 # ======================== REGISTRATION ========================
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -487,53 +639,21 @@ async def ask_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    text = (
-        "⚡ *Bot buyruqlari:*\n\n"
-        "🤖 /ask <savol> — AI yordamchi (tabiiy til)\n"
-        "📊 /stats — Umumiy statistika\n"
-        "🔮 /forecast — 7 kunlik prognoz\n"
-        "🏘️ /districts — Tumanlar bo'yicha\n"
-        "🔍 /sensor S0001 — Sensor ma'lumoti (S001 ham ishlaydi)\n"
-        "🧠 /model — AI bashorat\n"
-        "🔴 /danger — Muammoli sensorlar\n"
-        "📈 /averages — O'rtacha qiymatlar\n"
-        "📋 /top — Top 10 xavfli sensor\n"
-        "🌤️ /weather — Ob-havo\n\n"
-        "📊 /chart S0001 — Sensor grafik (S001 ham ishlaydi)\n"
-        "📈 /compare S0001 S0002 — Taqqoslash\n"
-        "🏘️ /district\\_compare A B — Tuman taqqos\n"
-        "🕐 /history S001 7 — Sensor tarixi\n"
-        "🔎 /search Chilonzor — Tuman qidiruv\n"
-        "🔎 /filter danger — Holat filtri\n"
-        "� /report — PDF hisobot\n"
-        "� /report — PDF hisobot\n"
-        "🗺️ /map Chilonzor — Tuman xaritasi\n"
-        "📊 /dashboard — Vizual panel\n"
-        "📍 /near\\_sensors — Eng yaqin sensorlar\n"
-        "� /risk — 24h buzilish ehtimoli (yaqin)\n"
-        "🗺 /zones — Tumanlar xavf darajasi\n"
-        "🛠 /tickets — Faol ta'mirlash buyurtmalari\n"
-        "📍 /mylocation — GPS-ni yangilash\n"
-        "🔔 /subscribe — Auto-alert obuna\n"
-        "🔕 /unsubscribe — Obunani bekor\n"
-        "🌙 /silent — Sokin rejim on/off\n"
-        "🧪 /alert\\_test — (admin) alert testi\n"
-        "👤 /admin — Admin panel\n\n"
-        "_Yaratuvchi: G'aybullayev Shohjahon (@gaybullayeev19)_"
-    )
-    if update.callback_query:
-        await update.callback_query.edit_message_text(text, parse_mode="Markdown")
-    else:
-        await update.message.reply_text(text, parse_mode="Markdown")
+    await reply_panel(update,
+        "ℹ️ Botdan foydalanish\n\n"
+        "Monitoring — dashboard, statistika va muammoli sensorlar.\n"
+        "Sensorlar — ID yuboring, grafik va tarixni oching.\n"
+        "Prognoz — 7 kunlik ob-havo.\n"
+        "Nosozlik bildirish — muammoni yuboring.\n"
+        "Sozlamalar — alert obunasi va sokin rejim.\n\n"
+        "/start — boshlash\n/menu — Bosh menyu\n"
+        "/help — yordam\n/cancel — jarayonni bekor qilish.")
 
 
 async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if df is None or df.empty:
         text = "❌ Ma'lumot yuklanmagan!"
-        if update.callback_query:
-            await update.callback_query.edit_message_text(text)
-        else:
-            await update.message.reply_text(text)
+        await reply_panel(update, text)
         return
 
     latest = df.sort_values("Timestamp").groupby("SensorID").last().reset_index()
@@ -563,51 +683,110 @@ async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(text, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
 
 
-async def forecast_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user = update.effective_user
-    user_data = get_user_by_id(user.id)
-    user_district = user_data.get("district") if user_data else None
-    lat, lon = 41.3111, 69.2797
-    if user_district and user_district in DISTRICT_COORDS:
-        lat, lon = DISTRICT_COORDS[user_district]
-
+def weather_location(update):
+    user = get_user_by_id(update.effective_user.id) or {}
+    district = user.get("district")
     try:
-        resp = requests.get("https://api.open-meteo.com/v1/forecast", params={
-            "latitude": lat, "longitude": lon,
-            "current": "temperature_2m,wind_speed_10m,relative_humidity_2m",
-            "daily": "temperature_2m_max,temperature_2m_min,wind_speed_10m_max,precipitation_sum",
-            "timezone": "Asia/Tashkent", "forecast_days": 7
-        }, timeout=10)
-        daily = resp.json().get("daily", {})
-        lines = [f"🌤️ *{user_district or 'Toshkent'} uchun ob-havo*", "━━━━━━━━━━━━━━━━━━━━", "7 kunlik prognoz:"]
-        if daily.get("time"):
-            for i in range(min(7, len(daily["time"]))):
-                icon = "🌧️" if daily["precipitation_sum"][i] > 1 else "☀️"
-                lines.append(
-                    f"  {icon} {daily['time'][i][5:]}: "
-                    f"{daily['temperature_2m_min'][i]:.0f}–{daily['temperature_2m_max'][i]:.0f}°C | "
-                    f"🌬️{daily['wind_speed_10m_max'][i]:.0f}km/h"
-                )
-        else:
-            lines.append("⚠️ Ob-havo ma'lumoti yuklanmadi")
-    except Exception as e:
-        lines = [f"⚠️ Ob-havo olinmadi: {e}"]
+        lat, lon = float(user.get("latitude")), float(user.get("longitude"))
+        if math.isfinite(lat) and math.isfinite(lon) and -90 <= lat <= 90 and -180 <= lon <= 180:
+            return lat, lon, "Joylashuvingiz"
+    except (TypeError, ValueError):
+        pass
+    if district in DISTRICT_COORDS:
+        lat, lon = DISTRICT_COORDS[district]
+        return lat, lon, district
+    return 41.3111, 69.2797, "Toshkent"
 
-    if df is not None and not df.empty and user_district:
-        latest = df.sort_values("Timestamp").groupby("SensorID").last().reset_index()
-        tdf = latest[latest["District"] == user_district]
-        if not tdf.empty:
-            lines += [
-                "",
-                f"{user_district} tumani: 📡{len(tdf)} | ✅{int((tdf['Fault']==0).sum())} | "
-                f"⚠️{int((tdf['Fault']==1).sum())} | 🔴{int((tdf['Fault']==2).sum())}"
-            ]
 
-    text = "\n".join(lines)
-    if update.callback_query:
-        await update.callback_query.edit_message_text(text, parse_mode="Markdown")
+def fetch_weather(lat, lon):
+    """Har so'rovda Open-Meteo'dan olinadi; sensor datasetiga almashtirilmaydi."""
+    response = requests.get("https://api.open-meteo.com/v1/forecast", params={
+        "latitude": lat, "longitude": lon,
+        "current": "temperature_2m,relative_humidity_2m,wind_speed_10m,precipitation",
+        "daily": "temperature_2m_max,temperature_2m_min,wind_speed_10m_max,precipitation_sum,relative_humidity_2m_mean",
+        "temperature_unit": "celsius", "wind_speed_unit": "kmh",
+        "precipitation_unit": "mm", "timezone": "Asia/Tashkent", "forecast_days": 7,
+    }, timeout=10)
+    response.raise_for_status()
+    data = response.json()
+    if not isinstance(data, dict) or data.get("error"):
+        raise ValueError("Ob-havo javobi noto'g'ri")
+    current = data.get("current")
+    daily = data.get("daily")
+    if not isinstance(current, dict) and not isinstance(daily, dict):
+        raise ValueError("Ob-havo ma'lumoti yo'q")
+    return data
+
+
+def weather_number(value, unit="", digits=1):
+    if isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value):
+        return f"{value:.{digits}f}{unit}"
+    return "ma'lumot yo'q"
+
+
+def air_dryness(humidity):
+    """Oddiy namlik bahosi, alohida o'lchangan quruqlik foizi emas."""
+    if not isinstance(humidity, (int, float)) or isinstance(humidity, bool):
+        return "ma'lumot yo'q"
+    if not math.isfinite(humidity) or not 0 <= humidity <= 100:
+        return "ma'lumot yo'q"
+    if humidity < 30:
+        return "quruq"
+    if humidity <= 60:
+        return "o'rtacha"
+    return "nam"
+
+
+def weather_text(data, place):
+    current = data.get("current") if isinstance(data.get("current"), dict) else {}
+    daily = data.get("daily") if isinstance(data.get("daily"), dict) else {}
+    humidity = current.get("relative_humidity_2m")
+    # API qiymati bo'lmasa sensor yoki taxminiy raqam bilan to'ldirilmaydi.
+    valid_humidity = humidity if air_dryness(humidity) != "ma'lumot yo'q" else None
+    updated = current.get("time")
+    lines = [
+        f"🌤️ {place} uchun ob-havo",
+        f"🕒 {str(updated).replace('T', ' ')} (Toshkent vaqti)" if updated else "🕒 Yangilanish vaqti yo'q",
+        f"🌡️ Harorat: {weather_number(current.get('temperature_2m'), '°C')}",
+        f"💧 Havo namligi: {weather_number(valid_humidity, '%', 0)}",
+        f"🌬️ Shamol: {weather_number(current.get('wind_speed_10m'), ' km/soat')}",
+        f"🌵 Havo quruqligi: {air_dryness(humidity)} (namlik asosida)",
+        f"🌧️ Yog'ingarchilik: {weather_number(current.get('precipitation'), ' mm')}",
+        "", "📆 7 kunlik prognoz:",
+    ]
+    times = daily.get("time")
+    if isinstance(times, list) and times:
+        def value(key, index):
+            values = daily.get(key)
+            return values[index] if isinstance(values, list) and index < len(values) else None
+
+        for index, day in enumerate(times[:7]):
+            low = weather_number(value("temperature_2m_min", index), "°C", 0)
+            high = weather_number(value("temperature_2m_max", index), "°C", 0)
+            wind = weather_number(value("wind_speed_10m_max", index), " km/soat")
+            rain = weather_number(value("precipitation_sum", index), " mm")
+            mean_humidity = value("relative_humidity_2m_mean", index)
+            valid_mean = mean_humidity if air_dryness(mean_humidity) != "ma'lumot yo'q" else None
+            lines.extend([
+                f"{day}: {low} – {high}",
+                f"  🌬️ {wind} | 💧 {weather_number(valid_mean, '%', 0)} | 🌧️ {rain}",
+            ])
     else:
-        await update.message.reply_text(text, parse_mode="Markdown")
+        lines.append("Kunlik prognoz ma'lumoti yo'q.")
+    lines.extend(["", "Manba: Open-Meteo · internetdan olindi",
+                  "Quruqlik bahosi: <30% — quruq, 30–60% — o'rtacha, >60% — nam."])
+    return "\n".join(lines)
+
+
+async def forecast_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    lat, lon, place = weather_location(update)
+    try:
+        data = await asyncio.to_thread(fetch_weather, lat, lon)
+        text = weather_text(data, place)
+    except (RequestException, ValueError, TypeError):
+        await reply_panel(update, "⚠️ Internetdan ob-havo olinmadi. Keyinroq qayta urinib ko'ring.")
+        return
+    await reply_panel(update, text)
 
 
 async def districts_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -654,28 +833,22 @@ async def districts_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def sensor_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.callback_query:
-        await update.callback_query.edit_message_text(
-            "🔍 Buyruq: `/sensor S001`", parse_mode="Markdown",
-            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Bosh menyu", callback_data="menu")]])
-        )
-        return
-
+    message = update.effective_message
     if not context.args:
-        await update.message.reply_text("⚠️ Masalan: /sensor S001")
+        await reply_panel(update, "🔍 Sensorlar tugmasini tanlab, ID yuboring.",
+                          InlineKeyboardMarkup([[InlineKeyboardButton("🔍 Sensorlar", callback_data="sensor_check")], *_BACK]))
         return
-
     raw_id = context.args[0]
-    if df is None or df.empty:
-        await update.message.reply_text("❌ Ma'lumot yuklanmagan!")
+    if not re.fullmatch(r"[sS]?[0-9]{1,10}", raw_id):
+        await reply_panel(update, "⚠️ Sensor ID noto'g'ri. Masalan: S0001.")
+        return
+    if df is None or df.empty or "SensorID" not in df.columns:
+        await reply_panel(update, "⚠️ Sensor ma'lumotlari hali yuklanmagan.")
         return
     sensor_id = normalize_sensor_id(raw_id, df["SensorID"])
     sensor_df = df[df["SensorID"] == sensor_id].sort_values("Timestamp")
     if sensor_df.empty:
-        await update.message.reply_text(
-            f"❌ *{raw_id.upper()}* topilmadi!\n"
-            f"Masalan: `/sensor S0001` yoki `/sensor S0004`",
-            parse_mode="Markdown")
+        await reply_panel(update, "❌ Sensor topilmadi. Boshqa ID yuboring.")
         return
 
     latest = sensor_df.iloc[-1]
@@ -710,14 +883,14 @@ async def sensor_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             InlineKeyboardButton("🧭 Yandex Maps",
                                   url=f"https://yandex.com/maps/?pt={s_lon},{s_lat}&z=17&l=map"),
         ])
-    nav_kb.append([InlineKeyboardButton("🔙 Bosh menyu", callback_data="menu")])
-    await update.message.reply_text(text, parse_mode="Markdown",
+    nav_kb.extend(sensor_markup(sensor_id).inline_keyboard)
+    await message.reply_text(text, parse_mode="Markdown",
                                      reply_markup=InlineKeyboardMarkup(nav_kb))
 
     # Telegram-ning native location pin'ini ham yuboramiz
     if s_lat and s_lon:
         try:
-            await update.message.reply_location(latitude=s_lat, longitude=s_lon)
+            await message.reply_location(latitude=s_lat, longitude=s_lon)
         except Exception as e:
             logger.warning(f"Sensor location yuborilmadi: {e}")
 
@@ -779,8 +952,7 @@ async def predict_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def danger_sensors_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if df is None or df.empty:
         text = "❌ Ma'lumot yuklanmagan!"
-        if update.callback_query: await update.callback_query.edit_message_text(text)
-        else: await update.message.reply_text(text)
+        await reply_panel(update, text)
         return
     latest = df.sort_values("Timestamp").groupby("SensorID").last().reset_index()
     danger = latest[latest["Fault"] == 2]
@@ -844,62 +1016,22 @@ async def averages_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def weather_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    try:
-        resp = requests.get("https://api.open-meteo.com/v1/forecast", params={
-            "latitude": 41.3111, "longitude": 69.2797,
-            "current": "temperature_2m,wind_speed_10m,relative_humidity_2m",
-            "daily": "temperature_2m_max,temperature_2m_min,wind_speed_10m_max,precipitation_sum",
-            "timezone": "Asia/Tashkent", "forecast_days": 7
-        }, timeout=10)
-        data = resp.json()
-        current = data.get("current", {})
-        daily = data.get("daily", {})
-        text = (
-            f"🌤️ *Toshkent ob-havo*\n━━━━━━━━━━━━━━━━━━━━\n\n"
-            f"🌡️ {current.get('temperature_2m','N/A')}°C | "
-            f"🌬️ {current.get('wind_speed_10m','N/A')}km/h | "
-            f"💨 {current.get('relative_humidity_2m','N/A')}%\n\n"
-            f"📆 *7 kunlik prognoz:*\n"
-        )
-        if daily.get("time"):
-            for i in range(min(7, len(daily["time"]))):
-                icon = "🌧️" if daily["precipitation_sum"][i] > 1 else "☀️"
-                text += (f"  {icon} {daily['time'][i][5:]}: "
-                         f"{daily['temperature_2m_min'][i]:.0f}–{daily['temperature_2m_max'][i]:.0f}°C | "
-                         f"🌬️{daily['wind_speed_10m_max'][i]:.0f}km/h\n")
-        keyboard = [[InlineKeyboardButton("🔙 Bosh menyu", callback_data="menu")]]
-        if update.callback_query:
-            await update.callback_query.edit_message_text(text, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
-        else:
-            await update.message.reply_text(text, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
-    except Exception as e:
-        err = f"❌ Ob-havo yuklanmadi: {e}"
-        if update.callback_query: await update.callback_query.edit_message_text(err)
-        else: await update.message.reply_text(err)
+    return await forecast_command(update, context)
 
 
 async def chart_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.callback_query:
-        await update.callback_query.edit_message_text(
-            "📊 Sensor grafigi uchun:\n\n`/chart S001`", parse_mode="Markdown",
-            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Bosh menyu", callback_data="menu")]])
-        )
-        return
+    message = update.effective_message
     if not context.args:
-        await update.message.reply_text("⚠️ Masalan: /chart S001")
+        await reply_panel(update, "🔍 Avval Sensorlar bo'limidan sensor tanlang.")
         return
     raw_id = context.args[0]
-    if df is None or df.empty:
-        await update.message.reply_text("❌ Ma'lumot yuklanmagan!")
+    if df is None or df.empty or "SensorID" not in df.columns:
+        await reply_panel(update, "⚠️ Sensor ma'lumotlari hali yuklanmagan.")
         return
     sensor_id = normalize_sensor_id(raw_id, df["SensorID"])
     sensor_df = df[df["SensorID"] == sensor_id].sort_values("Timestamp").tail(200)
     if sensor_df.empty:
-        await update.message.reply_text(
-            f"❌ *{raw_id.upper()}* topilmadi!\n"
-            f"To'g'ri format: `/chart S0001`\n"
-            f"Mavjud ID-lar: S0001 – S{len(df['SensorID'].unique()):04d}",
-            parse_mode="Markdown")
+        await reply_panel(update, "❌ Sensor topilmadi. Boshqa ID yuboring.")
         return
 
     fig, axes = plt.subplots(2, 2, figsize=(12, 8))
@@ -922,9 +1054,8 @@ async def chart_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     plt.tight_layout()
     buf = io.BytesIO()
     fig.savefig(buf, format="png", dpi=130); buf.seek(0); plt.close(fig)
-    keyboard = [[InlineKeyboardButton("🔙 Bosh menyu", callback_data="menu")]]
-    await update.message.reply_photo(photo=buf, caption=f"📊 *{sensor_id}* oxirgi 200 yozuv",
-                                     parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
+    await message.reply_photo(photo=buf, caption=f"📊 *{sensor_id}* oxirgi 200 yozuv",
+                                     parse_mode="Markdown", reply_markup=sensor_markup(sensor_id))
 
 
 async def compare_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -1030,19 +1161,17 @@ async def district_compare_command(update: Update, context: ContextTypes.DEFAULT
 
 async def history_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not context.args:
-        await update.message.reply_text("⚠️ Masalan: /history S001 7")
+        await reply_panel(update, "🔍 Avval Sensorlar bo'limidan sensor tanlang.")
         return
-    if df is None or df.empty:
-        await update.message.reply_text("❌ Ma'lumot yuklanmagan!")
+    if df is None or df.empty or "SensorID" not in df.columns:
+        await reply_panel(update, "⚠️ Sensor ma'lumotlari hali yuklanmagan.")
         return
     sensor_id = normalize_sensor_id(context.args[0], df["SensorID"])
     days = int(context.args[1]) if len(context.args) > 1 and context.args[1].isdigit() else 7
-    days = min(days, 30)
+    days = max(1, min(days, 30))
     sensor_df = df[df["SensorID"] == sensor_id].sort_values("Timestamp")
     if sensor_df.empty:
-        await update.message.reply_text(
-            f"❌ *{context.args[0].upper()}* topilmadi!\n"
-            f"Format: `/history S0001 7`", parse_mode="Markdown")
+        await reply_panel(update, "❌ Sensor topilmadi. Boshqa ID yuboring.")
         return
     cutoff = datetime.datetime.now() - datetime.timedelta(days=days)
     period = sensor_df[sensor_df["Timestamp"] >= cutoff]
@@ -1073,8 +1202,7 @@ async def history_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             text += f"\n  ... va yana {len(changes)-10} ta"
     else:
         text += "\n✅ Holat o'zgarmagan"
-    keyboard = [[InlineKeyboardButton("🔙 Bosh menyu", callback_data="menu")]]
-    await update.message.reply_text(text, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
+    await reply_panel(update, text, sensor_markup(sensor_id), parse_mode="Markdown")
 
 
 async def search_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -1434,8 +1562,7 @@ async def dashboard_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Tizim holati vizual dashboard — 4 panel."""
     if df is None or df.empty:
         text = "❌ Ma'lumot yuklanmagan!"
-        if update.callback_query: await update.callback_query.edit_message_text(text)
-        else: await update.message.reply_text(text)
+        await reply_panel(update, text)
         return
 
     latest = df.sort_values("Timestamp").groupby("SensorID").last().reset_index()
@@ -1488,7 +1615,6 @@ async def dashboard_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             caption=caption, parse_mode="Markdown",
             reply_markup=InlineKeyboardMarkup(keyboard)
         )
-        await update.callback_query.answer()
     else:
         await update.message.reply_photo(photo=buf, caption=caption, parse_mode="Markdown",
                                          reply_markup=InlineKeyboardMarkup(keyboard))
@@ -1612,20 +1738,13 @@ async def silent_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Sokin rejim — tungi ogohlantirishlarni o'chirish/yoqish."""
     user_data = get_user_by_id(update.effective_user.id)
     if not user_data:
-        await (update.callback_query.answer("Avval /start") if update.callback_query
-               else update.message.reply_text("❌ /start orqali ro'yxatdan o'ting."))
+        await reply_panel(update, "Avval /start orqali ro'yxatdan o'ting.")
         return
     new_val = not user_data.get("silent_mode", False)
     update_user(update.effective_user.id, silent_mode=new_val)
     text = ("🌙 *Sokin rejim yoqildi*\n\n22:00–07:00 orasida ogohlantirishlar kelmasligi o'rnatildi."
             if new_val else "🔔 *Sokin rejim o'chirildi*\n\nOgohlantirishlar qayta yoqildi.")
-    keyboard = [[InlineKeyboardButton("🔙 Bosh menyu", callback_data="menu")]]
-    if update.callback_query:
-        await update.callback_query.edit_message_text(text, parse_mode="Markdown",
-                                                      reply_markup=InlineKeyboardMarkup(keyboard))
-    else:
-        await update.message.reply_text(text, parse_mode="Markdown",
-                                        reply_markup=InlineKeyboardMarkup(keyboard))
+    await reply_panel(update, text, settings_markup(update), parse_mode="Markdown")
 
 
 # ==================== 🔔 SUBSCRIBE ====================
@@ -1633,24 +1752,19 @@ async def silent_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def subscribe_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
     if chat_id in subscribers:
-        text = "✅ Allaqachon obuna bo'lgansiz!"
+        text = "✅ Allaqachon obuna bo'lgansiz."
     else:
         subscribers.add(chat_id)
         save_subscribers(subscribers)
-        text = "🔔 *Obuna muvaffaqiyatli!*\n\nXavfli holat topilganda xabar olasiz.\nBekor qilish: /unsubscribe"
-    keyboard = [[InlineKeyboardButton("🔙 Bosh menyu", callback_data="menu")]]
-    await update.message.reply_text(text, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
+        text = "🔔 Obuna yoqildi. Xavfli holatlarda xabar olasiz."
+    await reply_panel(update, text, settings_markup(update))
 
 
 async def unsubscribe_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
-    if chat_id in subscribers:
-        subscribers.discard(chat_id); save_subscribers(subscribers)
-        text = "🔕 Obuna bekor qilindi."
-    else:
-        text = "⚠️ Obuna emassiz. /subscribe"
-    keyboard = [[InlineKeyboardButton("🔙 Bosh menyu", callback_data="menu")]]
-    await update.message.reply_text(text, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
+    subscribers.discard(chat_id)
+    save_subscribers(subscribers)
+    await reply_panel(update, "🔕 Obuna o'chirildi.", settings_markup(update))
 
 
 def create_banner_image(title: str, subtitle: str, lines: list[str], color: str = "red") -> io.BytesIO:
@@ -2453,31 +2567,17 @@ async def contacts_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # ==================== 🔘 CALLBACK ====================
 
-_MAIN_KEYBOARD = [
-    [InlineKeyboardButton("📊 Statistika",         callback_data="stats"),
-     InlineKeyboardButton("🔮 Prognoz",            callback_data="forecast")],
-    [InlineKeyboardButton("🏘️ Tumanlar",           callback_data="districts"),
-     InlineKeyboardButton("🔍 Sensor tekshirish",  callback_data="sensor_check")],
-    [InlineKeyboardButton("🧠 Model bashorat",     callback_data="model"),
-     InlineKeyboardButton("🔴 Muammoli sensorlar", callback_data="danger_sensors")],
-    [InlineKeyboardButton("📈 O'rtachalar",        callback_data="averages"),
-     InlineKeyboardButton("📋 Top 10 xavfli",     callback_data="top_danger")],
-    [InlineKeyboardButton("📊 Grafik",             callback_data="chart_check"),
-     InlineKeyboardButton("📈 Taqqoslash",         callback_data="compare_check")],
-    [InlineKeyboardButton("🕐 Tarix",              callback_data="history_check"),
-     InlineKeyboardButton("🗺️ Xarita",             callback_data="map_check")],
-    [InlineKeyboardButton("📥 Hisobot",            callback_data="report_check"),
-     InlineKeyboardButton("🔔 Obuna",              callback_data="subscribe_check")],
-    [InlineKeyboardButton("📊 Dashboard",          callback_data="dashboard"),
-     InlineKeyboardButton("📍 Yaqin sensorlar",   callback_data="near_sensors_info")],
-    [InlineKeyboardButton("🌙 Sokin rejim",        callback_data="silent_toggle"),
-     InlineKeyboardButton("🌤️ Ob-havo",            callback_data="weather")],
-    [InlineKeyboardButton("🛠️ Nosozlik bildirish", callback_data="new_ticket")],
-    [InlineKeyboardButton("ℹ️ Yordam",              callback_data="help")],
-]
 
-_MAIN_TEXT = "⚡ *Elektr Monitoring Bot*\n━━━━━━━━━━━━━━━━━━━━\nQuyidagi tugmalardan birini tanlang:"
+_MAIN_KEYBOARD = [
+    [InlineKeyboardButton("📊 Monitoring", callback_data="monitoring"),
+     InlineKeyboardButton("🔍 Sensorlar", callback_data="sensor_check")],
+    [InlineKeyboardButton("🔮 Prognoz", callback_data="forecast")],
+    [InlineKeyboardButton("🛠️ Nosozlik bildirish", callback_data="new_ticket")],
+    [InlineKeyboardButton("⚙️ Sozlamalar va yordam", callback_data="settings")],
+]
+_MAIN_TEXT = "⚡ *Elektr Monitoring Bot*\nKerakli bo'limni tanlang:"
 _BACK = [[InlineKeyboardButton("🔙 Bosh menyu", callback_data="menu")]]
+
 
 
 async def go_menu(query):
@@ -2497,8 +2597,15 @@ async def go_menu(query):
 
 async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
+    data = query.data or ""
+    admin_action = (
+        data.startswith(("resolve:", "adm_inprog_", "adm_close_", "close_ticket_", "inprog_ticket_", "contact_msg:"))
+        or data in {"tickets_list", "admin_broadcast_hint"}
+    )
+    if admin_action and not is_admin(update):
+        await query.answer("🔒 Faqat admin uchun.", show_alert=True)
+        return
     await query.answer()
-    data = query.data
 
     # ---- Resolve incident (admin tugmasi) ----
     if data.startswith("resolve:"):
@@ -2606,6 +2713,20 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if data == "menu":
         await go_menu(query)
+    elif data == "monitoring":      await monitoring_menu(update, context)
+    elif data in {"settings", "subscribe_check"}: await settings_menu(update, context)
+    elif data == "subscribe":       await subscribe_command(update, context)
+    elif data == "unsubscribe":     await unsubscribe_command(update, context)
+    elif data.startswith(("sensor_chart:", "sensor_history:", "sensor_S")):
+        if data.startswith("sensor_S"):
+            action, sid = "sensor", data.removeprefix("sensor_")
+        else:
+            prefix, sid = data.split(":", 1)
+            action = "chart" if prefix == "sensor_chart" else "history"
+        if not re.fullmatch(r"S[0-9]{1,10}", sid):
+            await reply_panel(update, "⚠️ Sensor ID noto'g'ri.")
+        else:
+            await run_sensor_action(update, context, action, sid)
     elif data == "stats":           await stats_command(update, context)
     elif data == "forecast":        await forecast_command(update, context)
     elif data == "districts":       await districts_command(update, context)
@@ -2617,7 +2738,6 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif data == "help":            await help_command(update, context)
     elif data == "dashboard":       await dashboard_command(update, context)
     elif data == "silent_toggle":   await silent_command(update, context)
-    elif data == "new_ticket":      await ticket_start(update, context)
     elif data == "tickets_list":    await tickets_command(update, context)
     elif data.startswith("close_ticket_"):
         tid = data.replace("close_ticket_", "")
@@ -2646,13 +2766,6 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 InlineKeyboardButton("🔙 Menyu",   callback_data="menu"),
             ]])
         )
-    elif data == "sensor_check":
-        await query.edit_message_text("🔍 Buyruq: `/sensor S001`", parse_mode="Markdown",
-                                      reply_markup=InlineKeyboardMarkup(_BACK))
-    elif data == "chart_check":
-        await query.edit_message_text(
-            "📊 Sensor grafigi:\n\n`/chart S001`\n\nOxirgi 200 yozuv: Kuchlanish | Harorat | Chastota | Vibratsiya",
-            parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(_BACK))
     elif data == "compare_check":
         await query.edit_message_text(
             "📈 Taqqoslash:\n\n🔹 `/compare S001 S002`\n🔹 Tumanlar:",
@@ -2679,9 +2792,6 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                                           [InlineKeyboardButton("🔄 Qayta", callback_data="dc_start"),
                                            InlineKeyboardButton("🔙 Menyu", callback_data="menu")]
                                       ]))
-    elif data == "history_check":
-        await query.edit_message_text("🕐 *Tarix:*\n\n`/history S001 7`", parse_mode="Markdown",
-                                      reply_markup=InlineKeyboardMarkup(_BACK))
     elif data == "map_check":
         keyboard = []
         row = []
@@ -2696,9 +2806,6 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                                       reply_markup=InlineKeyboardMarkup(keyboard))
     elif data == "report_check":
         await query.edit_message_text("📥 *Export:*\n\n🔹 /report — PDF hisobot\n🔹 /dashboard — vizual dashboard",
-                                      parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(_BACK))
-    elif data == "subscribe_check":
-        await query.edit_message_text("🔔 /subscribe — Obuna\n🔕 /unsubscribe — Bekor",
                                       parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(_BACK))
     elif data == "near_sensors_info":
         await query.edit_message_text(
@@ -2841,6 +2948,8 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     elif data == "contacts_cmd":
         await contacts_command(update, context)
+    else:
+        await reply_panel(update, "Bu tugma eskirgan. Bosh menyudan tanlang.")
 
 
 # ==================== MORNING REPORT ====================
@@ -3015,6 +3124,7 @@ def _priority_kb():
         [InlineKeyboardButton("🟡 O'rta (bugun)", callback_data="tkt_pri_o'rta")],
         [InlineKeyboardButton("🟢 Past (reja bilan)", callback_data="tkt_pri_past")],
         [InlineKeyboardButton("❌ Bekor", callback_data="tkt_cancel")],
+        *_BACK,
     ])
 
 def _confirm_kb():
@@ -3022,6 +3132,7 @@ def _confirm_kb():
         [InlineKeyboardButton("✅ Tasdiqlash va yuborish", callback_data="tkt_send")],
         [InlineKeyboardButton("✏️ Qayta yozish", callback_data="tkt_redo")],
         [InlineKeyboardButton("❌ Bekor qilish", callback_data="tkt_cancel")],
+        *_BACK,
     ])
 
 async def ticket_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -3051,6 +3162,7 @@ async def ticket_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [
             [KeyboardButton("📍 Hozirgi joylashuvimni yuborish", request_location=True)],
             [KeyboardButton("⏭️ GPS siz davom etish")],
+            [KeyboardButton("🏠 Bosh menyu")],
         ],
         resize_keyboard=True,
         one_time_keyboard=True,
@@ -3204,6 +3316,7 @@ async def _show_sensor_list(update, context, lat, lon):
     keyboard.append([InlineKeyboardButton("🤷 Sensor ID bilmayman",   callback_data="tkt_sensor_unknown")])
     keyboard.append([InlineKeyboardButton("❌ Bekor",                 callback_data="tkt_cancel")])
 
+    keyboard.extend(_BACK)
     await update.message.reply_text(
         msg, parse_mode="Markdown",
         reply_markup=InlineKeyboardMarkup(keyboard)
@@ -3247,15 +3360,14 @@ async def tkt_sensor_selected(update: Update, context: ContextTypes.DEFAULT_TYPE
 
 
 async def tkt_sensor_manual_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Foydalanuvchi sensor ID qo'lda yozmoqda."""
     q = update.callback_query
     await q.answer()
     await q.edit_message_text(
-        "⌨️ *Sensor ID yozing:*\n\n"
-        "Masalan: `S0045`, `S0123`\n\n"
-        "_Sensor ID ni bilmasangiz — /ticket da «Sensor IDni bilmayman» tugmasini bosing._",
-        parse_mode="Markdown"
-    )
+        "⌨️ Sensor ID yuboring. Masalan: S0045.",
+        reply_markup=InlineKeyboardMarkup([
+            [InlineKeyboardButton("🤷 Sensor ID bilmayman", callback_data="tkt_sensor_unknown")],
+            *_BACK,
+        ]))
     return TKT_SENSOR
 
 
@@ -3273,7 +3385,7 @@ async def tkt_sensor_unknown(update: Update, context: ContextTypes.DEFAULT_TYPE)
             "📍 *Joylashuv yuborish*\n\n"
             "Pastdagi tugmani bosib, aynan hozir turgan joyingizni yuboring.\n"
             "Admin shu koordinata asosida eng yaqin sensorda muammoni ko'radi.",
-            parse_mode="Markdown"
+            parse_mode="Markdown", reply_markup=back_markup()
         )
     except Exception:
         pass
@@ -3281,7 +3393,7 @@ async def tkt_sensor_unknown(update: Update, context: ContextTypes.DEFAULT_TYPE)
     # Joylashuv so'rash tugmasi — effective_chat orqali yuboramiz
     loc_kb = ReplyKeyboardMarkup(
         [[KeyboardButton("📍 Joylashuvimni yuborish", request_location=True)],
-         [KeyboardButton("⏭️ O'tkazib yuborish")]],
+         [KeyboardButton("⏭️ O'tkazib yuborish")], [KeyboardButton("🏠 Bosh menyu")]],
         resize_keyboard=True,
         one_time_keyboard=True
     )
@@ -3422,7 +3534,7 @@ async def tkt_priority_selected(update: Update, context: ContextTypes.DEFAULT_TY
         f"📝 *3-qadam:* Nosozlikni batafsil tasvirlab yozing:\n\n"
         f"_Masalan: «Kuchlanish keskin tushib ketdi, 190V ga yetdi. "
         f"Xo'jalik substansiyasida uzilish bo'lyapti.»_",
-        parse_mode="Markdown"
+        parse_mode="Markdown", reply_markup=back_markup()
     )
     return TKT_DESCRIBE
 
@@ -3440,6 +3552,7 @@ async def tkt_describe(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("📷 Rasm yuborish", callback_data="tkt_photo_wait")],
         [InlineKeyboardButton("⏭️ Rasmsiz davom etish", callback_data="tkt_photo_skip")],
         [InlineKeyboardButton("❌ Bekor", callback_data="tkt_cancel")],
+        *_BACK,
     ])
     await update.message.reply_text(
         "📷 *4-qadam:* Nosozlik rasmini yuboring (ixtiyoriy)\n"
@@ -3463,21 +3576,25 @@ async def tkt_photo_received(update: Update, context: ContextTypes.DEFAULT_TYPE)
 async def tkt_photo_skip(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Rasm o'tkazib yuborildi."""
     q = update.callback_query
-    await q.answer()
+    if q:
+        await q.answer()
     context.user_data["tkt"].pop("photo_file_id", None)
-    await _show_ticket_confirm_from_query(q, context)
+    if q:
+        await _show_ticket_confirm_from_query(q, context)
+    else:
+        await _show_ticket_confirm(update, context)
     return TKT_CONFIRM
 
 
 async def tkt_photo_wait(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Rasm kutilmoqda."""
     q = update.callback_query
     await q.answer()
     await q.edit_message_text(
-        "📷 Iltimos, rasm yuboring (kamera yoki galereyadan).\n"
-        "O'tkazib yuborish uchun /skip yozing.",
-        parse_mode="Markdown"
-    )
+        "📷 Rasm yuboring yoki rasmsiz davom eting.",
+        reply_markup=InlineKeyboardMarkup([
+            [InlineKeyboardButton("⏭️ Rasmsiz davom etish", callback_data="tkt_photo_skip")],
+            *_BACK,
+        ]))
     return TKT_PHOTO
 
 
@@ -3594,7 +3711,7 @@ async def tkt_send(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 f"📡 *Sensor:* {tkt.get('sensor_id')}\n"
                 f"{emoji} *Daraja:* {PRIORITY_LABEL.get(priority, priority)}\n"
                 f"⏰ Admin ko'rib chiqadi va ETA belgilaydi.\n\n"
-                f"📲 Buyurtma holati: /tickets"
+                "📲 Holat yangilanganda xabar olasiz."
             )
             await q.edit_message_text(success_text, parse_mode="Markdown",
                                        reply_markup=InlineKeyboardMarkup([[
@@ -3607,7 +3724,7 @@ async def tkt_send(update: Update, context: ContextTypes.DEFAULT_TYPE):
         else:
             error = resp.json().get("error", "Noma'lum xatolik")
             await q.edit_message_text(
-                f"❌ Xatolik: {error}\n\nQayta urinish uchun /ticket",
+                f"❌ Xatolik: {error}\nMenyudan qayta nosozlik bildiring.",
                 reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Menyu", callback_data="menu")]])
             )
     except Exception as e:
@@ -3640,7 +3757,7 @@ async def tkt_send(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
             await _notify_admin_new_ticket(context, tkt, ticket["id"])
         except Exception as e2:
-            await q.edit_message_text(f"❌ Xato: {e2}")
+            await q.edit_message_text("❌ Buyurtma saqlanmadi. Qayta urinib ko'ring.", reply_markup=back_markup())
 
     context.user_data.pop("tkt", None)
     return ConversationHandler.END
@@ -3655,18 +3772,7 @@ async def tkt_redo(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def tkt_cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Bekor qilish."""
-    context.user_data.pop("tkt", None)
-    msg = "❌ Buyurtma bekor qilindi."
-    if update.callback_query:
-        await update.callback_query.answer()
-        await update.callback_query.edit_message_text(
-            msg, reply_markup=InlineKeyboardMarkup([[
-                InlineKeyboardButton("🔙 Bosh menyu", callback_data="menu")
-            ]]))
-    else:
-        await update.message.reply_text(msg)
-    return ConversationHandler.END
+    return await cancel_command(update, context)
 
 
 async def _notify_admin_new_ticket(context, tkt, ticket_id):
@@ -3856,6 +3962,7 @@ async def photo_ticket_entry(update: Update, context: ContextTypes.DEFAULT_TYPE)
     keyboard.append([InlineKeyboardButton("⌨️ ID qo'lda", callback_data="ptkt_manual")])
     keyboard.append([InlineKeyboardButton("❌ Bekor", callback_data="ptkt_cancel")])
 
+    keyboard.extend(_BACK)
     await update.message.reply_text(
         "📸 *Rasm qabul qilindi!*\n\n"
         "📡 *Qaysi sensorda nosozlik?*\n"
@@ -3874,7 +3981,7 @@ async def photo_tkt_sensor_cb(update: Update, context: ContextTypes.DEFAULT_TYPE
         await q.edit_message_text("❌ Bekor qilindi.")
         return ConversationHandler.END
     if q.data == "ptkt_manual":
-        await q.edit_message_text("⌨️ Sensor ID yozing (masalan: `S0045`):", parse_mode="Markdown")
+        await q.edit_message_text("⌨️ Sensor ID yozing (masalan: `S0045`):", parse_mode="Markdown", reply_markup=back_markup())
         return PHOTO_TKT_SENSOR
     sensor_id = q.data.replace("ptkt_", "")
     context.user_data["ptkt"]["sensor_id"] = sensor_id
@@ -3882,7 +3989,7 @@ async def photo_tkt_sensor_cb(update: Update, context: ContextTypes.DEFAULT_TYPE
         f"✅ Sensor: *{sensor_id}*\n\n"
         "📝 *Nosozlikni qisqacha tasvirlaing:*\n"
         "_(Masalan: Kuchlanish tushib ketdi, sim qizib ketgan...)_",
-        parse_mode="Markdown"
+        parse_mode="Markdown", reply_markup=back_markup()
     )
     return PHOTO_TKT_DESCRIBE
 
@@ -3894,13 +4001,13 @@ async def photo_tkt_sensor_text(update: Update, context: ContextTypes.DEFAULT_TY
     if df is not None and sensor_id not in df["SensorID"].values:
         await update.message.reply_text(
             f"❌ *{raw.upper()}* topilmadi. Qayta yozing:",
-            parse_mode="Markdown"
+            parse_mode="Markdown", reply_markup=back_markup()
         )
         return PHOTO_TKT_SENSOR
     context.user_data["ptkt"]["sensor_id"] = sensor_id
     await update.message.reply_text(
         f"✅ Sensor: *{sensor_id}*\n\n📝 Nosozlikni tasvirlaing:",
-        parse_mode="Markdown"
+        parse_mode="Markdown", reply_markup=back_markup()
     )
     return PHOTO_TKT_DESCRIBE
 
@@ -3972,11 +4079,7 @@ async def photo_tkt_describe(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
 
 async def photo_tkt_cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    context.user_data.pop("ptkt", None)
-    if update.callback_query:
-        await update.callback_query.answer()
-        await update.callback_query.edit_message_text("❌ Bekor qilindi.")
-    return ConversationHandler.END
+    return await cancel_command(update, context)
 
 
 # ==================== 📅 MAINTENANCE REMINDER ====================
@@ -4023,6 +4126,12 @@ async def schedule_eta_reminder(context, ticket_id, sensor_id, eta_str, admin_id
 
 async def tickets_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Tiketlar ro'yxati — operator/admin uchun inline boshqaruv."""
+    if not is_admin(update):
+        if update.callback_query:
+            await update.callback_query.answer("🔒 Faqat admin uchun.", show_alert=True)
+        else:
+            await reply_panel(update, "🔒 Faqat admin uchun.")
+        return
     from utils import load_tickets
     if update.callback_query:
         await update.callback_query.answer()
@@ -4066,247 +4175,108 @@ async def tickets_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # ==================== NOTO'G'RI BUYRUQ HANDLER ====================
 
 async def unknown_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Noto'g'ri yoki noma'lum buyruq."""
-    cmd = (update.message.text or "").split()[0] if update.message else "?"
-    await update.message.reply_text(
-        f"❓ `{cmd}` buyrug'i mavjud emas.\n\n"
-        "📋 Barcha buyruqlar uchun: /help\n"
-        "🔙 Bosh menyu: /start",
-        parse_mode="Markdown",
-        reply_markup=InlineKeyboardMarkup([[
-            InlineKeyboardButton("📋 Yordam", callback_data="help"),
-            InlineKeyboardButton("🏠 Bosh menyu", callback_data="menu"),
-        ]])
-    )
+    await reply_panel(update, "❓ Buyruq topilmadi. Menyudan tanlang.", InlineKeyboardMarkup([
+        [InlineKeyboardButton("🏠 Bosh menyu", callback_data="menu"),
+         InlineKeyboardButton("ℹ️ Yordam", callback_data="help")],
+    ]))
 
 
 async def unknown_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Foydalanuvchi oddiy matn yubordi."""
-    text = (update.message.text or "").strip()
-
-    # Buyruq bo'lsa (/ bilan boshlansa) lekin ConversationHandler ichida band
-    if text.startswith("/"):
-        cmd = text.split()[0]
-        # Qaysi buyruq so'ralganini aniqlaymiz va to'g'ridan-to'g'ri chaqiramiz
-        known = {
-            "/predict":          predict_command,
-            "/search":           search_command,
-            "/sensor":           sensor_command,
-            "/stats":            stats_command,
-            "/forecast":         forecast_command,
-            "/chart":            chart_command,
-            "/danger":           danger_sensors_command,
-            "/averages":         averages_command,
-            "/help":             help_command,
-            "/weather":          weather_command,
-            "/top":              top_danger_command,
-            "/report":           report_command,
-            "/districts":        districts_command,
-            "/history":          history_command,
-            "/filter":           filter_command,
-            "/compare":          compare_command,
-            "/ask":              ask_command,
-            "/risk":             risk_command,
-            "/zones":            zones_command,
-            "/dashboard":        dashboard_command,
-            "/tickets":          tickets_command,
-            "/near_sensors":     near_sensors_command,
-        }
-        fn = known.get(cmd.lower().split("@")[0])
-        if fn:
-            # Buyruq argumentlarini qayta parse qilish
-            raw_args = text[len(cmd):].strip()
-            context.args = raw_args.split() if raw_args else []
-            await fn(update, context)
-        else:
-            await update.message.reply_text(
-                f"⚠️ Agar nosozlik buyurtmasi jarayonidasiz, "
-                f"`/cancel` yozing va keyin `{cmd}` ni qayta ishlating.\n\n"
-                "📋 Barcha buyruqlar: /help",
-                parse_mode="Markdown",
-                reply_markup=InlineKeyboardMarkup([[
-                    InlineKeyboardButton("❌ Jarayonni bekor qilish", callback_data="tkt_cancel"),
-                    InlineKeyboardButton("📋 Yordam", callback_data="help"),
-                ]])
-            )
-        return
-
-    # Oddiy matn
-    if len(text) > 1:
-        await update.message.reply_text(
-            "💬 *Buyruq topilmadi.*\n\n"
-            "Quyidagilarni sinab ko'ring:\n"
-            "• `/sensor S0001` — Sensor ma'lumoti\n"
-            "• `/search Chilonzor` — Tuman qidirish\n"
-            "• `/ask savolingiz` — AI yordamchi\n"
-            "• `/help` — Barcha buyruqlar",
-            parse_mode="Markdown",
-            reply_markup=InlineKeyboardMarkup([[
-                InlineKeyboardButton("🔍 Sensor", callback_data="sensor_check"),
-                InlineKeyboardButton("📋 Yordam", callback_data="help"),
-            ]])
-        )
-    else:
-        await send_main_menu(update.message)
+    await reply_panel(update, "Kerakli bo'limni tugma orqali tanlang.", InlineKeyboardMarkup([
+        [InlineKeyboardButton("🏠 Bosh menyu", callback_data="menu"),
+         InlineKeyboardButton("ℹ️ Yordam", callback_data="help")],
+    ]))
 
 
 # ==================== MAIN ====================
 
-def main():
-    if not BOT_TOKEN:
-        logger.error("❌ TELEGRAM_BOT_TOKEN o'rnatilmagan! .env faylga qo'shing.")
-        return
+class MonitoringApplication(Application):
+    """PTB 21.3 dagi yetishmaydigan startup slotini lokal to'ldiradi."""
 
-    load_data()
-    load_model()
-    global subscribers
-    subscribers = load_subscribers()
+    __slots__ = ("_Application__stop_running_marker",)
 
-    app = Application.builder().token(BOT_TOKEN).build()
+
+def build_application(token):
+    app = (Application.builder().application_class(MonitoringApplication)
+           .token(token).concurrent_updates(False)
+           .post_init(setup_bot_commands).build())
     app.add_error_handler(error_handler)
-
-    reg_conv = ConversationHandler(
-        entry_points=[CommandHandler("start", start)],
-        states={
-            REG_PHONE: [
-                MessageHandler(filters.CONTACT, reg_phone),
-                MessageHandler(filters.TEXT & ~filters.COMMAND, reg_phone),
-            ],
-            REG_FIRSTNAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, reg_firstname)],
-            REG_LASTNAME:  [MessageHandler(filters.TEXT & ~filters.COMMAND, reg_lastname)],
-            REG_DISTRICT:  [MessageHandler(filters.TEXT & ~filters.COMMAND, reg_district)],
-            REG_LOCATION: [
-                MessageHandler(filters.LOCATION, reg_location),
-                MessageHandler(filters.TEXT & ~filters.COMMAND, reg_location),
-            ],
-        },
-        fallbacks=[
-            CommandHandler("start",   start),
-            CommandHandler("cancel",  lambda u, c: ConversationHandler.END),
-            CommandHandler("predict", predict_command),
-            CommandHandler("sensor",  sensor_command),
-            CommandHandler("search",  search_command),
-            CommandHandler("stats",   stats_command),
-            CommandHandler("help",    help_command),
+    registration_states = {
+        REG_PHONE: [
+            MessageHandler(filters.CONTACT, reg_phone),
+            MessageHandler(filters.TEXT & ~filters.COMMAND, reg_phone),
         ],
-        allow_reentry=True,
-        per_message=False,
-    )
-    app.add_handler(reg_conv)
-
-    # ── ticket_conv OLDIN ro'yxatga olinadi (CommandHandler "ticket" uchun) ──
-    ticket_conv = ConversationHandler(
-        entry_points=[
-            CommandHandler("ticket", ticket_start),
-            CallbackQueryHandler(ticket_start, pattern="^new_ticket$"),
+        REG_FIRSTNAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, reg_firstname)],
+        REG_LASTNAME:  [MessageHandler(filters.TEXT & ~filters.COMMAND, reg_lastname)],
+        REG_DISTRICT:  [MessageHandler(filters.TEXT & ~filters.COMMAND, reg_district)],
+        REG_LOCATION: [
+            MessageHandler(filters.LOCATION, reg_location),
+            MessageHandler(filters.TEXT & ~filters.COMMAND, reg_location),
         ],
-        states={
-            # ── 1-qadam: GPS so'rash ──
-            TKT_LOCATION: [
-                MessageHandler(filters.LOCATION, tkt_location_received),
-                MessageHandler(
-                    filters.TEXT & filters.Regex(r"^⏭️"),
-                    tkt_location_skip
-                ),
-                MessageHandler(
-                    filters.TEXT & filters.Regex(r"(?i)^(skip|o'tkazib|gps siz)"),
-                    tkt_location_skip
-                ),
-                CallbackQueryHandler(tkt_cancel, pattern="^tkt_cancel$"),
-            ],
-            # ── 2-qadam: Sensor tanlash ──
-            TKT_SENSOR: [
-                CallbackQueryHandler(tkt_sensor_selected,     pattern=r"^tkt_sensor_\w+$"),
-                CallbackQueryHandler(tkt_sensor_manual_input, pattern="^tkt_sensor_manual$"),
-                CallbackQueryHandler(tkt_sensor_unknown,      pattern="^tkt_sensor_unknown$"),
-                CallbackQueryHandler(tkt_cancel,              pattern="^tkt_cancel$"),
-                MessageHandler(filters.LOCATION,               tkt_unknown_location),
-                MessageHandler(filters.TEXT & ~filters.COMMAND, tkt_sensor_text),
-            ],
-            # ── 3-qadam: Prioritet ──
-            TKT_PRIORITY: [
-                CallbackQueryHandler(tkt_priority_selected, pattern=r"^tkt_pri_"),
-                CallbackQueryHandler(tkt_cancel,            pattern="^tkt_cancel$"),
-            ],
-            # ── 4-qadam: Tavsif ──
-            TKT_DESCRIBE: [
-                MessageHandler(filters.TEXT & ~filters.COMMAND, tkt_describe),
-            ],
-            # ── 5-qadam: Rasm ──
-            TKT_PHOTO: [
-                CallbackQueryHandler(tkt_photo_wait, pattern="^tkt_photo_wait$"),
-                CallbackQueryHandler(tkt_photo_skip, pattern="^tkt_photo_skip$"),
-                CallbackQueryHandler(tkt_cancel,     pattern="^tkt_cancel$"),
-                MessageHandler(filters.PHOTO,         tkt_photo_received),
-                MessageHandler(filters.TEXT & filters.Regex(r"^/skip$"), tkt_photo_skip),
-            ],
-            # ── 6-qadam: Tasdiqlash ──
-            TKT_CONFIRM: [
-                CallbackQueryHandler(tkt_send,   pattern="^tkt_send$"),
-                CallbackQueryHandler(tkt_redo,   pattern="^tkt_redo$"),
-                CallbackQueryHandler(tkt_cancel, pattern="^tkt_cancel$"),
-            ],
-        },
-        fallbacks=[
-            CommandHandler("cancel",  tkt_cancel),
-            CommandHandler("start",   start),
-            # Buyruqlar ConversationHandler ichida ham ishlashi uchun fallback
-            CommandHandler("predict",    predict_command),
-            CommandHandler("sensor",     sensor_command),
-            CommandHandler("search",     search_command),
-            CommandHandler("stats",      stats_command),
-            CommandHandler("help",       help_command),
-            CommandHandler("chart",      chart_command),
-            CommandHandler("danger",     danger_sensors_command),
-            CommandHandler("forecast",   forecast_command),
-            CommandHandler("weather",    weather_command),
-            CommandHandler("ask",        ask_command),
-            CommandHandler("history",    history_command),
-            CommandHandler("filter",     filter_command),
-            CommandHandler("compare",    compare_command),
-            CommandHandler("averages",   averages_command),
-            CommandHandler("top",        top_danger_command),
-            CommandHandler("report",     report_command),
-            CommandHandler("districts",  districts_command),
-            CommandHandler("risk",       risk_command),
-            CommandHandler("zones",      zones_command),
-            CommandHandler("dashboard",  dashboard_command),
-            CommandHandler("tickets",    tickets_command),
+    }
+    ticket_states = {
+        # ── 1-qadam: GPS so'rash ──
+        TKT_LOCATION: [
+            MessageHandler(filters.LOCATION, tkt_location_received),
+            MessageHandler(
+                filters.TEXT & filters.Regex(r"^⏭️"),
+                tkt_location_skip
+            ),
+            MessageHandler(
+                filters.TEXT & filters.Regex(r"(?i)^(skip|o'tkazib|gps siz)"),
+                tkt_location_skip
+            ),
             CallbackQueryHandler(tkt_cancel, pattern="^tkt_cancel$"),
         ],
-        allow_reentry=True,
-        per_message=False,
-    )
-    app.add_handler(ticket_conv)
-
-    # ── Rasm tahlili ConversationHandler ──
-    photo_conv = ConversationHandler(
-        entry_points=[MessageHandler(filters.PHOTO & ~filters.COMMAND, photo_ticket_entry)],
-        states={
-            PHOTO_TKT_SENSOR: [
-                CallbackQueryHandler(photo_tkt_sensor_cb,    pattern=r"^ptkt_"),
-                MessageHandler(filters.TEXT & ~filters.COMMAND, photo_tkt_sensor_text),
-            ],
-            PHOTO_TKT_DESCRIBE: [
-                MessageHandler(filters.TEXT & ~filters.COMMAND, photo_tkt_describe),
-            ],
-        },
-        fallbacks=[
-            CommandHandler("cancel", photo_tkt_cancel),
-            CallbackQueryHandler(photo_tkt_cancel, pattern="^ptkt_cancel$"),
+        # ── 2-qadam: Sensor tanlash ──
+        TKT_SENSOR: [
+            CallbackQueryHandler(tkt_sensor_manual_input, pattern="^tkt_sensor_manual$"),
+            CallbackQueryHandler(tkt_sensor_unknown,      pattern="^tkt_sensor_unknown$"),
+            CallbackQueryHandler(tkt_sensor_selected,     pattern=r"^tkt_sensor_S[0-9]+$"),
+            CallbackQueryHandler(tkt_cancel,              pattern="^tkt_cancel$"),
+            MessageHandler(filters.LOCATION,               tkt_unknown_location),
+            MessageHandler(filters.TEXT & ~filters.COMMAND, tkt_sensor_text),
         ],
-        allow_reentry=True,
-        per_message=False,
-    )
-    app.add_handler(photo_conv)
-
-    for cmd, fn in [
+        # ── 3-qadam: Prioritet ──
+        TKT_PRIORITY: [
+            CallbackQueryHandler(tkt_priority_selected, pattern=r"^tkt_pri_"),
+            CallbackQueryHandler(tkt_cancel,            pattern="^tkt_cancel$"),
+        ],
+        # ── 4-qadam: Tavsif ──
+        TKT_DESCRIBE: [
+            MessageHandler(filters.TEXT & ~filters.COMMAND, tkt_describe),
+        ],
+        # ── 5-qadam: Rasm ──
+        TKT_PHOTO: [
+            CallbackQueryHandler(tkt_photo_wait, pattern="^tkt_photo_wait$"),
+            CallbackQueryHandler(tkt_photo_skip, pattern="^tkt_photo_skip$"),
+            CallbackQueryHandler(tkt_cancel,     pattern="^tkt_cancel$"),
+            MessageHandler(filters.PHOTO,         tkt_photo_received),
+            MessageHandler(filters.TEXT & filters.Regex(r"^/skip$"), tkt_photo_skip),
+        ],
+        # ── 6-qadam: Tasdiqlash ──
+        TKT_CONFIRM: [
+            CallbackQueryHandler(tkt_send,   pattern="^tkt_send$"),
+            CallbackQueryHandler(tkt_redo,   pattern="^tkt_redo$"),
+            CallbackQueryHandler(tkt_cancel, pattern="^tkt_cancel$"),
+        ],
+    }
+    photo_states = {
+        PHOTO_TKT_SENSOR: [
+            CallbackQueryHandler(photo_tkt_sensor_cb,    pattern=r"^ptkt_(manual|S[0-9]+)$"),
+            MessageHandler(filters.TEXT & ~filters.COMMAND, photo_tkt_sensor_text),
+        ],
+        PHOTO_TKT_DESCRIBE: [
+            MessageHandler(filters.TEXT & ~filters.COMMAND, photo_tkt_describe),
+        ],
+    }
+    legacy_commands = [
         ("help",             help_command),
         ("ask",              ask_command),
         ("stats",            stats_command),
         ("forecast",         forecast_command),
         ("districts",        districts_command),
-        ("sensor",           sensor_command),
+        ("sensor",           sensor_entry),
         ("model",            model_command),
         ("predict",          predict_command),
         ("danger",           danger_sensors_command),
@@ -4335,17 +4305,75 @@ def main():
         ("broadcast",        broadcast_command),
         ("contacts",         contacts_command),
         ("send_user",        send_user_command),
-    ]:
+    ]
+    states = {
+        **registration_states, **ticket_states, **photo_states,
+        SENSOR_ID: [MessageHandler(filters.TEXT & ~filters.COMMAND, sensor_input)],
+    }
+    for handlers in states.values():
+        handlers.insert(0, MessageHandler(filters.Regex(r"^🏠 Bosh menyu$"), menu_command))
+    # A single conversation prevents registration, ticket and sensor dialogs
+    # from consuming each other's messages.
+    dialog = ConversationHandler(
+        entry_points=[
+            CommandHandler("start", start),
+            CommandHandler("ticket", ticket_start),
+            CallbackQueryHandler(ticket_start, pattern="^new_ticket$"),
+            CommandHandler("sensor", sensor_entry),
+            CallbackQueryHandler(sensor_entry, pattern=r"^(sensor_check|chart_check|history_check)$"),
+            MessageHandler(filters.PHOTO & ~filters.COMMAND, photo_ticket_entry),
+        ],
+        states=states,
+        fallbacks=[
+            CommandHandler("menu", menu_command),
+            CommandHandler("cancel", cancel_command),
+            CommandHandler("start", restart_command),
+            CommandHandler("ticket", ticket_start),
+            *[CommandHandler(cmd, fn) for cmd, fn in legacy_commands],
+            CallbackQueryHandler(menu_command, pattern="^menu$"),
+            CallbackQueryHandler(tkt_cancel, pattern="^tkt_cancel$"),
+            CallbackQueryHandler(photo_tkt_cancel, pattern="^ptkt_cancel$"),
+            CallbackQueryHandler(active_dialog_hint),
+            MessageHandler(filters.ALL, active_dialog_hint),
+        ],
+        allow_reentry=False,
+        per_message=False,
+    )
+    app.add_handler(dialog)
+    app.add_handler(CommandHandler("menu", menu_command))
+    app.add_handler(CommandHandler("cancel", cancel_command))
+    for cmd, fn in legacy_commands:
         app.add_handler(CommandHandler(cmd, fn))
-
-    # group=1 — ConversationHandler (group=0) dan keyin ishlaydi
-    app.add_handler(MessageHandler(filters.LOCATION, location_handler), group=1)
+    # Same group: handled dialog locations never reach the general handler.
+    app.add_handler(MessageHandler(filters.LOCATION, location_handler))
     app.add_handler(CallbackQueryHandler(button_callback))
-
-    # ── Noto'g'ri buyruq va matn handlerlari (eng oxirida) ──
     app.add_handler(MessageHandler(filters.COMMAND, unknown_command))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, unknown_text))
+    return app
 
+
+
+def run_bot_polling(application):
+    """Python 3.14 uchun event loopni aniq yaratib, yakunda yopadi."""
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    try:
+        application.run_polling(allowed_updates=Update.ALL_TYPES)
+    finally:
+        if not loop.is_closed():
+            loop.close()
+        asyncio.set_event_loop(None)
+
+
+def main():
+    if not BOT_TOKEN:
+        logger.error("❌ TELEGRAM_BOT_TOKEN o'rnatilmagan!")
+        return
+    load_data()
+    load_model()
+    global subscribers
+    subscribers = load_subscribers()
+    app = build_application(BOT_TOKEN)
     if app.job_queue is not None:
         # Faqat ertalabki hisobot — har kuni 06:00 Toshkent vaqti (UTC+5)
         try:
@@ -4358,9 +4386,8 @@ def main():
         logger.info("✅ JobQueue: morning_report (06:00 Asia/Tashkent)")
     else:
         logger.warning("⚠️ JobQueue yo'q. Auto-alert uchun: pip install 'python-telegram-bot[job-queue]'")
-
     logger.info("🤖 Bot ishga tushdi!")
-    app.run_polling(allowed_updates=Update.ALL_TYPES)
+    run_bot_polling(app)
 
 
 if __name__ == "__main__":

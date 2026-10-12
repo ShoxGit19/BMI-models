@@ -634,6 +634,8 @@
 </style>
 <script>
 (function(){
+  // Dashboard tanishtiruvi boshqa sahifalarda xaritani tosmasin.
+  if(window.location.pathname !== '/') return;
   if(localStorage.getItem('eg_tour_done')) return;
 
   var steps = [

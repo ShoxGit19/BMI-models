@@ -4,7 +4,7 @@
 
 <div align="center">
 
-![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)
+![Python](https://img.shields.io/badge/Python-3.14-3776AB?logo=python&logoColor=white)
 ![Flask](https://img.shields.io/badge/Flask-3.0-000000?logo=flask&logoColor=white)
 ![scikit-learn](https://img.shields.io/badge/scikit--learn-1.8-F7931E?logo=scikit-learn&logoColor=white)
 ![Telegram Bot](https://img.shields.io/badge/Telegram_Bot-21.3-2CA5E0?logo=telegram&logoColor=white)
@@ -63,7 +63,7 @@
 
 **ElectroGrid Monitoring** — Toshkent shahrining 12 tumanidagi **1,200 ta sensor**dan yig'ilgan **1,292,959 yozuv** asosida ishlaydigan to'liq monitoring tizimi.
 
-Tizim 8 ta elektr va atrof-muhit parametrini real vaqtda kuzatadi, har bir sensorni 3 bosqichli xavf darajasi bo'yicha tasniflaydi, **gibrid AI model** (RandomForest + MLP) yordamida nosozlikni bashorat qiladi va **wttr.in + Open-Meteo** real ob-havo asosida 7 kunlik prognoz beradi. Barcha hodisalar Telegram bot orqali tegishli tuman foydalanuvchisiga jonli yetkaziladi va foydalanuvchilar bot orqali GPS joylashuv bilan **nosozlik buyurtma** (ticket) bera oladi.
+Tizim 8 ta elektr va atrof-muhit parametrini real vaqtda kuzatadi, har bir sensorni 3 bosqichli xavf darajasi bo'yicha tasniflaydi, **gibrid AI model** (RandomForest + MLP) yordamida nosozlikni bashorat qiladi va **wttr.in + Open-Meteo** real ob-havo asosida 7 kunlik prognoz beradi. Foydalanuvchilar bot orqali GPS joylashuv bilan **nosozlik buyurtma** (ticket) bera oladi; buyurtmalar saytda ko'rinadi. Rejalashtirilgan xabarlarning ishlash shartlari Telegram bot bo'limida berilgan.
 
 ### Loyihaning kuchli tomonlari
 
@@ -72,7 +72,7 @@ Tizim 8 ta elektr va atrof-muhit parametrini real vaqtda kuzatadi, har bir senso
 | ⚡ **Real-time** | Har 30 sekundda yangilanish, jonli status bar |
 | 🧠 **Hybrid AI** | RandomForest + MLP soft-voting, ishonch foizi va matnli tahlil |
 | 🌦️ **Real ob-havo** | wttr.in + Open-Meteo ikki manba (Toshkent haqiqiy ma'lumot) |
-| 🤖 **Telegram bot** | 35+ buyruq, grafik PNG, auto-alert, nosozlik buyurtma |
+| 🤖 **Telegram bot** | 5 bo'limli menyu, 4 asosiy command, sensor dialogi, ticket |
 | 🛠️ **Ticket tizimi** | GPS + rasm + daraja bilan buyurtma, admin bildirishnoma |
 | 💬 **AI Chatbot** | 24 intent, O'zbek/Kirill/Rus, professional NLU dvigateli |
 | 🎨 **Premium UI** | Glassmorphism, animatsiyalar, command palette (Ctrl+K), toast |
@@ -107,7 +107,8 @@ Tizim 8 ta elektr va atrof-muhit parametrini real vaqtda kuzatadi, har bir senso
 ### 🌤️ Ob-havo aniqroq
 - **wttr.in** asosiy manba (haqiqiy stansiya ma'lumoti)
 - Open-Meteo zaxira sifatida
-- Kesh 30 daqiqa (har 5 daqiqada yangilanishi mumkin)
+- Sayt widgeti uchun disk kesh 15 daqiqa, endpoint kesh 5 daqiqa
+- Bot Prognoz tugmasi Open-Meteo'dan har so'rovda yangi javob oladi
 - `feels_like`, `cloud`, `description` — yangi maydonlar
 
 ### 🗺️ Xarita yaxshilandi
@@ -122,8 +123,10 @@ Tizim 8 ta elektr va atrof-muhit parametrini real vaqtda kuzatadi, har bir senso
 - `⏭️ O'tkazib yuborish` bilan joylashuv skip
 
 ### 🤖 Bot yangiliklari
-- `/ticket` — nosozlik buyurtma ConversationHandler (5 bosqich)
-- Noto'g'ri buyruq → "❌ Bunday buyruq yo'q. /help yozing"
+- Bosh menyuda 5 ta bo'lim; odatiy amallar tugmalar orqali bajariladi
+- `/start, /menu, /help, /cancel` — foydalanuvchi command menyusi
+- Nosozlik bildirish: joylashuv, sensor, daraja, tavsif, rasm, tasdiqlash
+- Noma'lum buyruq yoki matn → Bosh menyu va Yordam tugmalari
 - Sensor ID normallashtirish: `S001` → `S0001` avtomatik
 - Admin bildirishnoma: GPS + rasm + sensor holati + tugmalar
 
@@ -144,7 +147,7 @@ Tizim 8 ta elektr va atrof-muhit parametrini real vaqtda kuzatadi, har bir senso
 | 🎫 | **Tiketlar** | GPS + rasm + daraja bilan nosozlik ticket tizimi |
 | 💬 | **AI Chatbot** | 24 intent NLU, O'zbek/Kirill/Rus, professional javoblar |
 | 🛠️ | **Audit jurnali** | Foydalanuvchi harakatlari log |
-| 🤖 | **Telegram Bot** | 35+ buyruq, grafik PNG, auto-alert, ticket, ro'yxatdan o'tish |
+| 🤖 | **Telegram Bot** | Tugmali menyu, sensor grafiklari, ticket, ro'yxatdan o'tish |
 | 🔐 | **Auth + Rollar** | Session-based login, admin / operator, bcrypt |
 | 🌙 | **Dark/Light** | Premium tema, manifest theme-color sinxron |
 | 📱 | **Responsive + PWA** | Mobile/tablet/desktop, telefonga o'rnatish |
@@ -159,14 +162,14 @@ Tizim 8 ta elektr va atrof-muhit parametrini real vaqtda kuzatadi, har bir senso
 
 | Kutubxona | Versiya | Vazifasi |
 |---|---|---|
-| **Python** | 3.12 | Asosiy til |
+| **Python** | 3.14.7 (tekshirilgan) | Asosiy til |
 | **Flask** | 3.0.0 | Web server, API, Jinja2 |
 | **Flask-Caching** | 2.3.1 | Server javoblarini keshlash |
 | **Flask-Limiter** | 4.1.1 | API rate-limit (200/min) |
 | **Flask-SocketIO** | 5.3.6 | WebSocket real-time push |
 | **bcrypt** | 5.0.0 | Parol xeshlash |
-| **pandas** | 2.x | Ma'lumotlarni qayta ishlash |
-| **numpy** | 2.x | Hisoblash, AR(1) simulyatsiya |
+| **pandas** | 3.0.2 | Ma'lumotlarni qayta ishlash |
+| **numpy** | 2.4.4 | Hisoblash, AR(1) simulyatsiya |
 | **pyarrow** | 24.x | Parquet format (10× CSV'dan tez) |
 | **scikit-learn** | 1.8 | RandomForest + MLP VotingClassifier |
 | **matplotlib** | 3.x | Bot uchun PNG grafiklar |
@@ -193,14 +196,16 @@ Tizim 8 ta elektr va atrof-muhit parametrini real vaqtda kuzatadi, har bir senso
 
 ```
 BMI_models/
+├── run.py                          # Sayt va botni birgalikda boshqarish
 ├── app.py                          # Flask server, 50+ API va sahifalar
 ├── chatbot_engine.py               # AI Chatbot NLU (24 intent, 3 til)
-├── telegram_bot.py                 # Telegram bot (35+ buyruq, ticket tizimi)
+├── telegram_bot.py                 # Tugmali Telegram bot, sensor va ticket dialoglari
 ├── config.py                       # Sensor chegaralari, port, yo'llar
 ├── utils.py                        # Yordamchi: ticket, alert, incident, GPS
 ├── train_model.py                  # AI modelni o'qitish skripti
 ├── requirements.txt                # Python paketlar
-├── bot_token.txt                   # Telegram bot tokeni (alternativa)
+├── .env.example                    # Maxfiy qiymatlarsiz sozlamalar namunasi
+├── tests/                          # Bot, launcher va muhit regressiya testlari
 ├── users.json                      # Bot foydalanuvchilari (telefon, tuman, GPS)
 ├── subscribers.json                # Auto-alert obunachilari
 │
@@ -267,55 +272,115 @@ BMI_models/
 
 ## 🚀 O'rnatish va ishga tushirish
 
-### Talablar
+### Tayyor loyihani ochish
 
-- **Python 3.10+** (3.12 tavsiya)
-- Internet aloqasi (ob-havo API, Telegram)
-- ~500 MB bo'sh joy (Parquet + model)
+IDE'da loyiha interpreterini tanlang va **run.py → Run** bosing.
+**app.py → Run** yoki **telegram_bot.py → Run** ham sayt va botni birga ochadi.
 
-### Windows (PowerShell)
+Terminalda loyiha papkasidan, kerakli Python muhiti bilan:
 
 ```powershell
-# 1. Klonlash
+python run.py
+```
+
+1. Launcher avval saytni ochadi va `/healthz` javobini kutadi.
+2. Sayt tayyor bo'lgach, Telegram bot shu interpreter bilan ochiladi.
+3. Brauzerda **http://localhost:5000** manzilini oching.
+4. Telegram'da botga `/start` yoki `/menu` yuboring.
+5. Ishga tushirgan terminalda **Ctrl+C** bosing — sayt va bot to'xtaydi.
+
+Bir loyiha uchun bitta launcher ishlaydi. Qayta Run bosilganda
+`Sayt va bot allaqachon ishga tushirilgan` xabari chiqadi va takroriy jarayon ochilmaydi.
+Ikkalasidan biri to'xtasa, launcher ikkinchisini ham yopadi.
+Bu tartib Python faylini bevosita ishga tushirish uchun; `flask run` umumiy launcherni chaqirmaydi.
+
+### Talablar va sozlamalar
+
+- Loyiha **Python 3.14.7** va **python-telegram-bot 21.3** bilan tekshirilgan.
+  Botda startup sloti va event loop uchun lokal moslik tuzatishlari mavjud.
+- Kutubxonalar `requirements.txt` bo'yicha o'rnatiladi.
+- Telegram va ob-havo API uchun internet kerak.
+- Sensor ma'lumotlari `data/`, tayyor model `models/` papkasida bo'lishi kerak.
+
+Mavjud `.env` faylini saqlang. Yangi o'rnatishda `.env.example` nusxasidan `.env` yarating
+va qiymatlarni mahalliy sozlang:
+
+| Sozlama | Vazifasi |
+|---|---|
+| `TELEGRAM_BOT_TOKEN` | BotFather bergan bot tokeni |
+| `PORT` | Sayt porti; standart qiymat `5000` |
+| `HOST` | Server manzili; standart qiymat `0.0.0.0` |
+| `SITE_BASE` | Bot ishlatadigan sayt URL'i |
+| `TELEGRAM_ADMIN_IDS` | Bot adminlarining raqamli Telegram ID'lari, vergul bilan ajratiladi |
+
+`SITE_BASE` berilmasa, launcher uni `http://127.0.0.1:<PORT>` qilib o'rnatadi.
+Mavjud `SITE_BASE` qiymati saqlanadi. `PORT=5001` bo'lsa va `SITE_BASE` ham yozilgan bo'lsa,
+uning portini ham moslang.
+
+Sayt va bot bir loyiha papkasi hamda bir xil sozlamalar bilan ishlaydi.
+Bot yuborgan ticketlar saytdagi `/tickets` bo'limiga tushadi.
+`localhost` server kompyuteriga tegishli; boshqa qurilmadan sayt ochilishi uchun
+yetib boriladigan sayt URL'ini `SITE_BASE` sifatida belgilang.
+
+### Windows: yangi o'rnatish
+
+```powershell
 git clone https://github.com/ShoxGit19/BMI_models.git
 cd BMI_models
 
-# 2. Virtual muhit
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
+python -m pip install -r requirements.txt
 
-# 3. Paketlar
-pip install -r requirements.txt
-
-# 4. .env fayl (BOM siz, UTF-8)
-[System.IO.File]::WriteAllText("$PWD\.env",
-  "TELEGRAM_BOT_TOKEN=YOUR_TOKEN`nSITE_BASE=http://localhost:5000`n")
-
-# 5. AI modelni o'qitish (bir marta, ~3-5 daqiqa)
-python train_model.py
-
-# 6. Saytni ishga tushirish
-python app.py
-
-# 7. (Alohida terminal) Telegram bot
-python telegram_bot.py
+# Mavjud .env ustiga yozilmaydi.
+if (-not (Test-Path -LiteralPath .env)) {
+    Copy-Item -LiteralPath .env.example -Destination .env
+}
+# .env qiymatlarini mahalliy sozlang, keyin:
+python run.py
 ```
 
-### Linux / macOS
+Windows'da `python` Microsoft Store oynasini taklif qilsa yoki topilmasa,
+IDE'da ishlayotgan interpreter bilan Run qiling. Mazkur kompyuterda tekshirilgan
+uv interpretori uchun:
+
+```powershell
+$projectPython = Join-Path $env:APPDATA 'uv\python\cpython-3.14.7-windows-x86_64-none\python.exe'
+& $projectPython -X utf8 -B run.py
+```
+
+Bu yo'l faqat shu uv interpretori o'rnatilgan kompyuter uchun.
+Tayyor model fayllari mavjud bo'lsa, qayta o'qitish talab qilinmaydi.
+Model yetishmasa, `python train_model.py` ni alohida bajaring.
+
+### Linux / macOS: yangi o'rnatish
 
 ```bash
 git clone https://github.com/ShoxGit19/BMI_models.git
 cd BMI_models
-python3 -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
-echo "TELEGRAM_BOT_TOKEN=YOUR_TOKEN" > .env
-echo "SITE_BASE=http://localhost:5000" >> .env
-python train_model.py
-python app.py &
-python telegram_bot.py
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements.txt
+test -f .env || cp .env.example .env
+# .env qiymatlarini mahalliy sozlang, keyin:
+python run.py
 ```
 
-> 🌐 Brauzerda oching: **http://localhost:5000**
+### Tekshirish
+
+Sayt holati: **http://localhost:5000/healthz**.
+`status: ok` server ishlayotganini bildiradi; `data_loaded` va `model_loaded`
+ma'lumot hamda model yuklanganini ko'rsatadi.
+
+Mavjud test muhitida:
+
+```powershell
+python -m pytest tests -q -p no:cacheprovider
+```
+
+Testlar uchun `pytest` kerak. 2026-10-12 kuni Python 3.14.7 muhitida
+**46 ta test va 2 ta subtest o'tgan**. Grafik shriftlari va PTB dialog sozlamalariga
+oid warninglar mavjud.
 
 ---
 
@@ -486,12 +551,14 @@ python train_model.py
 | **Shamol** | km/h | < 15 | 15–25 | > 25 |
 | **Vibratsiya** | — | < 1.0 | 1.0–1.5 | > 1.5 |
 | **Sim holati** | % | > 85 | 75–85 | < 75 |
-| **Namlik** | % | 25–85 | 15–25 / 85–90 | < 15 yoki > 90 |
+| **Namlik** | % | 35–85 | 30–35 / 85–90 | < 30 yoki > 90 |
 | **Quvvat** | kW | ≤ 5.0 | 5.0–5.5 | > 5.5 |
 
 ---
 
 ## 🔮 7 kunlik prognoz
+
+Quyidagi AI oqimi saytdagi prognozga tegishli. Botning Prognoz tugmasi Open-Meteo ob-havosini ko'rsatadi; uning tafsilotlari Telegram bot bo'limida yozilgan.
 
 ```
 1. Real ob-havo (wttr.in + Open-Meteo) → harorat, shamol, namlik
@@ -511,20 +578,105 @@ python train_model.py
 
 ```
 /start
-  → 📱 Telefon yuborish
-  → ✍️  Ism + Familiya
-  → 🏘️  12 tumandan biri
-  → 📍 GPS joylashuv (ixtiyoriy)
-  → 🔐 Web login/parol avtomatik yaratiladi
-  → ✅  Bosh menyu
+  → Telefon raqami
+  → Ism va familiya
+  → Tuman
+  → Joylashuv (ixtiyoriy)
+  → Web tizimi uchun login/parol
+  → Bosh menyu
 ```
 
-### Barcha buyruqlar
+### Bosh menyu
+
+| Bo'lim | Tugmalar orqali bajariladigan amallar |
+|---|---|
+| **Monitoring** | Dashboard, umumiy statistika, muammoli sensorlar |
+| **Sensorlar** | ID yuborish → sensor holati → grafik yoki tarix |
+| **Prognoz** | Joriy ob-havo va 7 kunlik prognoz |
+| **Nosozlik bildirish** | Joylashuv, sensor, daraja, tavsif, rasm va tasdiqlash |
+| **Sozlamalar va yordam** | Alert obunasi, sokin rejim, yordam |
+
+Sensor ID uchun `S0001`, `s1` yoki `1` yuborish mumkin.
+Sensor topilmasa, ID noto'g'ri bo'lsa yoki ma'lumot yuklanmagan bo'lsa, bot aniq xabar beradi.
+Bo'limlardan **Bosh menyu** tugmasi bilan qaytiladi.
+Dialog paytida bu tugma yoki `/menu` joriy jarayonni tugatadi;
+`/cancel` ham jarayonni bekor qilib menyuni ochadi.
+Noma'lum matn va commandlar uzun buyruqlar ro'yxatini chiqarmaydi.
+
+### Foydalanuvchi commandlari
+
+Telegram command menyusida faqat quyidagi to'rtta buyruq ko'rinadi:
+
+| Buyruq | Vazifasi |
+|---|---|
+| `/start` | Ro'yxatdan o'tish yoki botni boshlash |
+| `/menu` | Bosh menyu; faol dialogni tugatish |
+| `/help` | Qisqa foydalanish yordami |
+| `/cancel` | Joriy dialogni bekor qilish |
+
+BotFather'da `/setcommands` uchun:
+
+```text
+start - Botni boshlash
+menu - Bosh menyu
+help - Yordam
+cancel - Joriy jarayonni bekor qilish
+```
+
+Bot ishga tushganda commandlar `BotCommand` orqali ham o'rnatiladi.
+
+### Bot ob-havosi
+
+**Prognoz** tugmasi va saqlangan `/weather` commandi har so'rovda
+[Open-Meteo API](https://open-meteo.com/en/docs) ga ulanadi.
+Avval foydalanuvchining saqlangan koordinatasi, keyin tuman koordinatasi,
+ular bo'lmasa Toshkent markazi ishlatiladi.
+
+Ko'rsatiladigan qiymatlar: harorat (°C), nisbiy namlik (%), shamol (km/soat),
+yog'ingarchilik (mm), API vaqti va 7 kunlik prognoz.
+Havo quruqligi namlik asosida oddiy baholanadi:
+**<30% — quruq; 30–60% — o'rtacha; >60% — nam**.
+Bu botdagi baholash qoidasi.
+
+API qiymati bo'lmasa **ma'lumot yo'q**, ulanish ishlamasa qayta urinish xabari chiqadi.
+Sensor datasetidagi qiymatlar ob-havo API javobi o'rniga qo'yilmaydi.
+Sayt ob-havo widgeti esa o'zining wttr.in/Open-Meteo va kesh oqimidan foydalanadi.
+
+### Admin ruxsatlari
+
+Botda admin huquqi foydalanuvchining saqlangan `role="admin"` qiymati
+yoki `TELEGRAM_ADMIN_IDS` ro'yxatidagi Telegram ID orqali tekshiriladi.
+Username admin huquqini bermaydi. Admin commandlari alohida chat scope'iga o'rnatiladi.
+
+| Admin commandi | Vazifasi |
+|---|---|
+| `/admin` | Admin panel |
+| `/tickets` | Ticketlar ro'yxati va boshqaruvi |
+| `/broadcast <matn>` | Obunachilarga umumiy xabar |
+| `/alert_test` | Alert sinovi |
+| `/send_user <id> <matn>` | Foydalanuvchiga xabar |
+
+Admin bo'lmagan foydalanuvchi bu commandlar va ticket boshqaruv callbacklarini ishlata olmaydi.
+
+### Obuna va rejalashtirilgan xabarlar
+
+Alert obunasi va sokin rejim **Sozlamalar va yordam** bo'limida o'zgartiriladi.
+Sokin rejim qiymati saqlanadi; `alert_check` funksiyasi uni 22:00–07:00 oralig'ida tekshiradi.
+
+Joriy startup kodi `JobQueue` mavjud bo'lsa faqat ertalabki hisobotni
+**06:00, Asia/Tashkent** vaqtiga rejalashtiradi.
+`alert_check` va `realtime_alert_check` mavjud, ammo startup'da rejalashtirilmagan.
+`JobQueue` bo'lmasa rejalashtirilgan xabarlar ishlamaydi.
+Kerak bo'lsa, faol interpreterda `python -m pip install "python-telegram-bot[job-queue]==21.3"`
+orqali uni o'rnatib, loyihani qayta ishga tushiring.
+
+<details>
+<summary>Moslik uchun saqlangan eski commandlar</summary>
+
+Bu handlerlar saqlangan, ammo oddiy foydalanuvchining Telegram command menyusida ko'rsatilmaydi.
 
 | Buyruq | Tavsifi |
 |---|---|
-| `/start` | Ro'yxatdan o'tish va bosh menyu |
-| `/help` | Buyruqlar ro'yxati |
 | `/stats` | Umumiy statistika |
 | `/forecast` | 7 kunlik ob-havo prognozi |
 | `/districts` | Tumanlar holati |
@@ -547,14 +699,13 @@ python train_model.py
 | `/risk` | 24 soat buzilish ehtimoli |
 | `/zones` | Tumanlar xavf darajasi |
 | **`/ticket`** | **🆕 Nosozlik buyurtma berish** |
-| `/tickets` | Faol buyurtmalar |
 | `/subscribe` | Auto-alert obunasi |
 | `/unsubscribe` | Obunani bekor qilish |
 | `/silent` | Sokin rejim on/off |
 | `/ask <savol>` | AI chatbot (tabiiy til) |
-| `/mylocation` | GPS joylashuvni yangilash |
-| `/admin` | Admin boshqaruv paneli |
-| `/broadcast <matn>` | Ommaviy xabar (admin) |
+| `/mylocation` | Saqlangan GPS joylashuvni ko'rish |
+
+</details>
 
 ---
 
@@ -563,23 +714,25 @@ python train_model.py
 Foydalanuvchilar bot orqali nosozlikni tizimga bildirishi mumkin. Jarayon:
 
 ```
-/ticket yoki "🛠️ Nosozlik bildirish" tugmasi
+"🛠️ Nosozlik bildirish" tugmasi (eski /ticket ham saqlangan)
          ↓
-[1] Sensor tanlash
-    • GPS bo'lsa → 5 ta eng yaqin sensor avtomatik ko'rinadi
+[1] Joylashuv yuborish yoki "GPS siz davom etish"
+         ↓
+[2] Sensor tanlash
+    • GPS bo'lsa → 6 tagacha eng yaqin sensor ko'rinadi
     • GPS yo'q   → Tuman sensorlari ko'rinadi
     • ID bilmasa → "🤷 Sensor IDni bilmayman" → joylashuv yuboradi
-                   Bot eng yaqin sensorno GPS asosida aniqlaydi
+                   Bot eng yaqin sensorni GPS asosida aniqlaydi
          ↓
-[2] Daraja tanlash
+[3] Daraja tanlash
     🔴 Kritik (zudlik bilan) / 🟡 O'rta (bugun) / 🟢 Past (reja bilan)
          ↓
-[3] Muammo tavsifi yozish (min 10 belgi)
+[4] Muammo tavsifi yozish (min 10 belgi)
          ↓
-[4] Rasm yuborish (ixtiyoriy)
+[5] Rasm yuborish (ixtiyoriy)
     → Sayt /tickets sahifasida ko'rinadi
          ↓
-[5] Tasdiqlash → Yuborish
+[6] Tasdiqlash → Yuborish
 
 NATIJA:
   ✅ Foydalanuvchi → "Buyurtma ID: T-20260626164800"
@@ -716,15 +869,19 @@ python scripts\generate_result_image.py
 |---|---|
 | `FileNotFoundError: sensor_data.parquet` | `python scripts\csv_to_parquet.py` bajaring |
 | `FileNotFoundError: models/*.pkl` | `python train_model.py` bajaring |
-| Port 5000 band | `config.py` da `PORT = 5001` |
+| Port 5000 band | Shu loyihaning eski jarayonini to'xtating yoki `PORT` va mavjud `SITE_BASE` portini moslang |
 | Bot **401 Unauthorized** | `.env` da `TELEGRAM_BOT_TOKEN` ni tekshiring |
 | Bot **Conflict 409** | Boshqa ishlayotgan bot sessiyasini to'xtating |
-| `/ticket` ishlamaydi | Botni qayta ishga tushiring (`Ctrl+C → python telegram_bot.py`) |
+| Allaqachon ishga tushirilgan | Mavjud launcher ishlayapti; uning terminalida Ctrl+C bosib, keyin qayta Run qiling |
+| Windows'da Python topilmayapti | IDE interpreterini tanlang yoki yuqoridagi uv interpreter buyrug'idan foydalaning |
+| JobQueue yo'q | Menyu ishlaydi; rejalashtirilgan hisobot uchun JobQueue qo'shimchasini o'rnating |
+| Admin commandi rad etildi | Raqamli Telegram ID yoki saqlangan admin rolini tekshiring; username yetarli emas |
+| Ticket yuborilmayapti | `python run.py` bilan sayt va botni birga oching; `SITE_BASE` saytga olib borishini tekshiring |
 | Xarita sensorlar burchakda | Sahifani `Ctrl+Shift+R` bilan yangilang |
-| Ob-havo noto'g'ri | `data/tashkent_weather_cache.json` ni o'chiring |
+| Bot ob-havosi olinmayapti | Internetni tekshirib Prognoz tugmasini qayta bosing; bot sensor qiymatlarini zaxira sifatida ishlatmaydi |
 | Kirill tarjima ishlamaydi | `Ctrl+Shift+R` (cache tozalash), keyin `КР` tugmasini bosing |
 | `ModuleNotFoundError` | `.venv` faol, `pip install -r requirements.txt` |
-| `__stop_running_marker` | `pip install "python-telegram-bot>=21.10"` |
+| `__stop_running_marker` | Yangilangan `telegram_bot.py` va loyiha interpreteridan foydalaning; lokal moslik tuzatishi mavjud |
 | `﻿` BOM `.env` | `[System.IO.File]::WriteAllText(...)` ishlating |
 
 ---

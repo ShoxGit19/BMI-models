@@ -9,12 +9,19 @@ regenerate_csv.py
 fix_fault_labels.py
 fix_csv_faults.py
 analyze_faults.py
+
+# Local secrets / environment config
 .env
+.env.*
+!.env.example
+bot_token.txt
+*.pem
+*.key
+secrets/
+
 telegram_bot.py
 data/tashkent_weather_cache.json
 .gitignore
-.gitignore
 logs/
 static/ticket_photos/
-data/tashkent_weather_cache.json
 .claude/

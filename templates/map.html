@@ -170,6 +170,11 @@
     <p>Xarita yuklanmoqda...</p>
   </div>
 
+  <div id="map-status" class="alert mx-4 my-3" role="status" hidden>
+    <span id="map-status-text"></span>
+    <button type="button" class="btn btn-sm btn-outline-secondary ms-2" onclick="loadMap()">Qayta urinish</button>
+  </div>
+
   <main class="py-4" id="map-main" style="display:none;">
     <div class="container-fluid px-4">
       <div class="row g-3">
@@ -181,7 +186,7 @@
                 <span class="icon-pill"><i class="fas fa-location-dot"></i></span>
                 Sensor joylashuvi
               </div>
-              <small style="color:var(--text-muted);">12 ta tumanda 1200 sensor</small>
+              <small id="map-sensor-summary" style="color:var(--text-muted);">12 ta tumanda 1200 sensor</small>
             </div>
             <div style="flex:1;min-height:0;padding:0.75rem;">
               <div id="map" style="width:100%;height:100%;border-radius:10px;"></div>
@@ -291,7 +296,6 @@
     let clusterLayer = null;
     let plainLayer = null;
     let heatLayer = null;
-    let districtPolygons = [];
     let clusteringEnabled = true;
     let heatmapEnabled = false;
     let faultsOnly = false;
@@ -299,71 +303,6 @@
     let sensorMarkerIndex = {}; // SensorID -> {marker, latlng}
     let incidentLayer = null;
     let isAdminUser = "{{ session.get('role') }}" === "admin";
-
-    // Realistik (multi-vertex) tuman polygonlari — Toshkent shaharlari uchun
-    // approximated GeoJSON-style polygons (LatLng pairs).
-    const DISTRICT_BOUNDS = {
-      "Bektemir": [
-        [41.225,69.310],[41.232,69.345],[41.250,69.378],[41.275,69.395],
-        [41.300,69.388],[41.310,69.360],[41.298,69.330],[41.272,69.312],
-        [41.245,69.305]
-      ],
-      "Chilonzor": [
-        [41.260,69.150],[41.268,69.180],[41.275,69.210],[41.295,69.222],
-        [41.318,69.215],[41.328,69.195],[41.322,69.165],[41.305,69.145],
-        [41.282,69.140]
-      ],
-      "Mirabad": [
-        [41.255,69.205],[41.262,69.230],[41.272,69.255],[41.288,69.262],
-        [41.298,69.250],[41.295,69.225],[41.282,69.205],[41.268,69.198]
-      ],
-      "Mirobod": [
-        [41.270,69.245],[41.278,69.268],[41.290,69.290],[41.305,69.295],
-        [41.314,69.280],[41.310,69.258],[41.298,69.245],[41.282,69.240]
-      ],
-      "Mirzo Ulug'bek": [
-        [41.305,69.330],[41.318,69.360],[41.335,69.388],[41.358,69.395],
-        [41.385,69.388],[41.395,69.365],[41.388,69.340],[41.368,69.325],
-        [41.340,69.320],[41.318,69.322]
-      ],
-      "Olmazor": [
-        [41.330,69.215],[41.342,69.240],[41.358,69.265],[41.378,69.280],
-        [41.395,69.275],[41.392,69.250],[41.378,69.225],[41.358,69.215],
-        [41.342,69.215]
-      ],
-      "Sergeli": [
-        [41.170,69.245],[41.182,69.280],[41.200,69.310],[41.225,69.335],
-        [41.250,69.338],[41.260,69.315],[41.252,69.285],[41.230,69.260],
-        [41.205,69.248],[41.182,69.245]
-      ],
-      "Shayxontohur": [
-        [41.285,69.245],[41.292,69.270],[41.305,69.295],[41.322,69.302],
-        [41.335,69.288],[41.330,69.265],[41.315,69.248],[41.298,69.243]
-      ],
-      "Uchtepa": [
-        [41.285,69.150],[41.295,69.175],[41.310,69.205],[41.335,69.225],
-        [41.358,69.220],[41.365,69.195],[41.355,69.168],[41.335,69.150],
-        [41.310,69.148]
-      ],
-      "Yakkasaroy": [
-        [41.270,69.198],[41.276,69.215],[41.288,69.235],[41.302,69.242],
-        [41.310,69.228],[41.305,69.208],[41.292,69.198],[41.280,69.195]
-      ],
-      "Yashnobod": [
-        [41.215,69.275],[41.225,69.302],[41.240,69.328],[41.258,69.348],
-        [41.275,69.350],[41.272,69.325],[41.258,69.298],[41.240,69.278]
-      ],
-      "Yunusobod": [
-        [41.318,69.288],[41.328,69.315],[41.345,69.345],[41.365,69.368],
-        [41.388,69.370],[41.392,69.342],[41.380,69.315],[41.358,69.295],
-        [41.338,69.288]
-      ]
-    };
-    const DISTRICT_COLORS = {
-      "Bektemir":"#6366F1","Chilonzor":"#8B5CF6","Mirabad":"#EC4899","Mirobod":"#F43F5E",
-      "Mirzo Ulug'bek":"#0EA5E9","Olmazor":"#10B981","Sergeli":"#F59E0B","Shayxontohur":"#14B8A6",
-      "Uchtepa":"#F97316","Yakkasaroy":"#EF4444","Yashnobod":"#84CC16","Yunusobod":"#06B6D4"
-    };
 
     // ===== Toolbar tugmalar =====
     function _setBtnActive(btnId, active) {
@@ -403,55 +342,6 @@
       if (faultsOnly) params.set('only_faults', '1');
       const qs = params.toString();
       document.getElementById('export-csv').href = '/api/export/map-csv' + (qs ? ('?' + qs) : '');
-    }
-
-    function drawDistrictPolygons(selectedDistrict) {
-      districtPolygons.forEach(p => leafletMap.removeLayer(p));
-      districtPolygons = [];
-
-      // Zone analytics ma'lumotini yuklash (rang va tooltip uchun)
-      fetch('/api/zones').then(r => r.json()).then(zd => {
-        const zoneMap = {};
-        (zd.zones || []).forEach(z => { zoneMap[z.district] = z; });
-
-        const entries = selectedDistrict
-          ? Object.entries(DISTRICT_BOUNDS).filter(([k]) => k === selectedDistrict)
-          : Object.entries(DISTRICT_BOUNDS);
-        entries.forEach(([name, coords]) => {
-          const zone = zoneMap[name];
-          // Risk darajasi bo'yicha rang
-          const color = zone ? zone.color : (DISTRICT_COLORS[name] || '#64748B');
-          const fillOpacity = zone ? Math.min(0.35, 0.08 + (zone.risk_pct / 100) * 0.4) : 0.06;
-          const poly = L.polygon(coords, {
-            color: color, weight: 2, opacity: 0.7,
-            fillColor: color, fillOpacity: fillOpacity, dashArray: zone ? null : '6,4',
-            smoothFactor: 1.2
-          }).addTo(leafletMap);
-          let tooltip = '<b>' + name + '</b>';
-          if (zone) {
-            tooltip += '<br>📊 ' + zone.total + ' sensor'
-                    + '<br>✅ ' + zone.safe + ' | ⚠️ ' + zone.warning + ' | 🔴 ' + zone.danger
-                    + '<br>⚡ Yuklama: ' + zone.load_pct + '%'
-                    + '<br>🎯 Risk: ' + zone.risk_pct + '%';
-          }
-          poly.bindTooltip(tooltip, {permanent: false, direction: 'center', sticky: true});
-          districtPolygons.push(poly);
-        });
-      }).catch(() => {
-        // Fallback: oddiy polygons
-        const entries = selectedDistrict
-          ? Object.entries(DISTRICT_BOUNDS).filter(([k]) => k === selectedDistrict)
-          : Object.entries(DISTRICT_BOUNDS);
-        entries.forEach(([name, coords]) => {
-          const color = DISTRICT_COLORS[name] || '#64748B';
-          const poly = L.polygon(coords, {
-            color: color, weight: 1.5, opacity: 0.6,
-            fillColor: color, fillOpacity: 0.06, dashArray: '6,4'
-          }).addTo(leafletMap);
-          poly.bindTooltip('<b>' + name + '</b>', {permanent: false, direction: 'center'});
-          districtPolygons.push(poly);
-        });
-      });
     }
 
     // ===== Popup va sparkline =====
@@ -647,7 +537,13 @@
 
       const filtered = faultsOnly ? lastData.filter(d => d.Fault === 2) : lastData;
 
-      clusterLayer = L.markerClusterGroup({
+      const canCluster = typeof L.markerClusterGroup === 'function';
+      if (!canCluster) {
+        clusteringEnabled = false;
+        document.getElementById('cluster-toggle').disabled = true;
+        document.getElementById('cluster-label').textContent = 'Klaster: OFF';
+      }
+      clusterLayer = canCluster ? L.markerClusterGroup({
         maxClusterRadius: 38,
         showCoverageOnHover: false,
         iconCreateFunction: function(cluster) {
@@ -665,7 +561,7 @@
             className: '', iconSize: [sz, sz]
           });
         }
-      });
+      }) : L.layerGroup();
       plainLayer = L.layerGroup();
       sensorMarkerIndex = {};
 
@@ -691,6 +587,14 @@
       if (!leafletMap) return;
       if (heatLayer) { leafletMap.removeLayer(heatLayer); heatLayer = null; }
       if (!heatmapEnabled) return;
+      if (typeof L.heatLayer !== 'function') {
+        heatmapEnabled = false;
+        document.getElementById('heatmap-label').textContent = 'Heatmap: OFF';
+        document.getElementById('heatmap-modes').style.display = 'none';
+        document.getElementById('heatmap-toggle').disabled = true;
+        showMapStatus("Issiqlik xaritasi yuklanmadi. Oddiy xarita ishlayapti.", true);
+        return;
+      }
       const src = faultsOnly ? lastData.filter(d => d.Fault === 2) : lastData;
 
       let points;
@@ -740,7 +644,8 @@
         return;
       }
       const entry = sensorMarkerIndex[matchKey];
-      leafletMap.setView(entry.latlng, 16, { animate: true });
+      leafletMap.stop();
+      leafletMap.setView(entry.latlng, 16, { animate: false });
       // Klaster ichida bo'lsa ham popup ochish
       setTimeout(() => {
         try { entry.marker.openPopup(); } catch(e) {}
@@ -748,19 +653,38 @@
     }
 
     // ===== Asosiy yuklash =====
+    let mapRequestId = 0;
+    let displayedDistrict = null;
+
+    function showMapStatus(message, warning = false) {
+      const status = document.getElementById('map-status');
+      document.getElementById('map-status-text').textContent = message;
+      status.className = 'alert mx-4 my-3 ' + (warning ? 'alert-warning' : 'alert-danger');
+      status.hidden = false;
+    }
+
     async function loadMap() {
+      const requestId = ++mapRequestId;
       try {
         const district = document.getElementById('district-select').value;
         let url = '/api/map-data';
         if (district) url += '?district=' + encodeURIComponent(district);
         const response = await fetch(url);
-        const data = await response.json();
-        if (!data || data.length === 0) {
-          document.getElementById('map').innerHTML = '<div class="alert alert-warning m-3">Ma\'lumot topilmadi</div>';
-          return;
-        }
+        if (!response.ok) throw new Error("Sensor ma'lumotlari yuklanmadi. Qayta urinib ko'ring.");
+        const result = await response.json();
+        if (requestId !== mapRequestId) return;
+        if (!Array.isArray(result)) throw new Error("Sensor ma'lumotlari olinmadi. Qayta urinib ko'ring.");
+        if (typeof L === 'undefined') throw new Error("Xarita yuklanmadi. Internetni tekshirib, sahifani qayta oching.");
+        const data = result.filter(d =>
+          Number.isFinite(d.Latitude) && Number.isFinite(d.Longitude) &&
+          Math.abs(d.Latitude) <= 90 && Math.abs(d.Longitude) <= 180
+        );
+        document.getElementById('map-status').hidden = true;
         lastData = data;
         const total = data.length;
+        document.getElementById('map-sensor-summary').textContent = district
+          ? `${district}: ${total} sensor`
+          : `12 ta tumanda ${total} sensor`;
         const safe   = data.filter(d => d.Fault === 0).length;
         const warns  = data.filter(d => d.Fault === 1).length;
         const faults = data.filter(d => d.Fault === 2).length;
@@ -773,36 +697,42 @@
         document.getElementById('ss-safe').textContent   = safe;
         document.getElementById('ss-warn').textContent   = warns;
         document.getElementById('ss-danger').textContent = faults;
-        document.getElementById('avg-harorat').textContent    = (data.reduce((s,d)=>s+d.Harorat,0)/total).toFixed(1) + ' °C';
-        document.getElementById('avg-chastota').textContent   = (data.reduce((s,d)=>s+d.Chastota,0)/total).toFixed(2) + ' Hz';
-        document.getElementById('avg-kuchlanish').textContent = (data.reduce((s,d)=>s+d.Kuchlanish,0)/total).toFixed(0) + ' V';
-        document.getElementById('avg-quvvat').textContent     = (data.reduce((s,d)=>s+d.Quvvat,0)/total).toFixed(2) + ' kW';
+        const average = (field, digits, unit) => total
+          ? (data.reduce((sum, item) => sum + item[field], 0) / total).toFixed(digits) + unit : '—';
+        document.getElementById('avg-harorat').textContent = average('Harorat', 1, ' °C');
+        document.getElementById('avg-chastota').textContent = average('Chastota', 2, ' Hz');
+        document.getElementById('avg-kuchlanish').textContent = average('Kuchlanish', 0, ' V');
+        document.getElementById('avg-quvvat').textContent = average('Quvvat', 2, ' kW');
 
-        document.getElementById('map-loading').style.display = 'none';
-        document.getElementById('map-main').style.display    = 'block';
-
-        if (!leafletMap) {
-          leafletMap = L.map('map', {preferCanvas: true}).setView([41.2900, 69.2700], 11);
-          L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-            attribution: '© OpenStreetMap, © CartoDB', subdomains: 'abcd', maxZoom: 19
+        document.getElementById('map-main').style.display = 'block';
+        const firstLoad = !leafletMap;
+        if (firstLoad) {
+          leafletMap = L.map('map', {preferCanvas: true, maxZoom: 19}).setView([41.2900, 69.2700], 11);
+          L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors', maxZoom: 19
           }).addTo(leafletMap);
         }
-
         renderMarkers();
         renderHeatmap();
-        drawDistrictPolygons(district);
         renderIncidents();
         updateExportLink();
-
-        if (district && DISTRICT_BOUNDS[district]) {
-          const c = DISTRICT_BOUNDS[district];
-          const lats = c.map(x=>x[0]), lons = c.map(x=>x[1]);
-          leafletMap.fitBounds([[Math.min(...lats),Math.min(...lons)],[Math.max(...lats),Math.max(...lons)]], {padding:[30,30]});
+        leafletMap.invalidateSize({pan: false});
+        if (firstLoad || district !== displayedDistrict) {
+          if (total) {
+            leafletMap.fitBounds(data.map(d => [d.Latitude, d.Longitude]), {padding: [30, 30], animate: false});
+          }
         }
-      } catch(e) {
-        console.error('Map error:', e);
-        document.getElementById('map-loading').innerHTML =
-          '<div class="alert alert-danger m-3"><i class="fas fa-exclamation-circle me-2"></i>Xarita yuklanmadi</div>';
+        displayedDistrict = district;
+        if (!total) showMapStatus("Bu tanlov bo'yicha sensor topilmadi.", true);
+      } catch (error) {
+        if (requestId === mapRequestId) {
+          console.error('Map error:', error);
+          showMapStatus(error.message || "Xarita yuklanmadi. Qayta urinib ko'ring.");
+        }
+      } finally {
+        if (requestId === mapRequestId) {
+          document.getElementById('map-loading').style.display = 'none';
+        }
       }
     }
 

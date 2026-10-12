@@ -1,11 +1,23 @@
 # Configuration file
 import os
 
+
+def _get_bool(name: str, default: bool = False) -> bool:
+    value = os.getenv(name)
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
 class Config:
     """Application configuration"""
-    DEBUG = True
+    DEBUG = _get_bool("DEBUG", True)
+    ENV = os.getenv("APP_ENV", "development")
     DATA_FILES = ["data/sensor_data_part1.csv", "data/sensor_data_part2.csv"]
     MODEL_FILES = ["models/hybrid_model_part1.pkl", "models/hybrid_model_part2.pkl"]
+    SECRET_KEY = os.getenv("SECRET_KEY", "monitoring-secret-2026-toshkent")
+    TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
+    TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
 
     # Real elektr uzatish liniyasi parametr chegaralari (3 daraja)
     SENSOR_LIMITS = {
@@ -43,14 +55,17 @@ class Config:
 
     # App settings
     REFRESH_INTERVAL = 30000  # milliseconds
-    PORT = 5000
-    HOST = "0.0.0.0"
+    PORT = int(os.getenv("PORT", "5000"))
+    HOST = os.getenv("HOST", "0.0.0.0")
+
 
 class DevelopmentConfig(Config):
     DEBUG = True
 
+
 class ProductionConfig(Config):
     DEBUG = False
 
-config = DevelopmentConfig()
+
+config = DevelopmentConfig() if Config.ENV != "production" else ProductionConfig()
 

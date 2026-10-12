@@ -1,5 +1,10 @@
 # --- Yagona importlar va sozlamalar ---
 import os
+
+if __name__ == "__main__" and os.environ.get("BMI_RUN_WORKER") != "1":
+    from run import main as run_project
+    raise SystemExit(run_project())
+
 import io
 import logging
 import datetime
@@ -10,6 +15,8 @@ import pandas as pd
 import numpy as np
 import requests as http_requests
 from flask import Flask, render_template, jsonify, request, session, redirect, url_for, send_file, flash
+
+from config import Config
 
 # --- utils modulini import ---
 from utils import (
@@ -28,7 +35,8 @@ except ImportError:
 
 # --- Flask va logger ---
 app = Flask(__name__)
-app.secret_key = os.environ.get("SECRET_KEY", "monitoring-secret-2026-toshkent")
+app.config.from_object(Config)
+app.secret_key = os.environ.get("SECRET_KEY", Config.SECRET_KEY)
 
 # --- Static fayllar uchun cache (development: 0, production: 1 kun) ---
 app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 0  # kesh o'chirildi — yangilangan fayllar darhol ko'rinadi
@@ -105,8 +113,8 @@ STATIC_USERS = {
 }
 
 # --- Telegram sozlamalari ---
-TELEGRAM_BOT_TOKEN = read_bot_token() or os.environ.get("TELEGRAM_BOT_TOKEN", "")
-TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "")
+TELEGRAM_BOT_TOKEN = (read_bot_token() or os.environ.get("TELEGRAM_BOT_TOKEN", Config.TELEGRAM_BOT_TOKEN) or "").strip()
+TELEGRAM_CHAT_ID = (os.environ.get("TELEGRAM_CHAT_ID", Config.TELEGRAM_CHAT_ID) or "").strip()
 
 
 # --- Asosiy sahifa ---
@@ -963,7 +971,7 @@ def get_stats():
         return jsonify({"error": str(e)}), 500
 
 @app.route("/api/map-data")
-@cache.cached(timeout=30)
+@cache.cached(timeout=30, query_string=True)
 def map_data():
     """Map data — har bir sensorning oxirgi o'lchovi (1200 ta nuqta)"""
     try:
@@ -2126,75 +2134,20 @@ def metrics():
 # ========================
 # MAIN
 # ========================
-if __name__ == "__main__":
-    import subprocess, threading, sys
 
-    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-    BOT_FILE = os.path.join(BASE_DIR, "telegram_bot.py")
-
-    bot_proc_ref = {"proc": None}
-
-    def _stream_bot_output(proc):
-        """Bot stdout/stderr ni asosiy logga yo'naltirish."""
-        try:
-            for line in iter(proc.stdout.readline, b""):
-                if not line:
-                    break
-                try:
-                    msg = line.decode("utf-8", errors="replace").rstrip()
-                except Exception:
-                    msg = str(line)
-                if msg:
-                    logger.info(f"[BOT] {msg}")
-        except Exception as e:
-            logger.warning(f"[BOT] log oqimi to'xtadi: {e}")
-
-    def run_bot():
-        """Telegram botni alohida jarayonda ishga tushirish."""
-        if not os.path.exists(BOT_FILE):
-            logger.warning(f"⚠️ telegram_bot.py topilmadi: {BOT_FILE}")
-            return
-        token = read_bot_token() or os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
-        if not token:
-            logger.warning("⚠️ Bot token topilmadi (bot_token.txt yoki .env) — bot ishga tushirilmadi.")
-            return
-        try:
-            python_exe = sys.executable
-            proc = subprocess.Popen(
-                [python_exe, "-u", BOT_FILE],
-                cwd=BASE_DIR,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-                env={**os.environ, "PYTHONIOENCODING": "utf-8"}
-            )
-            bot_proc_ref["proc"] = proc
-            logger.info(f"🤖 Telegram bot ishga tushirildi (PID={proc.pid})")
-            threading.Thread(target=_stream_bot_output, args=(proc,), daemon=True).start()
-        except Exception as e:
-            logger.error(f"❌ Bot ishga tushirishda xato: {e}")
-
-    # use_reloader=False bo'lgani uchun bot bir marta ishga tushadi.
-    # WERKZEUG_RUN_MAIN tekshiruvi ham reloader holatlarini qo'shimcha himoya qiladi.
-    if os.environ.get("WERKZEUG_RUN_MAIN") != "true":
-        threading.Thread(target=run_bot, daemon=True).start()
-
-    import atexit
-    def _cleanup_bot():
-        p = bot_proc_ref.get("proc")
-        if p and p.poll() is None:
-            try:
-                p.terminate()
-                logger.info("🛑 Telegram bot to'xtatildi")
-            except Exception:
-                pass
-    atexit.register(_cleanup_bot)
-
-    # Start live stats emitter thread
+def run_web_server():
+    import threading
     if HAS_SOCKETIO:
         threading.Thread(target=_emit_live_stats, daemon=True).start()
-
-    logger.info("🚀 Server 0.0.0.0:5000 ishga tushmoqda")
+    host = os.environ.get("HOST", Config.HOST)
+    port = int(os.environ.get("PORT", str(Config.PORT)))
+    logger.info("🚀 Server %s:%s ishga tushmoqda", host, port)
     if HAS_SOCKETIO and socketio is not None:
-        socketio.run(app, host="0.0.0.0", port=5000, debug=True, use_reloader=False, allow_unsafe_werkzeug=True)
+        socketio.run(app, host=host, port=port, debug=Config.DEBUG,
+                     use_reloader=False, allow_unsafe_werkzeug=True)
     else:
-        app.run(host="0.0.0.0", port=5000, debug=True, use_reloader=False)
+        app.run(host=host, port=port, debug=Config.DEBUG, use_reloader=False)
+
+
+if __name__ == "__main__":
+    run_web_server()

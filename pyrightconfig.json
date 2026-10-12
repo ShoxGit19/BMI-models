@@ -40,7 +40,6 @@
     "reportOptionalMemberAccess": "none",
     "reportOptionalOperand": "none",
     "reportOptionalSubscript": "none",
-    "reportReturnType": "none",
     "reportUnnecessaryCast": "none",
     "reportUnnecessaryComparison": "none",
     "reportUnnecessaryContains": "none",

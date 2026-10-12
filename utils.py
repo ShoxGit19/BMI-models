@@ -330,10 +330,25 @@ def audit_log(action, user=None, ip=None, details=None):
 
 
 # ======================== TOKEN ========================
-def read_bot_token(path="bot_token.txt"):
-    """Bot tokenini fayldan o'qish."""
+def read_bot_token(path=None):
+    """Bot tokenini environment yoki mahalliy fayldan o'qish.
+
+    Token public repo'ga ko'rinmasligi uchun default yo'l bot_token.txt bo'lmagan holda
+    environment variable orqali olib kelinadi. Fayl maxfiy saqlanadi va .gitignore bilan
+    ajratiladi.
+    """
+    env_token = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
+    if env_token:
+        return env_token
+
+    if path is None:
+        path = os.getenv("TELEGRAM_BOT_TOKEN_FILE", "")
+
+    if not path:
+        return ""
+
     try:
-        with open(path, "r") as f:
+        with open(path, "r", encoding="utf-8") as f:
             return f.read().strip()
     except FileNotFoundError:
         return ""
